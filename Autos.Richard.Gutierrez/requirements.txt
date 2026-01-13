@@ -1,0 +1,22 @@
+# Requirements for Autos Report Generator
+# Compatible with Windows, Linux, and macOS
+
+# Data processing
+pandas>=2.0.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Supabase client
+supabase>=2.0.0
+
+# Web scraping and PDF generation
+playwright>=1.40.0
+
+# Image processing and optimization
+Pillow>=10.0.0
+
+# Installation instructions:
+# 1. pip install -r requirements.txt
+# 2. playwright install chromium
+# 3. (Linux only) playwright install --with-deps chromium

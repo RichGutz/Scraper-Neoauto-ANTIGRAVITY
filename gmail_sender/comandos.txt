@@ -1,0 +1,1 @@
+cd /home/richgutz/Scraper.Neoauto && /home/richgutz/Scraper.Neoauto/venv/bin/python ./gmail_sender/gmail_sender.py --enviar-correos --produccion --drive-link "https://drive.google.com/file/d/1lJrX1ZNrNiSaZGvB3qRgGwtBLiToIuQB/view?usp=drivesdk"

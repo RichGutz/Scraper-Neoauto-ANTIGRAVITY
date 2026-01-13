@@ -1,0 +1,22 @@
+{
+  "frases_clave": [
+    "unico dueño",
+    "unica dueña",
+    "primer dueño", 
+    "unico propietario",
+    "unica propietaria",
+    "solo un dueño",
+    "ocasión",
+    "remato",
+    "por viaje",
+    "comprado en tienda",
+    "comprado en concesionario"
+
+	
+  ],
+  "exclusiones": [
+    "varios dueños",
+    "multipropietario",
+    "dueño anterior"
+  ]
+}

@@ -1,0 +1,64 @@
+# Entornos Virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# PyInstaller (Compilación)
+build/
+dist/
+*.spec
+*.exe
+
+
+# Logs y Temporales
+*.log
+tmp/
+temp/
+
+# Archivos de Datos Generados (Outputs)
+*.pdf
+*.html
+*.csv
+*.xlsx
+outputs/
+results_json/
+extractores/results_json/
+extractores/results_txt/
+model_pages/
+
+
+# Imagenes y Videos (¡NO SUBIR!)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.mp4
+*.avi
+
+# Credenciales y Secretos (¡NO SUBIR!)
+.env
+*credentials*.json
+*token*.json
+key.json
+client_secret.json
+
+# IDEs
+.vscode/
+.idea/
+
+# Perfiles de Navegador y Cache (¡MUY IMPORTANTE!)
+*whatsapp_bot_profile*
+*Cache_Data*
+*Code Cache*
+*User Data*
+Anny.Bot/whatsapp_bot_profile/
+
+# Sistema
+Thumbs.db
+Desktop.ini

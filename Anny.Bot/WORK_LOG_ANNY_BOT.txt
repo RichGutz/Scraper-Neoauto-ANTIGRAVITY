@@ -1,0 +1,59 @@
+LOG DE TRABAJO - ANNY BOT WHATSAPP
+FECHA: 13/01/2026 - INTEGRACIÓN GOOGLE CONTACTS COMPLETADA
+
+✅ BOT COMPLETADO CON GOOGLE CONTACTS
+
+CARACTERÍSTICAS FINALES:
+✅ Integración con Google Contacts API
+✅ Creación automática de contactos antes de enviar mensajes
+✅ Formato de contactos: "Nombre - PROYECTO"
+✅ Links cortos de TinyURL en mensajes
+✅ Modo de prueba integrado
+✅ Ícono personalizado
+
+FLUJO DE EJECUCIÓN:
+
+FASE 1: CREACIÓN DE CONTACTOS EN GOOGLE
+- Lee el Excel completo
+- Autentica con Google (credentials_anny.json)
+- Crea cada contacto con formato: "Yadhira - LOMAS PARK"
+- Muestra resumen de contactos creados
+- Pausa para confirmar antes de enviar mensajes
+
+FASE 2: ENVÍO DE MENSAJES WHATSAPP
+- Envía mensajes personalizados
+- Incluye links cortos de TinyURL
+- WhatsApp muestra nombres de contactos automáticamente
+
+ARCHIVOS NECESARIOS:
+- credentials_anny.json - Credenciales de Google (cuenta de Anny)
+- token_anny.json - Se crea automáticamente al autenticar
+- plantilla_mensaje.txt - Template del mensaje
+- Excel con columnas: Nombre, TelefonoCelular, Proyecto
+
+LINKS DE BROCHURES:
+- Jacaranda: https://tinyurl.com/BrochureJacaranda
+- Lomas Park: https://tinyurl.com/BrochureLomasPark
+
+FORMATO DEL MENSAJE:
+```
+Hola [NOMBRE], buenas tardes...
+
+🏡 *BROCHURE DIGITAL DEL PROYECTO* 🏡
+👇 Descarga aquí 👇
+https://tinyurl.com/BrochureJacaranda
+```
+
+VENTAJAS:
+✅ Contactos organizados en Google
+✅ WhatsApp muestra nombres automáticamente
+✅ Links profesionales y confiables
+✅ Proceso automatizado en 2 fases
+✅ Fácil de usar para Anny
+
+PRÓXIMO PASO:
+Ejecutar bot y verificar:
+1. Autenticación con Google (primera vez)
+2. Creación de contactos
+3. Envío de mensajes
+4. Contactos visibles en WhatsApp

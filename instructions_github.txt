@@ -1,0 +1,24 @@
+---
+--- Git Instructions for Scraper.Neoauto Repository ---
+
+This document outlines the successful Git commands used for committing and pushing changes to the 'Scraper.Neoauto' repository.
+
+**Important:** Always execute these commands from the root directory of your repository: `C:\Users\rguti\Scraper.Neoauto`
+
+**1. Stage specific files for commit:**
+(Replace file paths with the files you want to commit)
+```bash
+cd C:\Users\rguti\Scraper.Neoauto && git add path/to/your/file.py
+```
+
+**2. Commit the changes:**
+(Replace the commit message with a relevant one)
+```bash
+cd C:\Users\rguti\Scraper.Neoauto && git commit -m "Your descriptive commit message"
+```
+
+**3. Push the changes to the remote repository:**
+```bash
+cd C:\Users\rguti\Scraper.Neoauto && git push -u origin master
+```
+---

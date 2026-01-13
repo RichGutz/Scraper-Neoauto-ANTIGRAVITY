@@ -1,0 +1,42 @@
+Vamos a hacer un bot inmobiliario que haga esto:
+
+1. Hay dos proyectos: Jacaranda Live & Lomas Park
+
+2. Hay un CRM llamado Evolta, que recibe leads desde META
+
+3. Con esos leads, mi esposa , usa su whatsapp para contactar 
+uno por uno a los leads. Es un proceso tedioso.
+
+QUE DESEO?:
+
+1. Un bot que lea la base de datos que baja de EVOLTA
+
+2. Lea que en que proyecto esta interesado en lead
+
+3. Envie por whatsapp un mensaje pre determinado y que adjunte 
+el brochure del proyecto correcpondiente.Estan en esta misma carpeta
+
+4. Deseo una interfase muy sencilla que pueda usar mi esposa
+para subir la bd de los lead no contactados (CSV) y que lance
+los whatsapps a todos esos leads.
+
+
+PARA ESTO UTILIZA LOS SCRIPTS QUE YA NOS FUNCIONAN EN EL crm
+. eL crm EVOLTA ES TAN MALO QUE NO BAJA CONTACTOS SIN FOLLOW UP.
+
+vAMOS A PROBAR MANDANDO TODOS LOS MENSAJE A UN UNICO CEL DE PRUEBA
+
+Mensaje pre determinados
+
+Hola "Cecilia", buenas tardes. Te saluda Anny Rojas de Tangible Inmobiliaria. 😊
+¡Muchas gracias por tu interés en nuestro proyecto "Jacaranda Life "- Surco!
+
+
+Cuéntame un poquito más para poder ayudarte 😊
+¿Qué tipo de departamento estás buscando?
+¿De cuántos dormitorios te gustaría?
+Con eso te envío las opciones que mejor se adapten a lo que necesitas. Te adjunto el
+brochure del proyecto para que tengas una mejor idea de todo
+nuestro proyecto.
+
+

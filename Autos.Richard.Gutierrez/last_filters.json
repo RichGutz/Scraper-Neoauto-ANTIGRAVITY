@@ -1,0 +1,81 @@
+{
+  "km_max": 100000.0,
+  "year_min": 2016,
+  "days_back": 30,
+  "selected_map": {
+    "AUDI": [
+      "A4",
+      "Q3"
+    ],
+    "BMW": [
+      "Serie 3",
+      "X1"
+    ],
+    "CHEVROLET": [
+      "Spark"
+    ],
+    "FORD": [
+      "Ranger"
+    ],
+    "HONDA": [
+      "Civic",
+      "Cr-V",
+      "Hr-V",
+      "Wr-V"
+    ],
+    "HYUNDAI": [
+      "Creta",
+      "Santa Fe",
+      "Tucson"
+    ],
+    "JEEP": [
+      "Cherokee",
+      "Grand Cherokee"
+    ],
+    "KIA": [
+      "K2400",
+      "Picanto",
+      "Sorento",
+      "Sportage"
+    ],
+    "MAZDA": [
+      "Cx-3",
+      "Cx-30",
+      "Cx-5",
+      "Cx-7",
+      "Cx-9"
+    ],
+    "MITSUBISHI": [
+      "L200"
+    ],
+    "NISSAN": [
+      "Frontier"
+    ],
+    "SUBARU": [
+      "All New Forester 2019",
+      "Crosstrek",
+      "Forester",
+      "New Xv",
+      "XV"
+    ],
+    "SUZUKI": [
+      "Jimny"
+    ],
+    "TOYOTA": [
+      "Fortuner",
+      "Hilux",
+      "Raize",
+      "Rav4",
+      "Rush"
+    ],
+    "VOLKSWAGEN": [
+      "Taos",
+      "Tiguan",
+      "Touareg"
+    ]
+  },
+  "fuels": [
+    "Diesel",
+    "Gasolina"
+  ]
+}

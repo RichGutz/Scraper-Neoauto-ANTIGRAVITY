@@ -1,0 +1,31 @@
+=============================================================================
+WORK LOG - 2026-01-11
+=============================================================================
+
+[2026-01-11 19:10] - Fix Critical: Scraper Diario (NeoAuto)
+------------------------------------------------------------
+PROBLEMA:
+El script `extractores/2.DIARIO.daily_urls_extraction.VCLI.py` fallaba y no encontraba autos.
+Causa: NeoAuto cambió su estructura front-end, eliminando clases CSS antiguas (`c-results__link`) e implementando Next.js con hidratación client-side. Los datos ahora vienen en un string JSON dentro del HTML, no en etiquetas `<a>` simples.
+
+SOLUCIÓN:
+Se implementó una estrategia de extracción multi-capa (Multi-Strategy Extraction) para máxima robustez:
+
+1. Estrategia Principal (Regex JSON Escapado):
+   - Se busca el patrón `\"slug\":\"/auto/...\"` que corresponde a cómo Next.js serializa los datos en el HTML.
+   - Esto bypass al problema de renderizado JS.
+
+2. Estrategia Secundaria (Regex JSON Simple):
+   - Fallback para JSON no escapado estándar.
+
+3. Estrategia Terciaria (Regex HTML):
+   - Búsqueda directa de `href="..."` en caso de que NeoAuto revierta a HTML estático.
+
+RESULTADO:
+- El script ahora detecta correctamente los autos.
+- Probado con filtro `publicado=7dias` -> 352+ autos detectados.
+- Se agregó lógica de "Auto-break" para detener el scraping si una página viene vacía, evitando bucles infinitos.
+
+ESTADO ACTUAL:
+- Script 2 reparado y verificado.
+- Ejecutando Script 4 (Detalle) en paralelo (6 instancias) para procesar la cola de 352 autos rápidamente.

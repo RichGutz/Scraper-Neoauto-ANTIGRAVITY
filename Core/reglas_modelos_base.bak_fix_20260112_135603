@@ -1,0 +1,421 @@
+make_rule_match,model_pattern_input_lower,model_base_target,match_type,priority,pattern_length
+bmw,m2 coupe,Serie 2,startswith,11.0,7.0
+bmw,M2 COUPE,Serie 2,startswith,11.0,7.0
+jeep,grand cherokee limited,Grand Cherokee,startswith,10.0,22.0
+jeep,GRAND CHEROKEE LIMITED,Grand Cherokee,startswith,10.0,22.0
+jeep,grand cherokee laredo,Grand Cherokee,startswith,10.0,21.0
+jeep,GRAND CHEROKEE LAREDO,Grand Cherokee,startswith,10.0,21.0
+jeep,grand cherokee srt,Grand Cherokee,startswith,10.0,19.0
+jeep,GRAND CHEROKEE SRT,Grand Cherokee,startswith,10.0,19.0
+toyota,land cruiser prado,Land Cruiser Prado,startswith,10.0,19.0
+toyota,LAND CRUISER PRADO,Land Cruiser Prado,startswith,10.0,19.0
+subaru,all new forester,Forester,exact,10.0,17.0
+subaru,ALL NEW FORESTER,Forester,exact,10.0,17.0
+subaru,all new outback,Outback,exact,10.0,17.0
+subaru,ALL NEW OUTBACK,Outback,exact,10.0,17.0
+chevrolet,all new captiva,Captiva,exact,10.0,15.0
+chevrolet,ALL NEW CAPTIVA,Captiva,exact,10.0,15.0
+subaru,all new legacy,Legacy,exact,10.0,15.0
+subaru,ALL NEW LEGACY,Legacy,exact,10.0,15.0
+nissan,np300 frontier,Frontier,startswith,10.0,14.0
+nissan,NP300 FRONTIER,Frontier,startswith,10.0,14.0
+hyundai,grand i10 hb,Grand i10,exact,10.0,13.0
+hyundai,GRAND I10 HB,Grand i10,exact,10.0,13.0
+toyota,corolla cross,Corolla Cross,startswith,10.0,13.0
+toyota,COROLLA CROSS,Corolla Cross,startswith,10.0,13.0
+suzuki,grand nomade,Grand Nomade,exact,10.0,12.0
+suzuki,GRAND NOMADE,Grand Nomade,exact,10.0,12.0
+suzuki,apv minivan,APV,exact,10.0,11.0
+suzuki,APV MINIVAN,APV,exact,10.0,11.0
+suzuki,s presso,S-Presso,exact,10.0,8.0
+suzuki,S PRESSO,S-Presso,exact,10.0,8.0
+suzuki,s-presso,S-Presso,exact,10.0,8.0
+suzuki,S-PRESSO,S-Presso,exact,10.0,8.0
+ford,edge sel,Edge,startswith,10.0,7.0
+ford,EDGE SEL,Edge,startswith,10.0,7.0
+nissan,pick up,Frontier,startswith,10.0,7.0
+nissan,PICK UP,Frontier,startswith,10.0,7.0
+nissan,pick-up,Frontier,startswith,10.0,7.0
+nissan,PICK-UP,Frontier,startswith,10.0,7.0
+volkswagen,t-cross,T-Cross,exact,10.0,7.0
+volkswagen,T-CROSS,T-Cross,exact,10.0,7.0
+volkswagen,t cross,T-Cross,exact,10.0,7.0
+volkswagen,T CROSS,T-Cross,exact,10.0,7.0
+honda,type r,Civic Type R,exact,10.0,6.0
+honda,TYPE R,Civic Type R,exact,10.0,6.0
+bmw,m235i,Serie 2,startswith,10.0,5.0
+bmw,M235I,Serie 2,startswith,10.0,5.0
+bmw,m240i,Serie 2,startswith,10.0,5.0
+bmw,M240I,Serie 2,startswith,10.0,5.0
+ford,f-150,F-150,startswith,10.0,5.0
+ford,F-150,F-150,startswith,10.0,5.0
+ford,f 150,F-150,startswith,10.0,5.0
+ford,F 150,F-150,startswith,10.0,5.0
+mazda,cx-30,CX-30,startswith,10.0,5.0
+mazda,CX-30,CX-30,startswith,10.0,5.0
+mazda,cx 30,CX-30,startswith,10.0,5.0
+mazda,CX 30,CX-30,startswith,10.0,5.0
+mazda,bt-50,BT-50,startswith,10.0,5.0
+mazda,BT-50,BT-50,startswith,10.0,5.0
+mazda,bt 50,BT-50,startswith,10.0,5.0
+mazda,BT 50,BT-50,startswith,10.0,5.0
+toyota,gt 86,GT86,exact,10.0,5.0
+toyota,GT 86,GT86,exact,10.0,5.0
+toyota,gt-86,GT86,exact,10.0,5.0
+toyota,GT-86,GT86,exact,10.0,5.0
+honda,hr v,HR-V,exact,10.0,4.0
+honda,HR V,HR-V,exact,10.0,4.0
+honda,wr v,WR-V,exact,10.0,4.0
+honda,WR V,WR-V,exact,10.0,4.0
+mazda,cx-5,CX-5,startswith,10.0,4.0
+mazda,CX-5,CX-5,startswith,10.0,4.0
+mazda,cx 5,CX-5,startswith,10.0,4.0
+mazda,CX 5,CX-5,startswith,10.0,4.0
+mazda,cx-7,CX-7,startswith,10.0,4.0
+mazda,CX-7,CX-7,startswith,10.0,4.0
+mazda,cx 7,CX-7,startswith,10.0,4.0
+mazda,CX 7,CX-7,startswith,10.0,4.0
+mazda,cx-9,CX-9,startswith,10.0,4.0
+mazda,CX-9,CX-9,startswith,10.0,4.0
+mazda,cx 9,CX-9,startswith,10.0,4.0
+mazda,CX 9,CX-9,startswith,10.0,4.0
+mazda,cx-3,CX-3,startswith,10.0,4.0
+mazda,CX-3,CX-3,startswith,10.0,4.0
+mazda,cx 3,CX-3,startswith,10.0,4.0
+mazda,CX 3,CX-3,startswith,10.0,4.0
+suzuki,sx-4,SX4,exact,10.0,4.0
+suzuki,SX-4,SX4,exact,10.0,4.0
+suzuki,sx 4,SX4,exact,10.0,4.0
+suzuki,SX 4,SX4,exact,10.0,4.0
+bmw,x-3,X3,exact,10.0,3.0
+bmw,X-3,X3,exact,10.0,3.0
+bmw,x 3,X3,exact,10.0,3.0
+bmw,X 3,X3,exact,10.0,3.0
+bmw,x-5,X5,exact,10.0,3.0
+bmw,X-5,X5,exact,10.0,3.0
+bmw,x 5,X5,exact,10.0,3.0
+bmw,X 5,X5,exact,10.0,3.0
+honda,hrv,HR-V,exact,10.0,3.0
+honda,HRV,HR-V,exact,10.0,3.0
+honda,wrv,WR-V,exact,10.0,3.0
+honda,WRV,WR-V,exact,10.0,3.0
+hyundai,h-1,H-1,exact,10.0,3.0
+hyundai,H-1,H-1,exact,10.0,3.0
+hyundai,h 1,H-1,exact,10.0,3.0
+hyundai,H 1,H-1,exact,10.0,3.0
+nissan,np 300,Frontier,startswith,9.0,6.0
+nissan,NP 300,Frontier,startswith,9.0,6.0
+nissan,np300,Frontier,startswith,9.0,5.0
+nissan,NP300,Frontier,startswith,9.0,5.0
+jeep,grand cherokee,Grand Cherokee,startswith,5.0,14.0
+jeep,GRAND CHEROKEE,Grand Cherokee,startswith,5.0,14.0
+toyota,land cruiser,Land Cruiser,startswith,5.0,12.0
+toyota,LAND CRUISER,Land Cruiser,startswith,5.0,12.0
+mitsubishi,eclipse cross,Eclipse Cross,startswith,2.0,13.0
+mitsubishi,ECLIPSE CROSS,Eclipse Cross,startswith,2.0,13.0
+suzuki,grand vitara,Grand Vitara,startswith,2.0,12.0
+suzuki,GRAND VITARA,Grand Vitara,startswith,2.0,12.0
+hyundai,grand i10,Grand i10,startswith,2.0,9.0
+hyundai,GRAND I10,Grand i10,startswith,2.0,9.0
+jeep,gladiator,Gladiator,contains,2.0,9.0
+toyota,4 runner,4Runner,contains,2.0,8.0
+kia,carnival,Carnival,contains,2.0,8.0
+hyundai,palisade,Palisade,contains,2.0,8.0
+nissan,x-trail,X-Trail,startswith,2.0,7.0
+nissan,X-TRAIL,X-Trail,startswith,2.0,7.0
+nissan,x trail,X-Trail,contains,2.0,7.0
+subaru,evoltis,Evoltis,contains,2.0,7.0
+bmw,serie 1,Serie 1,contains,2.0,7.0
+bmw,serie 2,Serie 2,contains,2.0,7.0
+bmw,serie 3,Serie 3,contains,2.0,7.0
+bmw,serie 4,Serie 4,contains,2.0,7.0
+bmw,serie 5,Serie 5,contains,2.0,7.0
+audi,e-tron,E-Tron,exact,2.0,6.0
+audi,E-TRON,E-Tron,exact,2.0,6.0
+toyota,tacoma,Tacoma,contains,2.0,6.0
+kia,soluto,Soluto,contains,2.0,6.0
+kia,mohave,Mohave,contains,2.0,6.0
+kia,optima,Optima,contains,2.0,6.0
+hyundai,staria,Staria,contains,2.0,6.0
+nissan,murano,Murano,contains,2.0,6.0
+nissan,xtrail,X-Trail,contains,2.0,6.0
+toyota,hiace,Hiace,contains,2.0,5.0
+toyota,prius,Prius,contains,2.0,5.0
+toyota,raize,Raize,contains,2.0,5.0
+kia,sonet,Sonet,contains,2.0,5.0
+kia,k2700,K2700,contains,2.0,5.0
+hyundai,venue,Venue,contains,2.0,5.0
+audi,etron,e-tron,contains,2.0,5.0
+honda,cr-v,CR-V,startswith,2.0,4.0
+honda,CR-V,CR-V,startswith,2.0,4.0
+volvo,xc60,XC60,startswith,2.0,4.0
+volvo,XC60,XC60,startswith,2.0,4.0
+volvo,xc90,XC90,startswith,2.0,4.0
+volvo,XC90,XC90,startswith,2.0,4.0
+volvo,xc40,XC40,startswith,2.0,4.0
+volvo,XC40,XC40,startswith,2.0,4.0
+toyota,agya,Agya,contains,2.0,4.0
+toyota,c-hr,C-HR,contains,2.0,4.0
+kia,niro,Niro,contains,2.0,4.0
+hyundai,kona,Kona,contains,2.0,4.0
+hyundai,atos,Atos,contains,2.0,4.0
+nissan,note,Note,contains,2.0,4.0
+nissan,juke,Juke,contains,2.0,4.0
+toyota,chr,C-HR,contains,2.0,3.0
+subaru,wrx,WRX,contains,2.0,3.0
+bmw,ix1,iX1,contains,2.0,3.0
+bmw,ix3,iX3,contains,2.0,3.0
+subaru,xv,XV,startswith,2.0,2.0
+subaru,XV,XV,startswith,2.0,2.0
+bmw,i3,i3,contains,2.0,2.0
+bmw,ix,iX,contains,2.0,2.0
+mitsubishi,outlander,Outlander,startswith,1.0,9.0
+mitsubishi,OUTLANDER,Outlander,startswith,1.0,9.0
+subaru,crosstrek,Crosstrek,startswith,1.0,9.0
+subaru,CROSSTREK,Crosstrek,startswith,1.0,9.0
+ford,ecosport,Ecosport,startswith,1.0,8.0
+ford,ECOSPORT,Ecosport,startswith,1.0,8.0
+ford,explorer,Explorer,startswith,1.0,8.0
+ford,EXPLORER,Explorer,startswith,1.0,8.0
+hyundai,santa fe,Santa Fe,startswith,1.0,8.0
+hyundai,SANTA FE,Santa Fe,startswith,1.0,8.0
+hyundai,veloster,Veloster,startswith,1.0,8.0
+hyundai,VELOSTER,Veloster,startswith,1.0,8.0
+jeep,cherokee,Cherokee,startswith,1.0,8.0
+jeep,CHEROKEE,Cherokee,startswith,1.0,8.0
+jeep,renegade,Renegade,startswith,1.0,8.0
+jeep,RENEGADE,Renegade,startswith,1.0,8.0
+jeep,wrangler,Wrangler,startswith,1.0,8.0
+jeep,WRANGLER,Wrangler,startswith,1.0,8.0
+kia,sportage,Sportage,startswith,1.0,8.0
+kia,SPORTAGE,Sportage,startswith,1.0,8.0
+nissan,qashqai,Qashqai,startswith,1.0,8.0
+nissan,QASHQAI,Qashqai,startswith,1.0,8.0
+nissan,frontier,Frontier,startswith,1.0,8.0
+nissan,FRONTIER,Frontier,startswith,1.0,8.0
+subaru,forester,Forester,startswith,1.0,8.0
+subaru,FORESTER,Forester,startswith,1.0,8.0
+suzuki,s-presso,S-Presso,startswith,1.0,8.0
+suzuki,S-PRESSO,S-Presso,startswith,1.0,8.0
+toyota,fortuner,Fortuner,startswith,1.0,8.0
+toyota,FORTUNER,Fortuner,startswith,1.0,8.0
+chevrolet,captiva,Captiva,startswith,1.0,7.0
+chevrolet,CAPTIVA,Captiva,startswith,1.0,7.0
+chevrolet,tracker,Tracker,startswith,1.0,7.0
+chevrolet,TRACKER,Tracker,startswith,1.0,7.0
+ford,mustang,Mustang,startswith,1.0,7.0
+ford,MUSTANG,Mustang,startswith,1.0,7.0
+hyundai,elantra,Elantra,startswith,1.0,7.0
+hyundai,ELANTRA,Elantra,startswith,1.0,7.0
+jeep,compass,Compass,startswith,1.0,7.0
+jeep,COMPASS,Compass,startswith,1.0,7.0
+kia,sorento,Sorento,startswith,1.0,7.0
+kia,SORENTO,Sorento,startswith,1.0,7.0
+kia,picanto,Picanto,startswith,1.0,7.0
+kia,PICANTO,Picanto,startswith,1.0,7.0
+mitsubishi,montero,Montero,startswith,1.0,7.0
+mitsubishi,MONTERO,Montero,startswith,1.0,7.0
+mitsubishi,eclipse,Eclipse,startswith,1.0,7.0
+mitsubishi,ECLIPSE,Eclipse,startswith,1.0,7.0
+subaru,outback,Outback,startswith,1.0,7.0
+subaru,OUTBACK,Outback,startswith,1.0,7.0
+subaru,impreza,Impreza,startswith,1.0,7.0
+subaru,IMPREZA,Impreza,startswith,1.0,7.0
+suzuki,s-cross,S-Cross,startswith,1.0,7.0
+suzuki,S-CROSS,S-Cross,startswith,1.0,7.0
+toyota,corolla,Corolla,startswith,1.0,7.0
+toyota,COROLLA,Corolla,startswith,1.0,7.0
+toyota,4runner,4Runner,startswith,1.0,7.0
+toyota,4RUNNER,4Runner,startswith,1.0,7.0
+volkswagen,t-cross,T-Cross,startswith,1.0,7.0
+volkswagen,T-CROSS,T-Cross,startswith,1.0,7.0
+ford,escape,Escape,startswith,1.0,6.0
+ford,ESCAPE,Escape,startswith,1.0,6.0
+ford,ranger,Ranger,startswith,1.0,6.0
+ford,RANGER,Ranger,startswith,1.0,6.0
+ford,fiesta,Fiesta,startswith,1.0,6.0
+ford,FIESTA,Fiesta,startswith,1.0,6.0
+honda,accord,Accord,startswith,1.0,6.0
+honda,ACCORD,Accord,startswith,1.0,6.0
+hyundai,tucson,Tucson,startswith,1.0,6.0
+hyundai,TUCSON,Tucson,startswith,1.0,6.0
+hyundai,accent,Accent,startswith,1.0,6.0
+hyundai,ACCENT,Accent,startswith,1.0,6.0
+kia,cerato,Cerato,startswith,1.0,6.0
+kia,CERATO,Cerato,startswith,1.0,6.0
+kia,seltos,Seltos,startswith,1.0,6.0
+kia,SELTOS,Seltos,startswith,1.0,6.0
+kia,carens,Carens,startswith,1.0,6.0
+kia,CARENS,Carens,startswith,1.0,6.0
+mitsubishi,mirage,Mirage,startswith,1.0,6.0
+mitsubishi,MIRAGE,Mirage,startswith,1.0,6.0
+nissan,sentra,Sentra,startswith,1.0,6.0
+nissan,SENTRA,Sentra,startswith,1.0,6.0
+subaru,legacy,Legacy,startswith,1.0,6.0
+subaru,LEGACY,Legacy,startswith,1.0,6.0
+suzuki,vitara,Vitara,startswith,1.0,6.0
+suzuki,VITARA,Vitara,startswith,1.0,6.0
+toyota,avanza,Avanza,startswith,1.0,6.0
+toyota,AVANZA,Avanza,startswith,1.0,6.0
+volkswagen,tiguan,Tiguan,startswith,1.0,6.0
+volkswagen,TIGUAN,Tiguan,startswith,1.0,6.0
+volkswagen,amarok,Amarok,startswith,1.0,6.0
+volkswagen,AMAROK,Amarok,startswith,1.0,6.0
+volkswagen,virtus,Virtus,startswith,1.0,6.0
+volkswagen,VIRTUS,Virtus,startswith,1.0,6.0
+chevrolet,cruze,Cruze,startswith,1.0,5.0
+chevrolet,CRUZE,Cruze,startswith,1.0,5.0
+chevrolet,spark,Spark,startswith,1.0,5.0
+chevrolet,SPARK,Spark,startswith,1.0,5.0
+ford,focus,Focus,startswith,1.0,5.0
+ford,FOCUS,Focus,startswith,1.0,5.0
+honda,civic,Civic,startswith,1.0,5.0
+honda,CIVIC,Civic,startswith,1.0,5.0
+honda,pilot,Pilot,startswith,1.0,5.0
+honda,PILOT,Pilot,startswith,1.0,5.0
+hyundai,creta,Creta,startswith,1.0,5.0
+hyundai,CRETA,Creta,startswith,1.0,5.0
+nissan,versa,Versa,startswith,1.0,5.0
+nissan,VERSA,Versa,startswith,1.0,5.0
+nissan,kicks,Kicks,startswith,1.0,5.0
+nissan,KICKS,Kicks,startswith,1.0,5.0
+nissan,march,March,startswith,1.0,5.0
+nissan,MARCH,March,startswith,1.0,5.0
+nissan,tiida,Tiida,startswith,1.0,5.0
+nissan,TIIDA,Tiida,startswith,1.0,5.0
+suzuki,swift,Swift,startswith,1.0,5.0
+suzuki,SWIFT,Swift,startswith,1.0,5.0
+suzuki,jimny,Jimny,startswith,1.0,5.0
+suzuki,JIMNY,Jimny,startswith,1.0,5.0
+toyota,hilux,Hilux,startswith,1.0,5.0
+toyota,HILUX,Hilux,startswith,1.0,5.0
+toyota,yaris,Yaris,startswith,1.0,5.0
+toyota,YARIS,Yaris,startswith,1.0,5.0
+toyota,etios,Etios,startswith,1.0,5.0
+toyota,ETIOS,Etios,startswith,1.0,5.0
+volkswagen,jetta,Jetta,startswith,1.0,5.0
+volkswagen,JETTA,Jetta,startswith,1.0,5.0
+chevrolet,onix,Onix,startswith,1.0,4.0
+chevrolet,ONIX,Onix,startswith,1.0,4.0
+chevrolet,sail,Sail,startswith,1.0,4.0
+chevrolet,SAIL,Sail,startswith,1.0,4.0
+chevrolet,aveo,Aveo,startswith,1.0,4.0
+chevrolet,AVEO,Aveo,startswith,1.0,4.0
+ford,edge,Edge,startswith,1.0,4.0
+ford,EDGE,Edge,startswith,1.0,4.0
+honda,hr-v,HR-V,startswith,1.0,4.0
+honda,HR-V,HR-V,startswith,1.0,4.0
+honda,city,City,startswith,1.0,4.0
+honda,CITY,City,startswith,1.0,4.0
+honda,wr-v,WR-V,startswith,1.0,4.0
+honda,WR-V,WR-V,startswith,1.0,4.0
+kia,soul,Soul,startswith,1.0,4.0
+kia,SOUL,Soul,startswith,1.0,4.0
+mitsubishi,l200,L200,startswith,1.0,4.0
+mitsubishi,L200,L200,startswith,1.0,4.0
+suzuki,ciaz,Ciaz,startswith,1.0,4.0
+suzuki,CIAZ,Ciaz,startswith,1.0,4.0
+toyota,rav4,Rav4,startswith,1.0,4.0
+toyota,RAV4,Rav4,startswith,1.0,4.0
+toyota,rush,Rush,startswith,1.0,4.0
+toyota,RUSH,Rush,startswith,1.0,4.0
+volkswagen,polo,Polo,startswith,1.0,4.0
+volkswagen,POLO,Polo,startswith,1.0,4.0
+honda,fit,Fit,startswith,1.0,3.0
+honda,FIT,Fit,startswith,1.0,3.0
+hyundai,i10,i10,startswith,1.0,3.0
+hyundai,I10,i10,startswith,1.0,3.0
+hyundai,i20,i20,startswith,1.0,3.0
+hyundai,I20,i20,startswith,1.0,3.0
+hyundai,i30,i30,startswith,1.0,3.0
+hyundai,I30,i30,startswith,1.0,3.0
+kia,rio,Rio,startswith,1.0,3.0
+kia,RIO,Rio,startswith,1.0,3.0
+mercedes,gla,Mercedes-Benz GLA,startswith,1.0,3.0
+mercedes,GLA,Mercedes-Benz GLA,startswith,1.0,3.0
+mercedes,glb,Mercedes-Benz GLB,startswith,1.0,3.0
+mercedes,GLB,Mercedes-Benz GLB,startswith,1.0,3.0
+mercedes,glc,Mercedes-Benz GLC,startswith,1.0,3.0
+mercedes,GLC,Mercedes-Benz GLC,startswith,1.0,3.0
+mercedes,gle,Mercedes-Benz GLE,startswith,1.0,3.0
+mercedes,GLE,Mercedes-Benz GLE,startswith,1.0,3.0
+mitsubishi,asx,ASX,startswith,1.0,3.0
+mitsubishi,ASX,ASX,startswith,1.0,3.0
+suzuki,apv,APV,startswith,1.0,3.0
+suzuki,APV,APV,startswith,1.0,3.0
+suzuki,xl7,XL7,startswith,1.0,3.0
+suzuki,XL7,XL7,startswith,1.0,3.0
+volkswagen,gol,Gol,startswith,1.0,3.0
+volkswagen,GOL,Gol,startswith,1.0,3.0
+volvo,s60,S60,startswith,1.0,3.0
+volvo,S60,S60,startswith,1.0,3.0
+volvo,s90,S90,startswith,1.0,3.0
+volvo,S90,S90,startswith,1.0,3.0
+audi,a1,A1,startswith,1.0,2.0
+audi,A1,A1,startswith,1.0,2.0
+audi,a3,A3,startswith,1.0,2.0
+audi,A3,A3,startswith,1.0,2.0
+audi,a4,A4,startswith,1.0,2.0
+audi,A4,A4,startswith,1.0,2.0
+audi,a5,A5,startswith,1.0,2.0
+audi,A5,A5,startswith,1.0,2.0
+audi,a6,A6,startswith,1.0,2.0
+audi,A6,A6,startswith,1.0,2.0
+audi,a7,A7,startswith,1.0,2.0
+audi,A7,A7,startswith,1.0,2.0
+audi,a8,A8,startswith,1.0,2.0
+audi,A8,A8,startswith,1.0,2.0
+audi,q2,Q2,startswith,1.0,2.0
+audi,Q2,Q2,startswith,1.0,2.0
+audi,q3,Q3,startswith,1.0,2.0
+audi,Q3,Q3,startswith,1.0,2.0
+audi,q5,Q5,startswith,1.0,2.0
+audi,Q5,Q5,startswith,1.0,2.0
+audi,q7,Q7,startswith,1.0,2.0
+audi,Q7,Q7,startswith,1.0,2.0
+audi,q8,Q8,startswith,1.0,2.0
+audi,Q8,Q8,startswith,1.0,2.0
+audi,tt,TT,startswith,1.0,2.0
+audi,TT,TT,startswith,1.0,2.0
+audi,r8,R8,startswith,1.0,2.0
+audi,R8,R8,startswith,1.0,2.0
+bmw,x1,X1,startswith,1.0,2.0
+bmw,X1,X1,startswith,1.0,2.0
+bmw,x2,X2,startswith,1.0,2.0
+bmw,X2,X2,startswith,1.0,2.0
+bmw,x3,X3,startswith,1.0,2.0
+bmw,X3,X3,startswith,1.0,2.0
+bmw,x4,X4,startswith,1.0,2.0
+bmw,X4,X4,startswith,1.0,2.0
+bmw,x5,X5,startswith,1.0,2.0
+bmw,X5,X5,startswith,1.0,2.0
+bmw,x6,X6,startswith,1.0,2.0
+bmw,X6,X6,startswith,1.0,2.0
+bmw,x7,X7,startswith,1.0,2.0
+bmw,X7,X7,startswith,1.0,2.0
+volvo,xc,XC Series,startswith,1.0,2.0
+volvo,XC,XC Series,startswith,1.0,2.0
+bmw,1,Serie 1,startswith,1.0,1.0
+bmw,1,Serie 1,startswith,1.0,1.0
+bmw,2,Serie 2,startswith,1.0,1.0
+bmw,2,Serie 2,startswith,1.0,1.0
+bmw,3,Serie 3,startswith,1.0,1.0
+bmw,3,Serie 3,startswith,1.0,1.0
+bmw,4,Serie 4,startswith,1.0,1.0
+bmw,4,Serie 4,startswith,1.0,1.0
+bmw,5,Serie 5,startswith,1.0,1.0
+bmw,5,Serie 5,startswith,1.0,1.0
+mazda,2,2,startswith,1.0,1.0
+mazda,2,2,startswith,1.0,1.0
+mazda,3,3,startswith,1.0,1.0
+mazda,3,3,startswith,1.0,1.0
+mazda,6,6,startswith,1.0,1.0
+mazda,6,6,startswith,1.0,1.0
+mercedes,a,Mercedes-Benz Clase A,startswith,1.0,1.0
+mercedes,A,Mercedes-Benz Clase A,startswith,1.0,1.0
+mercedes,c,Mercedes-Benz Clase C,startswith,1.0,1.0
+mercedes,C,Mercedes-Benz Clase C,startswith,1.0,1.0
+mercedes,e,Mercedes-Benz Clase E,startswith,1.0,1.0
+mercedes,E,Mercedes-Benz Clase E,startswith,1.0,1.0
+# --- REGLAS DE ALTA PRIORIDAD (ESPECÍFICOS Y PROBLEMÁTICOS) ---,,nan,,,
+# --- REGLAS DE BAJA PRIORIDAD (GENERALES Y BASE) ---,,nan,,,
