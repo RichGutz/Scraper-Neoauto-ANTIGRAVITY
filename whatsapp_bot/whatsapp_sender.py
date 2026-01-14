@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import subprocess
+import urllib.parse
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -78,12 +79,21 @@ def send_whatsapp_message(telefono, mensaje, attachment_path=None, silent=False)
                 print("⚠️ Tiempo de espera agotado.\n")
         
         # 5. Abrir chat
+        # 5. Abrir chat
         if not silent:
             print(f"Abriendo chat con +51{telefono}...")
         
-        url = f"https://web.whatsapp.com/send?phone=51{telefono}"
+        base_url = f"https://web.whatsapp.com/send?phone=51{telefono}"
+        if not attachment_path:
+            # Si es solo texto, enviarlo por URL es más robusto y rápido
+            encoded_msg = urllib.parse.quote(mensaje)
+            url = f"{base_url}&text={encoded_msg}"
+        else:
+            url = base_url
+            
         driver.get(url)
-        time.sleep(5)
+        # Esperar un poco más para que procese el texto en URL
+        time.sleep(8)
         
         # 6. SI HAY ADJUNTO, PROCESARLO
         if attachment_path and os.path.exists(attachment_path):
@@ -170,15 +180,27 @@ def send_whatsapp_message(telefono, mensaje, attachment_path=None, silent=False)
         # 7. Si NO hubo adjunto, enviar solo texto
         if not attachment_path:
             try:
-                text_box = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "footer div[contenteditable='true']"))
+                # Estrategia 1: Buscar botón enviar (XPath robusto para varios idiomas/versiones)
+                send_button = WebDriverWait(driver, 15).until(
+                    EC.element_to_be_clickable((By.XPATH, "//span[@data-icon='send'] | //button[@aria-label='Send'] | //button[@aria-label='Enviar']"))
                 )
-                text_box.send_keys(mensaje)
-                text_box.send_keys(Keys.ENTER)
+                send_button.click()
                 if not silent:
-                    print("✓ Mensaje de texto enviado")
+                    print("✓ Botón enviar clickeado")
             except Exception as e:
-                print(f"❌ Error enviando texto: {e}")
+                # Estrategia 2: Fallback ENTER en caja de texto (Asegurando que sea el FOOTER)
+                if not silent:
+                    print(f"⚠️ Click falló ({e}), intentando ENTER en footer...")
+                try:
+                    text_box = driver.find_element(By.CSS_SELECTOR, "footer div[contenteditable='true']")
+                    text_box.click() # Asegurar foco
+                    time.sleep(0.5)
+                    text_box.send_keys(Keys.ENTER)
+                    if not silent:
+                        print("✓ Enviado con ENTER")
+                except Exception as e2:
+                    print(f"❌ Falló envío fallback: {e2}")
+
         
         # Esperar confirmación
         if not silent:

@@ -681,8 +681,8 @@ def generate_html(df, results_map, filters, model_metrics):
             }
             .page {
                 background: white;
-                width: 297mm;  /* LANDSCAPE */
-                height: 210mm; /* LANDSCAPE */
+                width: 296mm;  /* REDUCED 1mm to avoid overflow */
+                height: 209mm; /* REDUCED 1mm to avoid overflow */
                 margin: 0 auto;
                 padding: 15px;  /* REDUCED from 30px */
                 box-sizing: border-box;
@@ -1167,7 +1167,7 @@ async def main():
         
         # Convert sets to sorted lists
         data_summary = {k: sorted(list(v)) for k, v in raw_map.items()}
-        print(f"  ✓ Built index with {len(data_summary)} brands and {sum(len(v) for v in data_summary.values())} models")
+        print(f"  [OK] Built index with {len(data_summary)} brands and {sum(len(v) for v in data_summary.values())} models")
     else:
         # Fallback: use current data if historical fetch fails
         print("  Warning: Could not fetch historical data, using current data")
@@ -1249,10 +1249,12 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-        # Loading local HTML file requires 'file://' prefix absolute path
+        # ABSOLUTE PATH for file protocol
         abs_path = os.path.abspath(html_filename)
-        await page.goto(f"file:///{abs_path}")
-        # LANDSCAPE orientation to match HTML layout
+        
+        # Increase timeout to 5 minutes (300000 ms) for large reports
+        await page.goto(f"file:///{abs_path}", timeout=300000, wait_until="load")
+        
         await page.pdf(path=pdf_filename, format="A4", landscape=True, print_background=True)
         await browser.close()
     

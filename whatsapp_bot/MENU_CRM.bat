@@ -41,12 +41,12 @@ echo.
 set /p opcion="Ingrese su opcion: "
 
 if "%opcion%"=="1" goto OP1
-if "%opcion%"=="2" goto OP2
-if "%opcion%"=="3" goto OP3
-if "%opcion%"=="4" goto OP4
-if "%opcion%"=="5" goto OP5
-if "%opcion%"=="6" goto OP6
-if "%opcion%"=="7" goto OP7
+if "%opcion%"=="2" goto LISTENER
+if "%opcion%"=="3" goto MARKETPLACE
+if "%opcion%"=="4" goto RESUMEN_IA
+if "%opcion%"=="5" goto ANALIZAR_LEAD
+if "%opcion%"=="6" goto RESET_DB
+if "%opcion%"=="7" goto SECUENCIA_DIARIA
 if "%opcion%"=="8" goto OP8
 if "%opcion%"=="9" goto OP9
 if "%opcion%"=="0" goto SALIR
@@ -71,13 +71,16 @@ cd /d "%~dp0"
 REM Regresamos un nivel al root del proyecto para encontrar el bat
 cd ..
 
-REM 0. Resetear Log (Para evitar que el monitor lea un 'COMPLETADO' antiguo)
+echo.
+REM 0. Resetear Log
 echo INICIANDO NUEVA SECUENCIA... > scraper_sequence.log
 
-REM 1. Lanzar el Worker (El script que hace el trabajo)
+REM 1. Lanzar el Worker
+echo Lanzando Worker...
 start "Worker Scraper" /min cmd /c "run_scraper_sequence_diario.bat"
 
-REM 2. Lanzar el Monitor (Version Python sin bloqueos)
+REM 2. Lanzar el Monitor
+echo Lanzando Monitor...
 start "Monitor Log Scraper" python tail_log.py
 
 echo.
