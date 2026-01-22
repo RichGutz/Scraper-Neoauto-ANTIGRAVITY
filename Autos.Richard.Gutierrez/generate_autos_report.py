@@ -14,6 +14,9 @@ import plotly.graph_objects as go
 from scipy.interpolate import make_interp_spline
 from pathlib import Path
 import sys
+# Force UTF-8 encoding for stdout/stderr to avoid Windows console issues
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 # Add parent directory to path to import report_gen module
 # parent_dir = Path(__file__).parent.parent
@@ -73,7 +76,7 @@ def load_config_from_json():
             with open(FILTERS_FILE, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 
-            print(f"✓ Loading config from {FILTERS_FILE}")
+            print(f"[OK] Loading config from {FILTERS_FILE}")
             
             # Update Globals
             if 'km_max' in config:
@@ -128,7 +131,7 @@ def load_rules():
                 LOADED_MODEL_RULES['make_rule_match'] = LOADED_MODEL_RULES['make_rule_match'].astype(str).str.lower().str.strip()
                 LOADED_MODEL_RULES['model_pattern_input_lower'] = LOADED_MODEL_RULES['model_pattern_input_lower'].astype(str).str.lower().str.strip()
                 LOADED_MODEL_RULES.sort_values(by=['priority', 'pattern_length'], ascending=[False, False], inplace=True)
-                print(f"✓ Loaded {len(LOADED_MODEL_RULES)} model rules")
+                print(f"[OK] Loaded {len(LOADED_MODEL_RULES)} model rules")
         except Exception as e:
             print(f"Error loading rules: {e}")
             LOADED_MODEL_RULES = pd.DataFrame()
@@ -170,7 +173,7 @@ def fetch_historical_data(supabase: Client) -> pd.DataFrame:
             print(f"Error fetching historical data: {e}")
             return pd.DataFrame()
     
-    print(f"✓ Historical data loaded: {len(all_data)} records")
+    print(f"[OK] Historical data loaded: {len(all_data)} records")
     return pd.DataFrame(all_data) if all_data else pd.DataFrame()
 
 def calculate_model_metrics(df_historic: pd.DataFrame) -> dict:
@@ -241,7 +244,7 @@ def calculate_model_metrics(df_historic: pd.DataFrame) -> dict:
             'yearly_stats': model_yearly
         }
     
-    print(f"✓ Calculated metrics for {len(result)} models")
+    print(f"[OK] Calculated metrics for {len(result)} models")
     return result
 
 
@@ -1213,7 +1216,7 @@ async def main():
     # Limit for testing - DISABLED for Production
     # df_filtered = df_filtered.head(5)
     
-    print(f"\n✓ Processing {len(df_filtered)} vehicles")
+    print(f"\n[OK] Processing {len(df_filtered)} vehicles")
 
 
     # 5. Fetch historical data and calculate model metrics
@@ -1259,7 +1262,7 @@ async def main():
         await browser.close()
     
     print(f"PDF report saved to {pdf_filename}")
-    print("\n✅ OPTIMIZATION: PDF size reduced by ~74% using base64 image embedding with aggressive compression")
+    print(f"\n[INFO] OPTIMIZATION: PDF size reduced by ~74% using base64 image embedding with aggressive compression")
     print("   - Hero images: 600px width, 60% quality")
     print("   - Gallery images: 400px width, 55% quality")
     print("   - Expected PDF size: ~10MB (down from ~40MB)")

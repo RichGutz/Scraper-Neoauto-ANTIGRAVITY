@@ -13,26 +13,19 @@ from whatsapp_sender import send_whatsapp_message
 
 init(autoreset=True)
 
-BROCHURE_JACARANDA = "BROCHURE JACARANDA (9).pdf"
-BROCHURE_LOMAS = "Brochure Lomas Park Tangible_ (2) (2).pdf"
+LINK_JACARANDA = "https://tinyurl.com/BrochureJacaranda"
+LINK_LOMAS = "https://tinyurl.com/BrochureLomasPark"
 
-def get_base_dir():
-    # Detectar si estamos corriendo como ejecutable (PyInstaller)
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-def get_brochure_path(proyecto):
+def get_project_link(proyecto):
     if not isinstance(proyecto, str):
         return None
     
     proyecto = proyecto.lower()
-    base_dir = get_base_dir()
     
     if "jacaranda" in proyecto:
-        return os.path.join(base_dir, BROCHURE_JACARANDA)
+        return LINK_JACARANDA
     elif "lomas" in proyecto:
-        return os.path.join(base_dir, BROCHURE_LOMAS)
+        return LINK_LOMAS
     return None
 
 def main():
@@ -136,20 +129,24 @@ def main():
         # Mensaje Base desde Plantilla
         mensaje = template_content.replace('[NOMBRE]', nombre).replace('[PROYECTO]', proyecto)
 
-        # Archivo adjunto
-        brochure_path = get_brochure_path(proyecto)
+        # Archivo adjunto (YA NO SE USA, SE USA LINK)
+        project_link = get_project_link(proyecto)
         
         # Destino real o test
         target_phone = test_phone if is_test_mode else celular
         
+        # Inyectar Link si existe
+        if project_link:
+            mensaje += f"\n\nAquí tienes el brochure digital: {project_link}"
+        
         print(f"\n[{index+1}/{len(df)}] Procesando {nombre} ({proyecto}) -> {target_phone}")
-        if brochure_path:
-            print(f"   Adjunto: {os.path.basename(brochure_path)}")
+        if project_link:
+            print(f"   Link inyectado: {project_link}")
         else:
-            print(f"   {Fore.RED}NO SE ENCONTRO BROCHURE PARA PROYECTO: {proyecto}{Style.RESET_ALL}")
+            print(f"   (Sin link específico para este proyecto)")
 
-        # Enviar
-        success = send_whatsapp_message(target_phone, mensaje, attachment_path=brochure_path, silent=False)
+        # Enviar (Sin attachment_path)
+        success = send_whatsapp_message(target_phone, mensaje, silent=False)
         
         if success:
             print(f"{Fore.GREEN}   Exito.")

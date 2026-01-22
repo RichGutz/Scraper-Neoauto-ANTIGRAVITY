@@ -222,3 +222,28 @@ playwright install --force chromium
 =============================================================================
 FIN DEL LOG - Sesión completada exitosamente
 =============================================================================
+
+[2026-01-13] - Sesión: Mantenimiento Crítico y Fixes
+Agent: Antigravity
+User: rguti
+
+---
+
+## LOGROS DE LA SESIÓN
+
+### 1. Estabilización de Reporte Autos
+- **Fix:** Aumento de timeout PDF a 300s (5 min) en `generate_autos_report.py`.
+- **Fix:** Ajuste de dimensiones CSS (-1mm) para eliminar páginas en blanco.
+- **Rescue:** Se creó script `rescue_pdf.py` para salvar reportes fallidos.
+
+### 2. Reparación WhatsApp Sender (Opción 5)
+- **Mejora:** Cambio a envío por URL (`&text=`) en `whatsapp_sender.py` para máxima confiabilidad.
+- **Robustez:** Selectores de botón "Enviar" redundantes y fallback de Enter en footer.
+
+### 3. Documentación Git
+- **Instrucciones:** Actualizado `instructions_github.txt` con lecciones de "Nuclear Reset" y `.gitignore`.
+- **Repositorio:** `RichGutz/Scraper-Neoauto-ANTIGRAVITY` limpio y sincronizado.
+
+=============================================================================
+FIN DEL LOG - Sesión Mantenimiento completada
+=============================================================================

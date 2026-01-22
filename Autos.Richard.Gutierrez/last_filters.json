@@ -9,7 +9,8 @@
     ],
     "BMW": [
       "Serie 3",
-      "X1"
+      "X1",
+      "X2"
     ],
     "CHEVROLET": [
       "Spark"
@@ -25,16 +26,21 @@
     ],
     "HYUNDAI": [
       "Creta",
+      "Elantra",
       "Santa Fe",
-      "Tucson"
+      "Tucson",
+      "Venue",
+      "Verna"
     ],
     "JEEP": [
-      "Cherokee",
       "Grand Cherokee"
     ],
     "KIA": [
-      "K2400",
       "Picanto",
+      "Rio",
+      "Seltos",
+      "Soluto",
+      "Sonet",
       "Sorento",
       "Sportage"
     ],
@@ -62,6 +68,7 @@
       "Jimny"
     ],
     "TOYOTA": [
+      "Corolla",
       "Fortuner",
       "Hilux",
       "Raize",
@@ -69,6 +76,9 @@
       "Rush"
     ],
     "VOLKSWAGEN": [
+      "Amarok",
+      "Jetta",
+      "Nivus",
       "Taos",
       "Tiguan",
       "Touareg"

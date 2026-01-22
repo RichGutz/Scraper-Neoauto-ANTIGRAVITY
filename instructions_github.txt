@@ -22,3 +22,28 @@ cd C:\Users\rguti\Scraper.Neoauto && git commit -m "Your descriptive commit mess
 cd C:\Users\rguti\Scraper.Neoauto && git push -u origin master
 ```
 ---
+
+## 🚫 TROUBLESHOOTING & BEST PRACTICES (LECCIONES APRENDIDAS)
+
+### 1. Error "pre-receive hook declined"
+**Causa:** Intentaste subir archivos demasiado pesados (>100MB) o prohibidos (ejecutables, carpetas masivas).
+**Solución (The Nuclear Reset):**
+Si el historial ya tiene archivos pesados (aunque los hayas borrado localmente), lo mejor es reiniciar el repo:
+```bash
+rm -rf .git
+git init
+git add .
+git commit -m "Reset history clean"
+git remote add origin https://github.com/RichGutz/Scraper-Neoauto-ANTIGRAVITY.git
+git push --force -u origin master
+```
+
+### 2. Archivos PROHIBIDOS (Agregar al .gitignore)
+Nunca permitas que estos entren al `git add`:
+- `*.exe`, `*.dll`, `*.msi` (Binarios)
+- `results_json/`, `outputs/` (Data generada masiva)
+- `*.pdf`, `*.mp4`, `*.mov` (Assets pesados, usar Drive/Dropbox)
+- `__pycache__/`, `venv/`, `.env`
+
+### 3. Regla de Oro
+Siempre revisa `git status` antes de `git add .`. Si ves archivos sospechosos, agrégalos al `.gitignore` primero.

@@ -59,6 +59,7 @@ def get_details_from_db(supabase, url):
             "Year": int(data.get("Year")) if data.get("Year") else None,
             "Price": float(data.get("Price")) if data.get("Price") else 0.0,
             "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0,
+            "Transmission": data.get("Transmission"),
             "Source": "DATABASE"
         }
     return None
@@ -95,6 +96,7 @@ async def scrape_neoauto_details(url):
             year = 0
             price = 0.0
             km = 0
+            transmission = None
             
             # Attempt Regex on Title/Header
             h1 = await page.inner_text("h1")
@@ -117,6 +119,17 @@ async def scrape_neoauto_details(url):
             km_match = re.search(r'Kilometraje[:\s]+([\d,]+)', body_text)
             if km_match: km = int(km_match.group(1).replace(",", ""))
 
+            # Extract Transmission
+            # Look for typical patterns like "Transmisión: Mecánica" or "Transmisión: Automática"
+            trans_match = re.search(r'Transmisión[:\s]+([A-Za-záéíóú]+)', body_text, re.IGNORECASE)
+            if trans_match:
+                raw_trans = trans_match.group(1).lower()
+                if "mec" in raw_trans:
+                    transmission = "Mecánica"
+                elif "aut" in raw_trans:
+                    transmission = "Automática"
+
+
             # Identify Make (Simple list check)
             makes = ["SUBARU", "TOYOTA", "HONDA", "NISSAN", "BMW", "MERCEDES", "KIA", "HYUNDAI", "FORD"]
             for m in makes:
@@ -133,6 +146,7 @@ async def scrape_neoauto_details(url):
                 "Year": year,
                 "Price": price,
                 "Kilometers": km,
+                "Transmission": transmission,
                 "Source": "SCRAPED"
             }
             
@@ -151,25 +165,37 @@ def get_manual_input():
     year = int(input("   Year (e.g. 2018): ").strip())
     price = float(input("   Price (USD): ").strip())
     km = int(input("   Kilometers: ").strip())
+    
+    trans_input = input("   Transmission (M=Mecánica, A=Automática, Enter=Skip): ").strip().upper()
+    transmission = None
+    if trans_input == 'M': transmission = "Mecánica"
+    elif trans_input == 'A': transmission = "Automática"
+
     return {
         "Make": make,
         "Model": model,
         "Year": year,
         "Price": price,
         "Kilometers": km,
+        "Transmission": transmission,
         "Source": "MANUAL"
     }
 
 # --- 2. MARKET ANALYSIS ---
 
-def fetch_market_context(supabase, make, model, year):
+def fetch_market_context(supabase, make, model, year, transmission=None):
     # Fetch comparative data
-    response = supabase.table("autos_detalles_diarios") \
-        .select("Price, Kilometers") \
+    query = supabase.table("autos_detalles_diarios") \
+        .select("Price, Kilometers, Transmission") \
         .eq("Make", make) \
         .ilike("Model", f"%{model}%") \
-        .eq("Year", year) \
-        .execute()
+        .eq("Year", year)
+    
+    if transmission:
+        print(f"   (Filtering by Transmission: {transmission})")
+        query = query.eq("Transmission", transmission)
+        
+    response = query.execute()
     
     df = pd.DataFrame(response.data)
     if not df.empty:
@@ -181,12 +207,13 @@ def fetch_market_context(supabase, make, model, year):
 def analyze_price(target_data, market_df, url=None):
     target_price = target_data['Price']
     target_km = target_data['Kilometers']
+    target_trans = target_data.get('Transmission', 'Unknown')
     make = target_data['Make']
     model = target_data['Model']
     year = target_data['Year']
     
     if market_df.empty:
-        print(f"\n⚠️  No historical data found for {make} {model} {year} to compare.")
+        print(f"\n⚠️  No historical data found for {make} {model} {year} ({target_trans}) to compare.")
         return
 
     median_price = market_df['Price'].median()
@@ -202,9 +229,10 @@ def analyze_price(target_data, market_df, url=None):
     print("\n" + "="*60)
     print(f"📊  MARKET ANALYSIS: {make} {model} {year}")
     print("="*60)
-    print(f"   ► Data Source: {target_data['Source']}")
-    print(f"   ► Target Car:  ${target_price:,.0f} | {target_km:,.0f} km")
-    print(f"   ► Market Median: ${median_price:,.0f} | {median_km:,.0f} km (Based on {count} units)")
+    print(f"   ► Data Source:  {target_data['Source']}")
+    print(f"   ► Transmission: {target_trans}")
+    print(f"   ► Target Car:   ${target_price:,.0f} | {target_km:,.0f} km")
+    print(f"   ► Market Median:${median_price:,.0f} | {median_km:,.0f} km (Based on {count} units)")
     print("-" * 60)
     
     # VERDICT
@@ -249,11 +277,12 @@ def analyze_price(target_data, market_df, url=None):
             print(f"   (Error buscando contacto: {e})")
         
         whatsapp_msg = f"""🚗 *ANÁLISIS DE LEAD*{contact_info}
-{make} {model} {year}
+{make} {model} {year} ({target_trans})
 💰 ${target_price:,.0f} | 🛣️ {target_km:,.0f} km
 
 {verdict}
-Mercado: ${median_price:,.0f} | {median_km:,.0f} km{km_note}
+Mercado: ${median_price:,.0f} | {median_km:,.0f} km (base: {count} un.)
+{km_note}
 
 🔗 {url}"""
         
@@ -300,7 +329,14 @@ async def main_async():
         return
 
     # 2. Analyze
-    market_df = fetch_market_context(supabase, data['Make'], data['Model'], data['Year'])
+    # Pass the transmission to the market context fetcher if available
+    market_df = fetch_market_context(
+        supabase, 
+        data['Make'], 
+        data['Model'], 
+        data['Year'], 
+        transmission=data.get('Transmission')
+    )
     analyze_price(data, market_df, url)
 
 def main():

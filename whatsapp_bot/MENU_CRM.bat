@@ -32,6 +32,7 @@ echo.
 echo  8. Kill Zombies (Limpiar Procesos)
 echo.
 echo  9. Resetear Token Google (Solucion Error 403)
+echo 10. Responder a Acreedores
 echo.
 echo  0. Salir
 echo.
@@ -49,6 +50,7 @@ if "%opcion%"=="6" goto RESET_DB
 if "%opcion%"=="7" goto SECUENCIA_DIARIA
 if "%opcion%"=="8" goto OP8
 if "%opcion%"=="9" goto OP9
+if "%opcion%"=="10" goto RESPONDER_ACREEDORES
 if "%opcion%"=="0" goto SALIR
 
 echo.
@@ -122,6 +124,22 @@ pause
 goto MENU
 
 :OP1
+goto PROCESAR_CORREOS
+
+:RESPONDER_ACREEDORES
+cls
+echo ==================================================
+echo  RESPONDER A ACREEDORES
+echo ==================================================
+echo.
+cd /d "%~dp0"
+cd ..\rpta.automatica.acreedores
+rem Launch renamed auto-reply script in new window
+start "AutoReply" cmd /c "python auto_reply_acreedores_v1.py"
+rem Launch tail log in another window
+start "TailLog" cmd /c "python tail_auto_reply_log.py"
+pause
+goto MENU
 :PROCESAR_CORREOS
 cls
 echo ==================================================

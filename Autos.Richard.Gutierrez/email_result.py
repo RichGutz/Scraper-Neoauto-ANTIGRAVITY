@@ -1,5 +1,8 @@
 import os
 import sys
+# Force UTF-8 encoding for stdout/stderr to avoid Windows console issues
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 import glob
 from pathlib import Path
 
