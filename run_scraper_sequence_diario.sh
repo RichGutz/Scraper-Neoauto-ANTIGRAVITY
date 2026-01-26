@@ -1,100 +1,86 @@
 #!/bin/bash
 
-# Termina el script inmediatamente si cualquier comando falla.
-set -e
-
 # --- Configuración ---
+# Use absolute path (adjust if necessary for your Linux environment)
 PROJECT_DIR="/home/richgutz/Scraper.Neoauto"
 LOG_FILE="$PROJECT_DIR/scraper_sequence.log"
-# Asegúrate de que la ruta a tu entorno virtual (venv) es correcta.
+# Assuming virtualenv structure or system python
 PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
 
-# --- Logging ---
-# Redirige toda la salida a un fichero de log y a la consola.
-exec &> >(tee -a "$LOG_FILE")
+# --- Logging Setup ---
+# Redirect all output (stdout and stderr) to log file and console (tee)
+exec > >(tee -a "$LOG_FILE") 2>&1
 
-# --- Lógica Principal ---
+echo ""
 echo "=================================================="
-echo "INICIANDO SECUENCIA DE SCRAPING"
-date
+echo "INICIANDO SECUENCIA DE SCRAPING - $(date)"
 echo "=================================================="
 
-# Moverse al directorio del proyecto es crucial.
-cd "$PROJECT_DIR"
-
-# --- Función para ejecutar scripts de Python ---
-run_python_script() {
-    SCRIPT_PATH=$1
-    echo ""
-    echo "--> Ejecutando: $SCRIPT_PATH"
-    $PYTHON_EXEC "$SCRIPT_PATH"
-    echo "--> Finalizado: $SCRIPT_PATH"
-}
+# Move to project dir
+cd "$PROJECT_DIR" || { echo "ERROR: No se pudo acceder a $PROJECT_DIR"; exit 1; }
 
 # --- Secuencia de Ejecución ---
-run_python_script "extractores/2.DIARIO.daily_urls_extraction.VCLI.py"
-# --- Ejecución de una sola instancia del scraper ---
+
+# 1. Extraccion de URLs (1 dia)
 echo ""
-echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
-SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
-$PYTHON_EXEC "$SCRIPT_TO_RUN"
-echo "--> Finalizada la instancia."
-# --- Fin de la ejecución de una sola instancia ---
-run_python_script "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
-run_python_script "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py"
-# run_python_script "generador_reporte_beta.py"
+echo "--> Ejecutando Extraccion de URLs..."
+$PYTHON_EXEC "extractores/2.DIARIO.daily_urls_extraction.VCLI.py"
 
-# --- Generación de PDF para Richard Gutierrez ---
+if [ $? -ne 0 ]; then
+    echo "ERROR en Extraccion de URLs."
+    exit 1
+fi
+
+# 2. Scraper Principal (6 INSTANCIAS PARALELAS)
 echo ""
-echo "--> Generando Reporte PDF para Richard Gutierrez..."
-"$PROJECT_DIR/.venv/bin/python3" "$PROJECT_DIR/Autos.Richard.Gutierrez/generate_autos_report.py"
-RICHARD_GUTIERREZ_PDF_PATH="$PROJECT_DIR/Autos.Richard.Gutierrez/reporte_autos_final.pdf"
-echo "--> PDF de Richard Gutierrez generado en: $RICHARD_GUTIERREZ_PDF_PATH"
+echo "--> Lanzando 6 instancias paralelas del SCRAPER..."
+# Usamos el launcher de Python para manejar la paralelizacion y el logging en tiempo real
+# -u para unbuffered stdout
+$PYTHON_EXEC -u "parallel_launcher.py"
 
-# --- Envío de Correo de Reporte Richard Gutierrez ---
-echo ""
-echo "--> Enviando correo de Reporte Richard Gutierrez..."
-"$PROJECT_DIR/.venv/bin/python3" "$PROJECT_DIR/gmail_sender/sender_richard_gutierrez.py" --enviar-correos --pdf-path "$RICHARD_GUTIERREZ_PDF_PATH"
-echo "Proceso de envío de Richard Gutierrez finalizado."
+echo "--> Scrapers finalizados."
+
+# 4. Procesamiento JSON y Supabase
+echo "--> Procesando JSONs..."
+$PYTHON_EXEC "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
+$PYTHON_EXEC "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py"
+
+# 5. Generador de Reporte (General/Legado) - DESACTIVADO TEMPORALMENTE
+# echo "--> Generando Reporte General..."
+# $PYTHON_EXEC "generador_reporte_beta.py"
+
+# --- Reporte Richard Gutierrez (PDF + Email) ---
+echo "--> Reporte Richard Gutierrez..."
+$PYTHON_EXEC "Autos.Richard.Gutierrez/generate_autos_report.py"
+
+# Envio Correo Richard
+echo "--> Enviando correo Richard a..."
+$PYTHON_EXEC "Autos.Richard.Gutierrez/email_result.py"
 
 
-# --- Generación de PDF ---
-# echo ""
-# echo "--> Generando PDF desde el reporte HTML..."
-# HTML_REPORT_PATH="$PROJECT_DIR/outputs/gmail_reporte_beta.html"
-# PDF_REPORT_PATH="$PROJECT_DIR/outputs/reporte_leads_unico_dueno.pdf"
-# wkhtmltopdf "$HTML_REPORT_PATH" "$PDF_REPORT_PATH"
-# echo "--> PDF generado en: $PDF_REPORT_PATH"
+# --- Reporte General (WKHTMLTOPDF + Drive + Email) --- DESACTIVADO
+# echo "--> Reporte General..."
+# HTML_REPORT="$PROJECT_DIR/outputs/gmail_reporte_beta.html"
+# PDF_REPORT="$PROJECT_DIR/outputs/reporte_leads_unico_dueno.pdf"
 
-# --- Subida a Google Drive y Captura de Enlace ---
-# echo ""
-# echo "--> Subiendo a Google Drive y capturando el enlace..."
+# wkhtmltopdf "$HTML_REPORT" "$PDF_REPORT"
+
+# echo "--> Subiendo a Drive..."
 # DRIVE_LINK=$($PYTHON_EXEC "google_drive/drive_uploader.py")
-# if [ -n "$DRIVE_LINK" ]; then
-#     echo "Enlace de Drive obtenido: $DRIVE_LINK"
-# else
-#     echo "ADVERTENCIA: No se obtuvo enlace de Google Drive."
-# fi
+# # Logic to capture output link would go here if uncommented
 
-# --- Envío de Correo con Gmail y Adjuntos ---
-# echo ""
-# echo "--> Enviando correo con adjuntos vía Python (Gmail)..."
+# echo "--> Enviando correo final..."
 # if [ -n "$DRIVE_LINK" ]; then
-#     $PYTHON_EXEC "/home/richgutz/Scraper.Neoauto/gmail_sender/gmail_sender.py" --enviar-correos --drive-link "$DRIVE_LINK" --pdf-path "$PDF_REPORT_PATH"
+#    $PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos --drive-link "$DRIVE_LINK" --pdf-path "$PDF_REPORT"
 # else
-#     echo "ADVERTENCIA: No se obtuvo enlace de Google Drive, enviando correo sin el enlace."
-#     $PYTHON_EXEC "/home/richgutz/Scraper.Neoauto/gmail_sender/gmail_sender.py" --enviar-correos --pdf-path "$PDF_REPORT_PATH"
+#    $PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos --pdf-path "$PDF_REPORT"
 # fi
-# echo "Proceso de envío finalizado." 
 
 echo ""
 echo "=================================================="
-echo "SECUENCIA DE SCRAPING COMPLETADA"
-date
+echo "SECUENCIA COMPLETADA - $(date)"
 echo "=================================================="
 
 echo ""
-# echo "--> APAGANDO EL EQUIPO..."
-# sudo /sbin/shutdown -h now
-
+echo "PROCESO FINALIZADO."
 exit 0
