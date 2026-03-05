@@ -331,10 +331,10 @@ def filter_data(df, filters):
         df = df[df['Fuel Type'].astype(str).str.contains(fuel_regex, case=False, na=False)]
     
     # 4. HARDCODED FILTER: Only Unique Owner vehicles
-    # if 'unico_dueno' in df.columns:
-    #     print("Applying HARDCODED filter: Only ÚNICO DUEÑO vehicles...")
-    #     df = df[df['unico_dueno'].astype(str).str.lower() == 'true']
-    #     print(f"  After único dueño filter: {len(df)} records")
+    if 'unico_dueno' in df.columns:
+        print("Applying HARDCODED filter: Only ÚNICO DUEÑO vehicles...")
+        df = df[df['unico_dueno'].astype(str).str.lower() == 'true']
+        print(f"  After único dueño filter: {len(df)} records")
     
     print(f"Filtered down to {len(df)} records.")
     return df

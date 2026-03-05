@@ -125,6 +125,18 @@ def load_recipients():
 # Main execution loop
 # ---------------------------------------------------------------------------
 
+
+def mark_as_read(service, msg_id):
+    """Mark a message as read by removing the UNREAD label."""
+    try:
+        service.users().messages().modify(
+            userId='me',
+            id=msg_id,
+            body={'removeLabelIds': ['UNREAD']}
+        ).execute()
+    except Exception as e:
+        logger.error(f"Failed to mark message {msg_id} as read: {e}")
+
 def main(poll_interval=30, max_cycles=0):
     logger.info('--- Auto-reply script started ---')
     creds = authenticate()
