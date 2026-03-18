@@ -123,18 +123,21 @@ class NeoAutoDailyScraper:
             found_slugs = set()
             
             # Estrategia 1: JSON Escapado (Next.js props usualmente)
-            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo)/[^"]+)\\"', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            slugs_json_escaped = re.findall(r'\\"slug\\":\\"/?(auto/(?:usado|seminuevo|nuevo)/[^"]+)\\"', raw_html)
             found_slugs.update(slugs_json_escaped)
             
             # Estrategia 2: JSON Simple (fallback)
-            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo)/[^"]+)"', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            slugs_json_simple = re.findall(r'"slug":"/?(auto/(?:usado|seminuevo|nuevo)/[^"]+)"', raw_html)
             found_slugs.update(slugs_json_simple)
 
             # Estrategia 3: HTML Anchor tags (Fallback a estructura clásica/SSR)
-            hrefs_html = re.findall(r'href=["\'](/?auto/(?:usado|nuevo)/[^"\']+)["\']', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            hrefs_html = re.findall(r'href=["\']/?(auto/(?:usado|seminuevo|nuevo)/[^"\']+)["\']', raw_html)
             found_slugs.update(hrefs_html)
 
-            # Normalizar slugs (asegurar slash inicial)
+            # Normalizar slugs (asegurar slash inicial para la URL final)
             normalized_slugs = []
             for s in found_slugs:
                 s = s.replace('\\', '') # Limpieza extra
@@ -163,25 +166,21 @@ class NeoAutoDailyScraper:
             soup = BeautifulSoup(requests.get(self.BASE_URL, headers=self.HEADERS).text, 'html.parser')
             total_pages = 1
             
-            # Intento 1: Buscar texto "avisos" en el HTML parseado
-            count_element = soup.find(lambda tag: tag.name == "div" and tag.text and "avisos" in tag.text.lower())
+            # Intento 1: Buscar texto "avisos" en el HTML raw para máxima cobertura
+            # El texto puede decir "150 avisos" o estar en JSON {"total":150}
+            total_items = 0
+            count_match = re.search(r'(\d+)\s*avisos', soup.text, re.IGNORECASE)
             
-            if count_element:
-                count_text = count_element.get_text(strip=True)
-                match = re.search(r'(\d+)\s*avisos', count_text) # \s* para flexibilidad
-                if match:
-                    total_items = int(match.group(1))
-                    total_pages = math.ceil(total_items / 20)
-                    logging.info(f"Total avisos: {total_items} - Total páginas: {total_pages}")
-                else:
-                     logging.warning(f"No se pudo parsear número de avisos de: {count_text}")
+            if count_match:
+                total_items = int(count_match.group(1))
+                total_pages = int(math.ceil(total_items / 20))
+                logging.info(f"Total avisos: {total_items} - Total páginas: {total_pages}")
             else:
-                # Intento 2: Buscar en el raw text si BS4 falla por hidratación
-                # El JSON tiene "total":56
-                total_match = re.search(r'"total":(\d+)', soup.text) # soup.text incluye el JS
-                if total_match:
-                    total_items = int(total_match.group(1))
-                    total_pages = math.ceil(total_items / 20)
+                # Intento 2: Buscar en el JSON (__NEXT_DATA__)
+                total_json_match = re.search(r'"total":(\d+)', soup.text)
+                if total_json_match:
+                    total_items = int(total_json_match.group(1))
+                    total_pages = int(math.ceil(total_items / 20))
                     logging.info(f"Total avisos (desde JSON): {total_items} - Total páginas: {total_pages}")
                 else:
                     logging.warning("No se encontró total de avisos, asumiendo 1 página")

@@ -1,0 +1,11 @@
+[2026-03-17 21:50] - Antigravity (Gemini)
+TAREA: Reparación de Scraper NeoAuto (Cambio de Diseño)
+
+DETALLES:
+- Se detectó que NeoAuto cambió el formato de sus slugs en el JSON de Next.js, eliminando el '/' inicial (ej. "auto/usado/..." en lugar de "/auto/usado/...").
+- Se corrigieron las expresiones regulares en 'extractores/2.DIARIO.daily_urls_extraction.VCLI.py'.
+- Se añadió la palabra clave 'seminuevo' a los filtros de extracción de URLs.
+- Se verificó que los selectores de detalle en 'extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.py' siguen funcionando correctamente.
+- Los cambios se realizaron en la rama 'fix-neoauto-scraping'.
+
+ESTADO: ÉXITO. El extractor vuelve a detectar anuncios.
