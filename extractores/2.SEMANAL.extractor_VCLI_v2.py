@@ -112,15 +112,18 @@ class NeoAutoWeeklyScraper:
             found_slugs = set()
             
             # Estrategia 1: JSON Escapado
-            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo)/[^"]+)\\"', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            slugs_json_escaped = re.findall(r'\\"slug\\":\\"/?(auto/(?:usado|seminuevo|nuevo)/[^"]+)\\"', raw_html)
             found_slugs.update(slugs_json_escaped)
             
             # Estrategia 2: JSON Simple
-            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo)/[^"]+)"', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            slugs_json_simple = re.findall(r'"slug":"/?(auto/(?:usado|seminuevo|nuevo)/[^"]+)"', raw_html)
             found_slugs.update(slugs_json_simple)
 
             # Estrategia 3: HTML Anchor tags
-            hrefs_html = re.findall(r'href=["\'](/?auto/(?:usado|nuevo)/[^"\']+)["\']', raw_html)
+            # Modificado: /? opcional y añadido seminuevo
+            hrefs_html = re.findall(r'href=["\']/?(auto/(?:usado|seminuevo|nuevo)/[^"\']+)["\']', raw_html)
             found_slugs.update(hrefs_html)
 
             # Normalizar
@@ -132,7 +135,7 @@ class NeoAutoWeeklyScraper:
                 
                 # Extraer marca de la URL para guardar metadata correcta
                 # Ejemplo: /auto/usado/volkswagen-amarok-2016-1859567 -> volkswagen
-                brand_match = re.search(r'/(?:usado|nuevo)/([a-z0-9]+)-', s)
+                brand_match = re.search(r'/(?:usado|seminuevo|nuevo)/([a-z0-9]+)-', s)
                 brand_in_url = brand_match.group(1) if brand_match else "unknown"
                 
                 full_url = f"https://neoauto.com{s}"
@@ -170,7 +173,7 @@ class NeoAutoWeeklyScraper:
                      total_items = int(total_match.group(1))
             
             if total_items > 0:
-                return math.ceil(total_items / 20)
+                return int(math.ceil(total_items / 20))
             return 1
             
         except Exception as e:
