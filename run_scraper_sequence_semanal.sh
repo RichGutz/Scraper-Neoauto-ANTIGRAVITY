@@ -34,9 +34,18 @@ $PYTHON_EXEC "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.p
 echo "--> Paso 5: Cargando a Supabase..."
 $PYTHON_EXEC "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py" >> "$LOG_FILE" 2>&1
 
-# 6. Generador de Reporte
+# 6. Generador de Reporte (Headless)
 echo "--> Paso 6: Generando Reporte Semanal..."
 $PYTHON_EXEC "main.py" >> "$LOG_FILE" 2>&1
+
+# 7. Subir a Google Drive
+echo "--> Paso 7: Subiendo a Google Drive..."
+$PYTHON_EXEC "google_drive/drive_uploader.py" >> "$LOG_FILE" 2>&1
+
+# 8. Envío de Correo Final
+echo "--> Paso 8: Enviando correo semanal..."
+# Usamos el gmail_sender optimizado
+$PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos >> "$LOG_FILE" 2>&1
 
 echo "==================================================" >> "$LOG_FILE"
 echo "SECUENCIA SEMANAL COMPLETADA - $(date)" >> "$LOG_FILE"
