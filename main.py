@@ -372,7 +372,8 @@ def run_market_analysis():
         </html>'''
         attractive_leads_report_path.write_text(full_html, encoding="utf-8")
         logger.info("Reporte de leads atractivos generado con éxito.")
-        webbrowser.open(attractive_leads_report_path.as_uri())
+        if sys.platform != 'linux':
+            webbrowser.open(attractive_leads_report_path.as_uri())
 
         # --- 3. Generar HTML para Gmail ---
         gmail_report_path = base_output_dir / "outputs" / f"gmail_attractive_leads_{today_str}.html"
@@ -393,7 +394,8 @@ def run_market_analysis():
     # ===================================================================
     
     logger.info("="*60 + "\nPROCESO FINALIZADO\n" + "="*60)
-    webbrowser.open(main_report_html_path.as_uri())
+    if sys.platform != 'linux':
+        webbrowser.open(main_report_html_path.as_uri())
 
 if __name__ == "__main__":
     run_market_analysis()

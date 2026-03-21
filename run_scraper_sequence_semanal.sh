@@ -3,9 +3,9 @@
 # Secuencia Semanal Scraper NeoAuto - LINUX
 # Basado en la versión de Windows creada hoy
 
-PROJECT_DIR="/home/rgutz/Scraper.Neoauto" # Ajustar según ruta real en Linux
+PROJECT_DIR="/home/richgutz/Scraper.Neoauto" # Ajustar según ruta real en Linux
 LOG_FILE="$PROJECT_DIR/scraper_sequence_semanal.log"
-PYTHON_EXEC="python3"
+PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
 
 echo "==================================================" >> "$LOG_FILE"
 echo "INICIANDO SECUENCIA SEMANAL - $(date)" >> "$LOG_FILE"
