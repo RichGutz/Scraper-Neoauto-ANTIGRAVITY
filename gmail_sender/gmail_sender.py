@@ -175,6 +175,7 @@ def main():
     parser.add_argument('--retardo-segundos', type=int, default=0, help='Delay in seconds between cycles.')
     parser.add_argument('--drive-link', type=str, help='Google Drive link to include in the email.', default=None) # NEW
     parser.add_argument('--pdf-path', type=str, help='Absolute path to the PDF file to attach.', default=None) # NEW PDF PATH
+    parser.add_argument('--html-path', type=str, help='Path to the HTML file for email body.', default=None) # NEW HTML PATH
     args = parser.parse_args()
 
     logger.info("--- INITIATING EMAIL SENDER SCRIPT ---")
@@ -197,7 +198,12 @@ def main():
     try:
         script_dir = Path(__file__).parent
         outputs_dir = script_dir.parent / "outputs"
-        html_file_path = outputs_dir / "gmail_reporte_beta.html"
+        
+        if args.html_path:
+            html_file_path = Path(args.html_path)
+        else:
+            html_file_path = outputs_dir / "gmail_reporte_beta.html"
+            
         html_filename = html_file_path.name
         logger.info(f"Report file to send: {html_file_path}")
     except Exception as e:

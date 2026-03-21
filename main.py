@@ -388,6 +388,10 @@ def run_market_analysis():
 
         gmail_report_path.write_text(gmail_html, encoding="utf-8")
         logger.info("HTML para Gmail generado con éxito.")
+        
+        # Guardar una copia con nombre fijo para el automatizador
+        latest_gmail_path = base_output_dir / "outputs" / "gmail_latest_weekly.html"
+        latest_gmail_path.write_text(gmail_html, encoding="utf-8")
 
     else:
         logger.info("No se encontraron leads atractivos que cumplan con los criterios.")

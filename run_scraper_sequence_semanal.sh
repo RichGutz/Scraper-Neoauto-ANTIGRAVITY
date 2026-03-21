@@ -44,8 +44,8 @@ $PYTHON_EXEC "google_drive/drive_uploader.py" >> "$LOG_FILE" 2>&1
 
 # 8. Envío de Correo Final
 echo "--> Paso 8: Enviando correo semanal..."
-# Usamos el gmail_sender optimizado
-$PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos >> "$LOG_FILE" 2>&1
+# Usamos el gmail_sender optimizado con el reporte semanal generado
+$PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos --html-path "$PROJECT_DIR/outputs/gmail_latest_weekly.html" >> "$LOG_FILE" 2>&1
 
 echo "==================================================" >> "$LOG_FILE"
 echo "SECUENCIA SEMANAL COMPLETADA - $(date)" >> "$LOG_FILE"
