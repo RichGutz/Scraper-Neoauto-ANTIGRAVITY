@@ -1280,6 +1280,22 @@ async def main():
     print("   - Hero images: 600px width, 60% quality")
     print("   - Gallery images: 400px width, 55% quality")
     print("   - Expected PDF size: ~10MB (down from ~40MB)")
+    
+    # --- LIMPIEZA DE BASURA TEMPORAL EN VPS ---
+    import shutil
+    print("\n--- LIMPIEZA DE TEMPORALES (Evitar Bloat de Hostinger) ---")
+    try:
+        # Borrar el HTML gigante
+        if os.path.exists(html_filename):
+            os.remove(html_filename)
+        
+        # Borrar toda la carpeta de imágenes descargadas
+        img_dir = os.path.join(base_dir, "downloaded_images")
+        if os.path.exists(img_dir):
+            shutil.rmtree(img_dir, ignore_errors=True)
+            print(f"Carpeta pesada '{img_dir}' y HTML temporal eliminados con éxito del disco duro.")
+    except Exception as e:
+        print(f"Advertencia: No se pudieron borrar todos los temporales > {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
