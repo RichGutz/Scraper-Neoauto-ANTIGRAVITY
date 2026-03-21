@@ -1194,9 +1194,23 @@ async def main():
     if current_dir not in sys.path:
         sys.path.insert(0, current_dir)
     
-    import gui_config
-    print("Waiting for user input...")
-    user_filters = gui_config.get_user_filters(data_summary)
+    import json
+    try:
+        if sys.platform == 'linux':
+            print("Linux environment detected. Bypassing GUI.")
+            raise ImportError("Headless setup")
+        import gui_config
+        print("Waiting for user input...")
+        user_filters = gui_config.get_user_filters(data_summary)
+    except ImportError:
+        print("Headless mode active. Loading last_filters.json...")
+        filters_path = os.path.join(current_dir, "last_filters.json")
+        if os.path.exists(filters_path):
+            with open(filters_path, 'r', encoding='utf-8') as f:
+                user_filters = json.load(f)
+        else:
+            print("No last_filters.json found. Using defaults.")
+            user_filters = {'km_max': 150000, 'year_min': 2015, 'days_back': 30, 'selected_map': {}, 'fuels': ["Gasolina", "Diesel"]}
     
     if not user_filters:
         print("User cancelled the operation.")
