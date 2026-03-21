@@ -13,3 +13,7 @@ selenium
 webdriver-manager
 pandas
 weasyprint
+playwright
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
