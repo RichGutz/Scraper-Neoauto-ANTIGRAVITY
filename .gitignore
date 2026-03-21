@@ -45,6 +45,7 @@ model_pages/
 
 # Credenciales y Secretos (¡NO SUBIR!)
 .env
+github_token.txt
 *credentials*.json
 *token*.json
 key.json
