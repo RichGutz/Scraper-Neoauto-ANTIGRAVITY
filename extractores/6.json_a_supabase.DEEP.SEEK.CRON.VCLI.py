@@ -178,13 +178,12 @@ def importar_json_a_supabase(filepath: str):
             print(f"Error al insertar datos de '{filename}' en Supabase: {e}")
 
     finally:
-        # Paso final: Mover el archivo a la carpeta de procesados
+        # Paso final: Eliminar el archivo .json para no acumular basura (Hostinger)
         try:
-            destination_path = PROCESSED_FOLDER / filename
-            shutil.move(str(filepath), str(destination_path))
-            print(f"Archivo '{filename}' movido a '{destination_path}'")
+            os.remove(filepath)
+            print(f"Archivo JSON temporal eliminado: '{filename}'")
         except Exception as e:
-            print(f"¡CRÍTICO! Error al mover el archivo procesado '{filename}': {e}")
+            print(f"¡CRÍTICO! Error al eliminar el archivo procesado '{filename}': {e}")
             print("El archivo podría ser procesado de nuevo en la siguiente ejecución.")
         print(f"--- Fin del procesamiento para: {filename} ---")
 

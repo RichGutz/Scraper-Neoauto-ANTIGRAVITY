@@ -446,13 +446,12 @@ def process_single_file(input_path: str, output_path: str, reglas_path: str):
             json.dump(resultado_final_original, f, indent=4, ensure_ascii=False)
         print(f"Resultados guardados en: {output_path}")
         
-        # Renombrar el archivo .txt de origen para marcarlo como procesado
+        # Eliminar el archivo .txt de origen de forma definitiva para ahorrar espacio (Hostinger)
         try:
-            processed_txt_path = input_path.replace('.txt', '_procesado.txt')
-            os.rename(input_path, processed_txt_path)
-            print(f"Archivo de texto de origen renombrado a: {os.path.basename(processed_txt_path)}")
+            os.remove(input_path)
+            print(f"Archivo de texto temporal eliminado: {os.path.basename(input_path)}")
         except OSError as e:
-            print(f"Error al renombrar el archivo {input_path}: {e}")
+            print(f"Error al eliminar el archivo temporal {input_path}: {e}")
 
     except IOError as e:
         print(f"Error al guardar el archivo de salida: {e}")
