@@ -5,7 +5,8 @@ from threading import Thread
 
 # Configuration
 sys.stdout.reconfigure(encoding='utf-8')
-SCRIPT_TO_RUN = r"extractores\4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
+import os
+SCRIPT_TO_RUN = os.path.join("extractores", "4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py")
 NUM_INSTANCES = 6
 
 def stream_output(process, prefix):
