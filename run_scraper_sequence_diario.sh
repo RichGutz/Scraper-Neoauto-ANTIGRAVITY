@@ -24,7 +24,7 @@ cd "$PROJECT_DIR" || { echo "ERROR: No se pudo acceder a $PROJECT_DIR"; exit 1; 
 # 1. Extraccion de URLs (1 dia)
 echo ""
 echo "--> Ejecutando Extraccion de URLs..."
-$PYTHON_EXEC "extractores/2.DIARIO.daily_urls_extraction.VCLI.py"
+$PYTHON_EXEC -u "extractores/2.DIARIO.daily_urls_extraction.VCLI.py"
 
 if [ $? -ne 0 ]; then
     echo "ERROR en Extraccion de URLs."
@@ -42,8 +42,8 @@ echo "--> Scrapers finalizados."
 
 # 4. Procesamiento JSON y Supabase
 echo "--> Procesando JSONs..."
-$PYTHON_EXEC "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
-$PYTHON_EXEC "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py"
+$PYTHON_EXEC -u "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
+$PYTHON_EXEC -u "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py"
 
 # 5. Generador de Reporte (General/Legado) - DESACTIVADO TEMPORALMENTE
 # echo "--> Generando Reporte General..."
