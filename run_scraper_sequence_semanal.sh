@@ -18,6 +18,12 @@ echo "=================================================="
 
 cd "$PROJECT_DIR" || exit
 
+# 0. Limpieza Preventiva (Evitar basura de ejecuciones fallidas previas)
+echo "--> Paso 0: Limpiando carpetas temporales..."
+rm -vf extractores/results_txt/*.txt >> "$LOG_FILE" 2>&1
+rm -vf extractores/results_json/*.json >> "$LOG_FILE" 2>&1
+rm -vf outputs/*.html >> "$LOG_FILE" 2>&1 # Limpiar reportes viejos para no acumular
+
 # 1. Extraccion V2
 echo "--> Paso 1: Ejecutando Extraccion Semanal V2..."
 $PYTHON_EXEC -u "extractores/2.SEMANAL.extractor_VCLI_v2.py"
