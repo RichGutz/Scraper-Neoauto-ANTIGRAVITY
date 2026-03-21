@@ -51,11 +51,11 @@ $PYTHON_EXEC -u "extractores/6.json_a_supabase.DEEP.SEEK.CRON.VCLI.py"
 
 # --- Reporte Richard Gutierrez (PDF + Email) ---
 echo "--> Reporte Richard Gutierrez..."
-$PYTHON_EXEC "Autos.Richard.Gutierrez/generate_autos_report.py"
+$PYTHON_EXEC -u "Autos.Richard.Gutierrez/generate_autos_report.py"
 
 # Envio Correo Richard
 echo "--> Enviando correo Richard a..."
-$PYTHON_EXEC "Autos.Richard.Gutierrez/email_result.py"
+$PYTHON_EXEC -u "Autos.Richard.Gutierrez/email_result.py"
 
 
 # --- Reporte General (WKHTMLTOPDF + Drive + Email) --- DESACTIVADO
