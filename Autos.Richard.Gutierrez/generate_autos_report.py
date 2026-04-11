@@ -282,7 +282,8 @@ def filter_data(df, filters):
     
     # Date logic
     print("Converting DateTime...")
-    df.loc[:, 'DateTime'] = pd.to_datetime(df['DateTime'], format='mixed', utc=True, errors='coerce')
+    # Fix for Pandas 3.0+ strict typing: direct assignment avoids DatetimeArray msg mismatch in .loc
+    df['DateTime'] = pd.to_datetime(df['DateTime'], format='mixed', utc=True, errors='coerce')
     df = df.dropna(subset=['DateTime'])
     try:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
@@ -333,8 +334,11 @@ def filter_data(df, filters):
     # 4. HARDCODED FILTER: Only Unique Owner vehicles
     if 'unico_dueno' in df.columns:
         print("Applying HARDCODED filter: Only ÚNICO DUEÑO vehicles...")
-        df = df[df['unico_dueno'].astype(str).str.lower() == 'true']
+        # Check for various truthy values just in case (boolean or string)
+        df = df[df['unico_dueno'].astype(str).str.lower().isin(['true', '1', 't', 'yes'])]
         print(f"  After único dueño filter: {len(df)} records")
+    else:
+        print("Warning: 'unico_dueno' column not found. Skipping filter.")
     
     print(f"Filtered down to {len(df)} records.")
     return df

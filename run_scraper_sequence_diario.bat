@@ -86,6 +86,13 @@ echo ================================================== >> "%LOG_FILE%"
 
 echo.
 echo PROCESO FINALIZADO.
+
+REM --- APAGADO AUTOMATICO ---
+echo.
+echo --^> INICIANDO APAGADO DEL SISTEMA EN 60 SEGUNDOS...
+echo --^> INICIANDO APAGADO DEL SISTEMA EN 60 SEGUNDOS... >> "%LOG_FILE%"
+shutdown /s /t 60
+
 popd
 exit /b 0
 

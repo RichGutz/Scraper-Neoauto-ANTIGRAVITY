@@ -4,10 +4,10 @@
 set -e
 
 # --- Configuración ---
-PROJECT_DIR="/home/richgutz/Scraper.Neoauto"
+PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
 LOG_FILE="$PROJECT_DIR/scraper_sequence_semanal.log"
 # Asegúrate de que la ruta a tu entorno virtual (venv) es correcta.
-PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
+PYTHON_EXEC="python3"
 
 # --- Logging ---
 # Redirige toda la salida a un fichero de log y a la consola.
@@ -34,16 +34,15 @@ run_python_script() {
 # --- Secuencia de Ejecución ---
 # --- Secuencia de Ejecución ---
 # run_python_script "extractores/1.SEMANAL.extractor_VCLI.py"  <-- OMITIDO (Funcionalidad integrada en V2)
-run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py" # <-- NUEVO EXTRACTOR V2
+run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py" # <-- NUEVO EXTRACTOR V2 (Descarga las URLs)
 # run_python_script "extractores/2.SEMANAL.car_urls_module_VCLI.py" <-- OMITIDO (Reemplazado por V2)
-run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
+run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py" # <-- Randomiza las URLs para los workers
 
-# --- Ejecución del scraper (una sola instancia) ---
+# --- Ejecución del scraper (8 instancias en paralelo) ---
 echo ""
-echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
-SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
-$PYTHON_EXEC "$SCRIPT_TO_RUN"
-echo "--> Finalizada la instancia del scraper."
+echo "--> Ejecutando 8 instancias paralelas de SCRAPER.NEOAUTO..."
+$PYTHON_EXEC "parallel_launcher_semanal.py"
+echo "--> Finalizadas todas las instancias del scraper."
 # --- Fin de la ejecución ---
 
 run_python_script "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
@@ -64,7 +63,7 @@ fi
 echo ""
 echo "--> Enviando correo con adjuntos vía Python..."
 SUBJECT="Reporte Semanal - $(date +'%Y-%m-%d')"
-$PYTHON_EXEC "/home/richgutz/Scraper.Neoauto/sendgrid_sender.py" --subject "$SUBJECT"
+$PYTHON_EXEC "gmail_sender/gmail_sender.py" --enviar-correos --subject "$SUBJECT" --drive-link "$DRIVE_LINK"
 echo "Proceso de envío finalizado."
 
 
@@ -76,6 +75,6 @@ echo "=================================================="
 
 echo ""
 echo "--> APAGANDO EL EQUIPO..."
-# sudo /sbin/shutdown -h now
+sudo /sbin/shutdown -h now
 
 exit 0

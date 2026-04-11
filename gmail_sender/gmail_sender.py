@@ -175,6 +175,7 @@ def main():
     parser.add_argument('--retardo-segundos', type=int, default=0, help='Delay in seconds between cycles.')
     parser.add_argument('--drive-link', type=str, help='Google Drive link to include in the email.', default=None) # NEW
     parser.add_argument('--pdf-path', type=str, help='Absolute path to the PDF file to attach.', default=None) # NEW PDF PATH
+    parser.add_argument('--subject', type=str, help='Custom subject for the email.', default=None) # NEW
     args = parser.parse_args()
 
     logger.info("--- INITIATING EMAIL SENDER SCRIPT ---")
@@ -197,7 +198,20 @@ def main():
     try:
         script_dir = Path(__file__).parent
         outputs_dir = script_dir.parent / "outputs"
-        html_file_path = outputs_dir / "gmail_reporte_beta.html"
+        
+        # Try to find the latest 'gmail_attractive_leads_*.html'
+        html_files = list(outputs_dir.glob("gmail_attractive_leads_*.html"))
+        if html_files:
+            # Sort by modification time, newest first
+            html_file_path = max(html_files, key=os.path.getmtime)
+        else:
+            # Fallback to legacy name
+            html_file_path = outputs_dir / "gmail_reporte_beta.html"
+            
+        if not html_file_path.exists():
+             logger.critical(f"HTML report file not found in {outputs_dir}")
+             return
+
         html_filename = html_file_path.name
         logger.info(f"Report file to send: {html_file_path}")
     except Exception as e:
@@ -211,17 +225,30 @@ def main():
     destinatarios_info = leer_destinatarios_y_asuntos(RECIPIENT_EMAILS_FILE)
     if not destinatarios_info: logger.critical("PROCESS STOPPED: No recipients found."); return
 
-    new_subject = f"Lista de Leads Calientes {html_filename}"
+    # Determine subject
+    if args.subject:
+        base_subject = args.subject
+    else:
+        base_subject = f"Lista de Leads Calientes {html_filename}"
+
     logger.info(f"--- STARTING EMAIL SEND (Cycles: {args.ciclos}, Delay: {args.retardo_segundos}s) ---")
     for i in range(args.ciclos):
         logger.info(f"--- Starting send cycle {i + 1} of {args.ciclos} ---")
         for dest_info in destinatarios_info:
+            # If custom subject is provided, use it. Otherwise use logic from file or default
+            if args.subject:
+                 final_subject = base_subject
+            else:
+                 # Use subject from file if available, else default
+                 final_subject = dest_info.get('subject', base_subject) # Fallback if 'subject' key missing or empty in file logic (though file reading logic ensures it)
+                 if not final_subject: final_subject = base_subject
+
             logger.info(f"Preparing email for: {dest_info['email']}")
-            mensaje_final = crear_mensaje_email(dest_info['email'], new_subject, cuerpo_html, args.drive_link, args.pdf_path) # MODIFIED
-            logger.debug(f"Attempting to send email to {dest_info['email']} with subject: {new_subject}") # NEW
+            mensaje_final = crear_mensaje_email(dest_info['email'], final_subject, cuerpo_html, args.drive_link, args.pdf_path)
+            logger.debug(f"Attempting to send email to {dest_info['email']} with subject: {final_subject}")
             try:
                 sent_message = service_gmail.users().messages().send(userId='me', body=mensaje_final).execute()
-                logger.info(f"  SUCCESS. Email sent to {dest_info['email']}. Message ID: {sent_message['id']}. Subject: {new_subject}") # MODIFIED
+                logger.info(f"  SUCCESS. Email sent to {dest_info['email']}. Message ID: {sent_message['id']}. Subject: {final_subject}")
                 mover_correo_a_papelera(service_gmail, sent_message['id'])
             except Exception as error:
                 logger.error(f"  ERROR sending email to {dest_info['email']}: {error}")

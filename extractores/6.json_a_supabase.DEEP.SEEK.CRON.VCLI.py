@@ -52,7 +52,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     print("Error: Las variables de entorno SUPABASE_URL o SUPABASE_KEY no están configuradas.")
     exit(1)
 
-SUPABASE_TABLE_NAME: str = 'autos_detalles_diarios'
+SUPABASE_TABLES = ['autos_detalles_diarios', 'autos_detalles']
 SCRIPT_DIR = Path(__file__).resolve().parent
 JSON_INPUT_FOLDER: Path = SCRIPT_DIR / 'results_json'
 PROCESSED_FOLDER: Path = JSON_INPUT_FOLDER / 'PROCESADO'
@@ -138,7 +138,7 @@ def validar_y_extraer_datos(json_data: Dict[str, Any], filename: str) -> Optiona
 
 def importar_json_a_supabase(filepath: str):
     """
-    Procesa un archivo JSON, lo inserta en Supabase y finalmente lo mueve a la carpeta de procesados.
+    Procesa un archivo JSON, lo inserta en las tablas de Supabase y finalmente lo mueve a la carpeta de procesados.
     """
     filename = os.path.basename(filepath)
     print(f"--- Iniciando procesamiento para: {filename} ---")
@@ -156,29 +156,27 @@ def importar_json_a_supabase(filepath: str):
         if data_to_insert is None:
             return
 
-        # Paso 2: Verificar si la URL ya existe en Supabase
+        # Paso 2 & 3: Insertar en cada tabla configurada
         url_to_check = data_to_insert['URL']
-        try:
-            response = supabase.from_(SUPABASE_TABLE_NAME).select("URL").eq("URL", url_to_check).execute()
-            if response.data:
-                print(f"URL '{url_to_check}' ya existe en Supabase. Omitiendo inserción.")
-                return
-        except Exception as e:
-            print(f"Error al verificar URL duplicada en Supabase para '{filename}': {e}")
-            return
-
-        # Paso 3: Insertar los datos en Supabase
-        try:
-            response = supabase.from_(SUPABASE_TABLE_NAME).insert(data_to_insert).execute()
-            if response.data:
-                print(f"Datos de '{filename}' insertados exitosamente.")
-            else:
-                print(f"Inserción de '{filename}' completada (la API no devolvió datos, lo cual es normal).")
-        except Exception as e:
-            print(f"Error al insertar datos de '{filename}' en Supabase: {e}")
+        for table_name in SUPABASE_TABLES:
+            try:
+                # Verificar duplicado en esta tabla específica
+                response_check = supabase.from_(table_name).select("URL").eq("URL", url_to_check).execute()
+                if response_check.data:
+                    print(f"URL '{url_to_check}' ya existe en '{table_name}'. Omitiendo.")
+                else:
+                    # Insertar si no existe
+                    response_insert = supabase.from_(table_name).insert(data_to_insert).execute()
+                    if response_insert.data:
+                        print(f"Datos de '{filename}' insertados exitosamente en '{table_name}'.")
+                    else:
+                        print(f"Inserción en '{table_name}' completada.")
+            except Exception as e:
+                print(f"Error al procesar tabla '{table_name}' para '{filename}': {e}")
 
     finally:
         # Paso final: Mover el archivo a la carpeta de procesados
+        # (Esto se mantiene igual para que solo se haga una vez por archivo)
         try:
             destination_path = PROCESSED_FOLDER / filename
             shutil.move(str(filepath), str(destination_path))

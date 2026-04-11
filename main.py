@@ -178,6 +178,20 @@ def run_market_analysis():
     load_dotenv()
     load_rules()
     
+    # --- CONFIG LOADING FROM GUI ---
+    filters_file = Path(__file__).parent / "Autos.Richard.Gutierrez" / "last_filters.json"
+    year_min_filter = 2010 # Default
+    if filters_file.exists():
+        try:
+            import json
+            with open(filters_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                if 'year_min' in config:
+                    year_min_filter = int(config['year_min'])
+                    logger.info(f"Cargado filtro year_min de GUI: {year_min_filter}")
+        except Exception as e:
+            logger.warning(f"No se pudo cargar {filters_file}: {e}")
+    
     supabase_client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
     
     # Fetch historic data from autos_detalles
@@ -311,7 +325,8 @@ def run_market_analysis():
     
     df_attractive_leads_raw = filter_attractive_leads(
         df_leads=df_leads_latest_session,
-        df_metrics=dashboard_df
+        df_metrics=dashboard_df,
+        year_min=year_min_filter
     )
 
     if not df_attractive_leads_raw.empty:

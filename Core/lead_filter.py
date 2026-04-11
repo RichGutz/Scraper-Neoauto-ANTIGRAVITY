@@ -5,13 +5,14 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-def filter_attractive_leads(df_leads: pd.DataFrame, df_metrics: pd.DataFrame) -> pd.DataFrame:
+def filter_attractive_leads(df_leads: pd.DataFrame, df_metrics: pd.DataFrame, year_min: int = 2010) -> pd.DataFrame:
     """
     Filters for the most attractive leads and prepares the data for reporting.
 
     Args:
         df_leads (pd.DataFrame): DataFrame containing the latest leads.
         df_metrics (pd.DataFrame): DataFrame containing market metrics per model.
+        year_min (int): Minimum year for the vehicle to be included.
 
     Returns:
         pd.DataFrame: A raw DataFrame with attractive leads and calculated opportunity metrics.
@@ -32,8 +33,8 @@ def filter_attractive_leads(df_leads: pd.DataFrame, df_metrics: pd.DataFrame) ->
     if leads_last_day.empty: return pd.DataFrame()
 
     # Year filter
-    leads_filtered_year = leads_last_day[leads_last_day['Year'] >= 2010].copy()
-    logger.info(f"LEAD_FILTER: {len(leads_filtered_year)} leads encontrados desde el año 2010.")
+    leads_filtered_year = leads_last_day[leads_last_day['Year'] >= year_min].copy()
+    logger.info(f"LEAD_FILTER: {len(leads_filtered_year)} leads encontrados desde el año {year_min}.")
     
     if leads_filtered_year.empty: return pd.DataFrame()
 

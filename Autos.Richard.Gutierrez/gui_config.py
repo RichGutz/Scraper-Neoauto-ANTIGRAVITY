@@ -132,12 +132,15 @@ class FilterDialog:
         self.km_max.insert(0, km_default)
         self.km_max.grid(row=0, column=1, padx=5)
         
-        ttk.Label(settings_frame, text="Año Min:").grid(row=0, column=2, padx=5)
-        self.year_min = ttk.Entry(settings_frame, width=6)
+        ttk.Label(settings_frame, text="Antigüedad Max (años):").grid(row=0, column=2, padx=5)
+        self.age_max = tk.Scale(settings_frame, from_=0, to=30, orient="horizontal", showvalue=True, width=10, sliderlength=20)
         current_year = datetime.now().year
-        year_default = str(saved_filters['year_min']) if saved_filters and 'year_min' in saved_filters else str(current_year - 10)
-        self.year_min.insert(0, year_default)
-        self.year_min.grid(row=0, column=3, padx=5)
+        if saved_filters and 'year_min' in saved_filters:
+            age_default = current_year - int(saved_filters['year_min'])
+        else:
+            age_default = 10
+        self.age_max.set(age_default)
+        self.age_max.grid(row=0, column=3, padx=5)
         
         ttk.Label(settings_frame, text="Días atrás:").grid(row=0, column=4, padx=5)
         self.days_back = ttk.Entry(settings_frame, width=5)
@@ -230,7 +233,9 @@ class FilterDialog:
         try:
             # Validate inputs
             km_max_val = float(self.km_max.get())
-            y_min = int(self.year_min.get())
+            age_val = int(self.age_max.get())
+            current_year = datetime.now().year
+            y_min = current_year - age_val
             d_back = int(self.days_back.get())
             
             # Get selected fuels
