@@ -1,0 +1,36 @@
+# DETALLES TECNICOS - DEPLOY ERP_INANDES A HOSTINGER VPS
+# Archivo de continuidad - Para que cualquier IA retome el trabajo exactamente aqui
+# Creado: 2026-04-06 | Claude Sonnet 4.6
+
+=======================================================================
+ESTADO ACTUAL DEL PROYECTO
+=======================================================================
+
+OBJETIVO: Migrar ERP_Inandes de Railway (caido) al VPS de Hostinger
+URL DESTINO: http://inandesh.geeksoft.tech
+REPO GIT: https://github.com/RichGutz/ERP_Inandes.git (PRIVADO - usar token)
+
+=======================================================================
+CREDENCIALES VPS (HOSTINGER)
+=======================================================================
+
+VPS_HOST = 91.108.125.253
+VPS_PORT = 22
+VPS_USER = root
+VPS_PASS = [REDACTED]
+SO      = Ubuntu 22.04 LTS (srv1333009)
+Python  = 3.10.12
+Nginx   = 1.18.0 (ACTIVO y funcionando)
+Disco   = 49G total / 43G libres / 6.3G usados
+
+=======================================================================
+VARIABLES DE ENTORNO Y TOKENS (REDACTED)
+=======================================================================
+GH_TOKEN = [REDACTED]
+GOOGLE_CLIENT_ID = [REDACTED]
+GOOGLE_CLIENT_SECRET = [REDACTED]
+ANTHROPIC_API_KEY = [REDACTED]
+...
+=======================================================================
+EL ERP ESTÁ VIVO Y ESTABLE EN: https://inandesh.geeksoft.tech
+=======================================================================
