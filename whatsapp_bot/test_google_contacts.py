@@ -4,7 +4,13 @@ Verifica si la sincronización con Google Contacts está funcionando
 """
 
 import os
+import sys
 from pathlib import Path
+
+# Configurar consola para soportar emojis UTF-8 en Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -13,7 +19,7 @@ from googleapiclient.discovery import build
 # Configuración
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/contacts']
 BASE_DIR = Path(__file__).parent.parent
-CREDENTIALS_DIR = BASE_DIR / "rpta.automatica.acreedores"
+CREDENTIALS_DIR = BASE_DIR / "gmail_sender" # Actualizado a la ruta unificada
 TOKEN_PATH = CREDENTIALS_DIR / 'token.json'
 CREDENTIALS_PATH = CREDENTIALS_DIR / 'credentials.json'
 
