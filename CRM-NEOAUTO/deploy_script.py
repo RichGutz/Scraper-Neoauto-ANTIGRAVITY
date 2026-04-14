@@ -64,10 +64,17 @@ def ssh_exec(ssh, command):
     print(f"Ejecutando: {command}")
     stdin, stdout, stderr = ssh.exec_command(command)
     exit_status = stdout.channel.recv_exit_status()
-    out = stdout.read().decode().strip()
-    err = stderr.read().decode().strip()
-    if out: print(f"  [OUT]: {out[:500]}")
-    if err and exit_status != 0: print(f"  [ERR]: {err[:500]}")
+    # Decodificar ignorando errores para evitar crash por caracteres raros
+    out = stdout.read().decode('utf-8', errors='ignore').strip()
+    err = stderr.read().decode('utf-8', errors='ignore').strip()
+    
+    # Limpiar para la terminal local de Windows (evitar charmap errors)
+    if out: 
+        out_clean = out.encode('ascii', 'ignore').decode('ascii')
+        print(f"  [OUT]: {out_clean[:500]}")
+    if err and exit_status != 0: 
+        err_clean = err.encode('ascii', 'ignore').decode('ascii')
+        print(f"  [ERR]: {err_clean[:500]}")
     return exit_status == 0
 
 def deploy_to_vps():
@@ -80,10 +87,10 @@ def deploy_to_vps():
     
     try:
         ssh.connect(VPS_HOST, port=VPS_PORT, username=VPS_USER, password=VPS_PASS)
-        print("✓ Conexion SSH Exitosa.")
+        print("[OK] Conexion SSH Exitosa.")
         
         # 1. Instalar dependencias base si faltan (python-venv, git, nginx)
-        ssh_exec(ssh, "apt-get update && apt-get install -y python3-venv git nginx certbot python3-certbot-nginx")
+        ssh_exec(ssh, "export DEBIAN_FRONTEND=noninteractive && apt-get update -qq && apt-get install -yq python3-venv git nginx certbot python3-certbot-nginx")
         
         # 2. Setup Directorio y Git Clone / Pull
         print("\n--- CONFIGURANDO REPOSITORIO ---")
@@ -103,9 +110,9 @@ def deploy_to_vps():
             sftp = ssh.open_sftp()
             sftp.put(local_env_path, remote_env_path)
             sftp.close()
-            print("✓ Archivo .env transferido exitosamente.")
+            print("[OK] Archivo .env transferido exitosamente.")
         else:
-            print(f"⚠️  ERROR: No se encuentra {local_env_path}")
+            print(f"[ERR] ERROR: No se encuentra {local_env_path}")
 
         # 4. Entorno Virtual Python
         print("\n--- INSTALANDO DEPENDENCIAS PYTHON ---")
@@ -133,16 +140,16 @@ def deploy_to_vps():
         # Test y reload Nginx
         if ssh_exec(ssh, "nginx -t"):
             ssh_exec(ssh, "systemctl reload nginx")
-            print(f"✓ Nginx enrutando tráfico a {DOMAIN_NAME}")
+            print(f"[OK] Nginx enrutando trafico a {DOMAIN_NAME}")
         else:
-            print("⚠️ ERROR NGINX: Hubo un problema con la configuracion.")
+            print("[ERR] ERROR NGINX: Hubo un problema con la configuracion.")
 
         # 7. Ejecutar Certbot para Certificado SSL / HTTPS
         print("\n--- EJECUTANDO CERTBOT (HTTPS / SSL) ---")
         ssh_exec(ssh, f"certbot --nginx -d {DOMAIN_NAME} --non-interactive --agree-tos -m contacto@geeksoft.pe --redirect")
         print("\n" + "="*50)
-        print("🚀 DESPLIEGUE COMPLETADO")
-        print(f"🔗 Tu CRM web ya debería estar vivo en: https://{DOMAIN_NAME}")
+        print("DESPLIEGUE COMPLETADO")
+        print(f"URL: https://{DOMAIN_NAME}")
         print("="*50)
 
     except Exception as e:
