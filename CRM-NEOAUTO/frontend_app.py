@@ -109,6 +109,16 @@ def move_lead_state(url, current_state, new_state, notes_history, new_note_text)
         st.error(f"Falla al mover: {str(e)}")
         return False
 
+def save_gyp_and_move(url, gyp_data, current_state, new_state, notes_history, new_note_text):
+    try:
+        # Guardar en la nueva tabla dedicada
+        supabase.table("crm_gyp").insert(gyp_data).execute()
+        # Mover de estado
+        return move_lead_state(url, current_state, new_state, notes_history, new_note_text)
+    except Exception as e:
+        st.error(f"Error al guardar GyP: {e}")
+        return False
+
 def add_note_to_lead(url, notes_history, state, new_note_text):
     import uuid
     note_id = f"Nota-{str(uuid.uuid4())[:6]}"
@@ -221,11 +231,85 @@ for tab, estado in zip(tabs, ESTADOS):
                         key=f"move_sel_{lead['url']}"
                     )
                     motivo = st.text_input("Nota/Motivo del cambio:", key=f"motivo_{lead['url']}")
-                    if st.button("Confirmar Movimiento", type="primary", key=f"confirm_move_{lead['url']}"):
-                        if move_lead_state(lead['url'], estado, avanzar_a, notas, motivo):
-                            st.success(f"Movido a {avanzar_a}")
-                            # Limpiar seleccion para no mostrarlo en el estado viejo
-                            del st.session_state.current_lead
-                            st.rerun()
+                    
+                    # LOGICA GyP: Si se quiere pasar a Vendido
+                    if avanzar_a == "Estado 6: Vendido":
+                        if estado != "Estado 5: Comprado (Stock)":
+                            st.error("❌ Solo los vehículos en 'Comprado (Stock)' pueden liquidarse y pasar a 'Vendido'.")
+                        else:
+                            st.markdown("### 📊 Liquidación GyP (Venta)")
+                            tc = st.number_input("Tipo de Cambio (TC)", value=3.40, step=0.01, format="%.2f", key=f"tc_{lead['url']}")
+                            
+                            col_ing1, col_ing2 = st.columns(2)
+                            with col_ing1:
+                                p_compra = st.number_input("Precio Compra (USD)", value=0.0, step=100.0, key=f"pcompra_{lead['url']}")
+                            with col_ing2:
+                                p_venta = st.number_input("Precio Venta (USD)", value=0.0, step=100.0, key=f"pventa_{lead['url']}")
+                            
+                            st.markdown("#### Costos Operativos (PEN)")
+                            c1, c2, c3 = st.columns(3)
+                            with c1:
+                                notarial = st.number_input("Notarial (PEN)", value=0.0, step=10.0, key=f"notarial_{lead['url']}")
+                                lavado = st.number_input("Lavado (PEN)", value=0.0, step=10.0, key=f"lavado_{lead['url']}")
+                                mecanica = st.number_input("Mecánica (PEN)", value=0.0, step=10.0, key=f"mecanica_{lead['url']}")
+                                cheque = st.number_input("Cheque Gcia (PEN)", value=0.0, step=10.0, key=f"cheque_{lead['url']}")
+                            with c2:
+                                registral = st.number_input("Registral (PEN)", value=0.0, step=10.0, key=f"registral_{lead['url']}")
+                                gasolina = st.number_input("Gasolina (PEN)", value=0.0, step=10.0, key=f"gasolina_{lead['url']}")
+                                llantas = st.number_input("Llantas (PEN)", value=0.0, step=10.0, key=f"llantas_{lead['url']}")
+                                intereses = st.number_input("Intereses (PEN)", value=0.0, step=10.0, key=f"intereses_{lead['url']}")
+                            with c3:
+                                pintura = st.number_input("Pintura/Aros (PEN)", value=0.0, step=10.0, key=f"pintura_{lead['url']}")
+                                cochera = st.number_input("Cochera (PEN)", value=0.0, step=10.0, key=f"cochera_{lead['url']}")
+                                neoauto_ad = st.number_input("Neoauto (PEN)", value=0.0, step=10.0, key=f"neoauto_{lead['url']}")
+                            
+                            comentarios_gyp = st.text_area("Comentarios Financieros:", key=f"comm_gyp_{lead['url']}")
+                            
+                            # Calculos dinámicos
+                            total_costos_pen = (notarial + registral + pintura + lavado + gasolina + cochera + mecanica + llantas + neoauto_ad + cheque + intereses)
+                            total_costos_usd = total_costos_pen / tc if tc > 0 else 0
+                            costo_total_inv_usd = p_compra + total_costos_usd
+                            utilidad_usd = p_venta - costo_total_inv_usd
+                            tir_pct = (utilidad_usd / costo_total_inv_usd * 100) if costo_total_inv_usd > 0 else 0
+                            
+                            st.markdown("---")
+                            rc1, rc2, rc3 = st.columns(3)
+                            rc1.metric("Total Costos", f"S/ {total_costos_pen:,.2f}", f"${total_costos_usd:,.2f} USD")
+                            rc2.metric("Utilidad Neta", f"${utilidad_usd:,.2f}", delta_color="normal")
+                            rc3.metric("TIR (%)", f"{tir_pct:,.2f}%", delta_color="normal")
+                            
+                            if st.button("✅ Grabar GyP y Marcar Vendido", type="primary", key=f"save_gyp_{lead['url']}"):
+                                gyp_data = {
+                                    "lead_url": lead['url'],
+                                    "tipo_cambio": tc,
+                                    "precio_compra_usd": p_compra,
+                                    "precio_venta_usd": p_venta,
+                                    "notarial_pen": notarial,
+                                    "registral_pen": registral,
+                                    "pintura_aros_pen": pintura,
+                                    "lavado_pen": lavado,
+                                    "gasolina_pen": gasolina,
+                                    "cochera_pen": cochera,
+                                    "mecanica_pen": mecanica,
+                                    "llantas_pen": llantas,
+                                    "neoauto_pen": neoauto_ad,
+                                    "cheque_gerencia_pen": cheque,
+                                    "intereses_pen": intereses,
+                                    "utilidad_neta_usd": utilidad_usd,
+                                    "tasa_tir_porcentaje": tir_pct,
+                                    "comentarios": {"notas": comentarios_gyp}
+                                }
+                                if save_gyp_and_move(lead['url'], gyp_data, estado, avanzar_a, notas, motivo):
+                                    st.success(f"GyP guardado y auto movido a {avanzar_a}")
+                                    del st.session_state.current_lead
+                                    st.rerun()
+
+                    else:
+                        # Para cualquier otro estado que no sea Vendido
+                        if st.button("Confirmar Movimiento", type="primary", key=f"confirm_move_{lead['url']}"):
+                            if move_lead_state(lead['url'], estado, avanzar_a, notas, motivo):
+                                st.success(f"Movido a {avanzar_a}")
+                                del st.session_state.current_lead
+                                st.rerun()
             else:
                 st.info("👈 Selecciona 'Inspeccionar Lead' en un contacto para ver los detalles y actualizar su estado.")
