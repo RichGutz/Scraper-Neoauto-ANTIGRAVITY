@@ -415,7 +415,7 @@ def main():
                     telefono_destino = datos['telefono_real']
 
                 # Enviar WhatsApp
-                mensaje_texto = f"Hola {datos['nombre_simple']}! Mi nombre es Richard Gutierrez. Vi tu vehículo en Neoauto: {datos['link']}. Por favor, quisiera saber donde y en que horarios se puede ver el vehiculo?. Gracias. RG"
+                mensaje_texto = f"Hola {datos['nombre_simple']}! Mi nombre es Anny Rojas. Vi tu vehículo en Neoauto: {datos['link']}. Por favor, quisiera saber donde y en que horarios se puede ver el vehiculo?. Gracias. Anny"
                 exito = enviar_whatsapp(driver, telefono_destino, mensaje_texto)
                 
                 if exito:
