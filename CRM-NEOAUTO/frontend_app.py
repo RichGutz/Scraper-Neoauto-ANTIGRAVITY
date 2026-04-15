@@ -269,52 +269,65 @@ for tab, estado in zip(tabs, ESTADOS):
         seleccionados = edited_df[edited_df["Seleccionar"] == True]
         
         if not seleccionados.empty:
-            lead = seleccionados.iloc[0]
-            raw = lead["_raw_row"]
+            lead_sel = seleccionados.iloc[0]
+            # Recuperamos el lead ORIGINAL del df base para evitar que sea un string
+            lead_res = df[df["url"] == lead_sel["_raw_url"]]
+            if lead_res.empty:
+                st.error("No se pudo recuperar la informacion del lead.")
+                st.stop()
+            
+            lead = lead_res.iloc[0]
+            # Mapeamos para que lead se comporte como el diccionario que esperan las herramientas
+            # pero manteniendo el acceso a las columnas enriquecidas
+            n_history = lead.get('notas_actividad', {})
+            if type(n_history) is str: 
+                try: n_history = json.loads(n_history)
+                except: n_history = {}
+            
             st.divider()
             
-            # --- PANEL DE HERRAMIENTAS (SIMETRIA V45 - 2x3 GRID EN COL 3) ---
-            st.markdown(f"#### Panel de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
+            # --- PANEL DE HERRAMIENTAS (SIMETRIA V48 - FIX TYPE) ---
+            st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
             
             c1, c2, c3 = st.columns(3)
             
             with c1:
                 st.write("**Movimiento de Estado**")
-                n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
-                n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Resumen...")
+                n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
+                n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['url']}", placeholder="Resumen...")
             
             with c2:
                 st.write("**Bitacora / Notas**")
-                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['_raw_url']}", height=128, placeholder="Escribe aqui...")
+                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=128, placeholder="Escribe aqui...")
 
             with c3:
                 st.write("**Datos del Vehiculo**")
-                # Micro-grilla 3x2 para los 6 atributos
+                # Micro-grilla 3x2
                 m1, m2 = st.columns(2)
                 with m1:
-                    st.text_input("Marca:", value=raw.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['_raw_url']}")
-                    st.text_input("Precio:", value=lead['Precio'], disabled=True, key=f"pr_{lead['_raw_url']}")
-                    st.text_input("Anio:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
+                    st.text_input("Marca:", value=lead.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['url']}")
+                    st.text_input("Precio:", value=f"${float(lead.get('Price', 0)):,.0f}" if lead.get('Price') else "N/A", disabled=True, key=f"pr_{lead['url']}")
+                    st.text_input("Anio:", value=lead.get('Year', 'N/A'), disabled=True, key=f"yr_{lead['url']}")
                 with m2:
-                    st.text_input("Modelo:", value=raw.get('Model', 'N/A'), disabled=True, key=f"md_{lead['_raw_url']}")
-                    st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dt_{lead['_raw_url']}")
-                    st.text_input("KM:", value=lead['KM'], disabled=True, key=f"km_{lead['_raw_url']}")
+                    st.text_input("Modelo:", value=lead.get('Model', 'N/A'), disabled=True, key=f"md_{lead['url']}")
+                    st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
+                    st.text_input("KM:", value=f"{float(lead.get('Kilometers', 0)):,.0f} km" if lead.get('Kilometers') else "N/A", disabled=True, key=f"km_{lead['url']}")
 
-            # FILA DE BOTONES (ALINEACION DE SUELO TOTAL)
+            # FILA DE BOTONES
             b1, b2, b3 = st.columns(3)
             with b1:
-                if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
-                    if move_lead_state(lead['_raw_url'], estado, n_state, lead['_raw_notas'], n_reason):
+                if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
+                    if move_lead_state(lead['url'], estado, n_state, n_history, n_reason):
                         st.success("Estado actualizado")
                         st.rerun()
             with b2:
-                if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['_raw_url']}"):
-                    if add_note_to_lead(lead['_raw_url'], lead['_raw_notas'], estado, n_text):
+                if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
+                    if add_note_to_lead(lead['url'], n_history, estado, n_text):
                         st.success("Nota guardada")
                         st.rerun()
             with b3:
                 st.markdown(f'''
-                <a href="{lead['_raw_url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
+                <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
                 Ver Aviso en NeoAuto
                 </a>
                 ''', unsafe_allow_html=True)
