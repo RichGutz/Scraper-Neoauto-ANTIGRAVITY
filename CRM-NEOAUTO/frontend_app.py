@@ -247,40 +247,38 @@ for tab, estado in zip(tabs, ESTADOS):
             lead = seleccionados.iloc[0]
             st.divider()
             
-            # --- PANEL DE HERRAMIENTAS (HORIZONTAL ULTRA-COMPACTO) ---
+            # --- PANEL DE HERRAMIENTAS (SIMETRIA V42) ---
             st.markdown(f"#### Herramientas de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
             
-            # Layout de 3 columnas para acciones
             h_col1, h_col2, h_col3 = st.columns([1.2, 1.2, 1.5])
             
             with h_col1:
-                # 1. Cambio de Estado
-                with st.container():
-                    st.write("**Mover de Etapa**")
-                    next_s = st.selectbox("Seleccionar nuevo:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
-                    motivo = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}")
-                    if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
-                        if move_lead_state(lead['_raw_url'], estado, next_s, lead['_raw_notas'], motivo):
-                            st.success("Listo")
-                            st.rerun()
+                # 1. Cambio de Estado (Fija la altura total)
+                st.write("**Mover de Etapa**")
+                next_s = st.selectbox("Seleccionar nuevo:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
+                motivo = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Resumen del cambio...")
+                if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
+                    if move_lead_state(lead['_raw_url'], estado, next_s, lead['_raw_notas'], motivo):
+                        st.success("Listo")
+                        st.rerun()
             
             with h_col2:
-                # 2. Agregar Nota Rapida
-                with st.container():
-                    st.write("**Notas del Lead**")
-                    n_text = st.text_area("Escribir nota:", key=f"txt_{lead['_raw_url']}", height=68, placeholder="Seguimiento...")
-                    if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['_raw_url']}"):
-                        if add_note_to_lead(lead['_raw_url'], lead['_raw_notas'], estado, n_text):
-                            st.success("Guardado")
-                            st.rerun()
+                # 2. Agregar Nota Rapida (Altura calculada para simetria: 121px aprox)
+                st.write("**Notas del Lead**")
+                n_text = st.text_area("Escribir nota:", key=f"txt_{lead['_raw_url']}", height=121, placeholder="Seguimiento detallado...")
+                if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['_raw_url']}"):
+                    if add_note_to_lead(lead['_raw_url'], lead['_raw_notas'], estado, n_text):
+                        st.success("Guardado")
+                        st.rerun()
 
             with h_col3:
-                # 3. Agenda Calendar (Solo en Estado 2)
+                # 3. Agenda / Info (Limitado para no romper la altura)
                 if estado == "Estado 2: Cita Concertada":
                     st.write("**Agenda Calendar**")
                     c_col_a, c_col_b = st.columns(2)
                     with c_col_a: c_d = st.date_input("Fecha", key=f"cd_{lead['_raw_url']}")
                     with c_col_b: c_t = st.time_input("Hora", key=f"ct_{lead['_raw_url']}")
+                    st.write("") # Espaciador para empujar el boton abajo
                     if st.button("Generar Enlace Calendar", use_container_width=True, key=f"btn_cal_{lead['_raw_url']}"):
                          import urllib.parse
                          start = pd.to_datetime(f"{c_d} {c_t}")
@@ -288,10 +286,18 @@ for tab, estado in zip(tabs, ESTADOS):
                          dates = f"{start.strftime('%Y%m%dT%H%M%S')}/{end.strftime('%Y%m%dT%H%M%S')}"
                          q = {"action": "TEMPLATE", "text": f"Cita Auto - {lead['Vehiculo']}", "dates": dates}
                          link = f"https://calendar.google.com/calendar/u/0/render?{urllib.parse.urlencode(q)}"
-                         st.markdown(f'<a href="{link}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:5px;border-radius:4px;text-decoration:none;">Lanzar Calendario</a>', unsafe_allow_html=True)
+                         st.markdown(f'<a href="{link}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:5px;border-radius:4px;text-decoration:none;font-weight:bold;">Lanzar Calendario</a>', unsafe_allow_html=True)
                 else:
-                    st.write("**Info Vehiculo**")
-                    st.info(f"Año: {lead['Anio']} | Distrito: {lead['Distrito']}")
+                    st.write("**Informacion Tecnica**")
+                    # Bloque de info compacto para no superar la altura de las cajas laterales
+                    st.markdown(f"""
+                    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; border-left: 5px solid #0068c9; height: 121px;">
+                        <p style="margin:0; font-size: 0.9rem;"><b>Año:</b> {lead['Anio']}</p>
+                        <p style="margin:0; font-size: 0.9rem;"><b>Distrito:</b> {lead['Distrito']}</p>
+                        <p style="margin:10px 0 0 0; font-size: 0.8rem; color: #666;">Datos sincronizados desde tabla de detalles.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.button("Info Bloqueada", disabled=True, use_container_width=True, key=f"dummy_{lead['_raw_url']}")
             
             # --- ZONA DE HISTORIAL (ABAJO DEL TODO) ---
             st.divider()
@@ -306,3 +312,4 @@ for tab, estado in zip(tabs, ESTADOS):
             else:
                 for key, val in notas.items():
                     st.markdown(f"* **{key}**: {val}")
+
