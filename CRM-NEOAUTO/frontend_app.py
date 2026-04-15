@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 import datetime
 from google_auth import get_google_creds
 from calendar_utils import create_calendar_event
-from streamlit_oauth import OAuth2Component
-import base64
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -57,58 +55,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# --- CONFIG LOGIN OAUTH ---
-AUTHORIZE_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_URL      = "https://oauth2.googleapis.com/token"
-REVOKE_URL     = "https://oauth2.googleapis.com/revoke"
-
-# Se cargarán del .env (para local) o de las variables de entorno del servidor (VPS/Railway)
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
-CLIENT_ID      = os.getenv("GOOGLE_CLIENT_ID")
-CLIENT_SECRET  = os.getenv("GOOGLE_CLIENT_SECRET")
-ALLOWED_EMAILS = ["annyred9@gmail.com", "rgutil@gmail.com"]
+# --- LOGIN SIMPLE ---
+ALLOWED_USERS = ["anny", "rgutil", "annyred9", "rgutil@gmail.com", "annyred9@gmail.com"]
+SECRET_PASS = "VivaLaVida2026$"
 
 def login_ui():
     st.markdown("""<style>[data-testid="stSidebar"]{display:none;}</style>""", unsafe_allow_html=True)
     _, col, _ = st.columns([1,2,1])
     with col:
         st.markdown("<h2 style='text-align:center;margin-top:20px'>CRM NeoAuto - Acceso Seguro</h2>", unsafe_allow_html=True)
-        st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Por favor, inicia sesión con tu cuenta de Google</h5><br>", unsafe_allow_html=True)
+        st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Introduce tus credenciales de acceso</h5><br>", unsafe_allow_html=True)
         
-        if not CLIENT_ID or not CLIENT_SECRET:
-            st.error("Credenciales OAuth no configuradas (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env).")
-            return
-
-        oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REVOKE_URL)
-        
-        # En VPS (Hostinger) se fuerza el callback a producción si está configurado en .env
-        env_redirect = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8501")
-        
-        try:
-            result = oauth2.authorize_button(
-                name="Iniciar Sesión con Google",
-                icon="https://www.google.com.tw/favicon.ico",
-                redirect_uri=env_redirect,
-                scope="openid email profile",
-                key="google", use_container_width=True, pkce="S256"
-            )
-        except Exception as e:
-            st.warning(f"Error OAuth: {e}")
-            return
+        with st.form("login_form"):
+            username = st.text_input("Usuario o Correo")
+            password = st.text_input("Contraseña", type="password")
+            submit_btn = st.form_submit_button("Ingresar", use_container_width=True)
             
-        if result:
-            id_token = result.get("token", {}).get("id_token")
-            if id_token:
-                p = id_token.split(".")[1]; p += "="*(-len(p)%4)
-                decoded = json.loads(base64.b64decode(p))
-                email = decoded.get("email")
-                
-                if email in ALLOWED_EMAILS:
-                    st.session_state["user_info"] = decoded
-                    st.session_state["token"] = result["token"]
+            if submit_btn:
+                if username.strip().lower() in ALLOWED_USERS and password == SECRET_PASS:
+                    st.session_state["user_info"] = {"email": username.lower(), "name": username.split("@")[0].capitalize()}
                     st.rerun()
                 else:
-                    st.error(f"Acceso denegado. El email '{email}' no está autorizado.")
+                    st.error("Credenciales incorrectas o usuario no autorizado.")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
