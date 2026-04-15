@@ -304,14 +304,27 @@ for tab, estado in zip(tabs, ESTADOS):
                 st.write("**Datos del Vehiculo**")
                 # Micro-grilla 3x2
                 m1, m2 = st.columns(2)
+                
+                # Función de ayuda interna para evitar crashes numéricos
+                def safe_val(val, suffix="", is_price=False):
+                    try:
+                        # Si es N/A o vacío, retornar N/A
+                        if not val or str(val).strip().upper() == "N/A": return "N/A"
+                        # Limpiar y convertir
+                        clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
+                        if is_price: return f"${clean_num:,.0f}"
+                        return f"{clean_num:,.0f}{suffix}"
+                    except:
+                        return "N/A"
+
                 with m1:
                     st.text_input("Marca:", value=lead.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['url']}")
-                    st.text_input("Precio:", value=f"${float(lead.get('Price', 0)):,.0f}" if lead.get('Price') else "N/A", disabled=True, key=f"pr_{lead['url']}")
+                    st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"pr_{lead['url']}")
                     st.text_input("Anio:", value=lead.get('Year', 'N/A'), disabled=True, key=f"yr_{lead['url']}")
                 with m2:
                     st.text_input("Modelo:", value=lead.get('Model', 'N/A'), disabled=True, key=f"md_{lead['url']}")
                     st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
-                    st.text_input("KM:", value=f"{float(lead.get('Kilometers', 0)):,.0f} km" if lead.get('Kilometers') else "N/A", disabled=True, key=f"km_{lead['url']}")
+                    st.text_input("KM:", value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"km_{lead['url']}")
 
             # FILA DE BOTONES
             b1, b2, b3 = st.columns(3)
