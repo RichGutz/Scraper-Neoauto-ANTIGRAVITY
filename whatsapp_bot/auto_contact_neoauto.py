@@ -339,11 +339,12 @@ def main():
         return
 
     # 3. Cerrar Chrome si está abierto (para evitar conflictos)
-    print("\nCerrando Chrome si está abierto...")
+    print("\nCerrando Chrome y Brave si están abiertos...")
     import subprocess
     subprocess.run("taskkill /F /IM chrome.exe /T", shell=True, capture_output=True)
+    subprocess.run("taskkill /F /IM brave.exe /T", shell=True, capture_output=True)
     time.sleep(2)
-    print("✓ Chrome cerrado\n")
+    print("✓ Navegadores cerrados\n")
 
 
     # 3. Inicializar Selenium (Solo si hay mensajes)
@@ -361,6 +362,14 @@ def main():
     # chrome_options.add_argument("--headless") # NO usar headless para poder escanear QR
     
     try:
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        if not os.path.exists(chrome_path):
+            print(f"ADVERTENCIA: No se encontro Chrome en {chrome_path}")
+            # Intentar sin ruta fija como fallback
+        else:
+            print(f"Usando binario de Chrome: {chrome_path}")
+            chrome_options.binary_location = chrome_path
+
         selenium_service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=selenium_service, options=chrome_options)
         

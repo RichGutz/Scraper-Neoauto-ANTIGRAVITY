@@ -1,0 +1,40 @@
+REGISTRO DE SESIÓN - 15/04/2026
+================================
+
+ESTADO: ESTABLE Y DESPLEGADO EN PRODUCCIÓN
+
+HITOS LOGRADOS:
+--------------
+
+1. [FOOTPRINT & ESTABILIDAD]
+   - Eliminado crash de Streamlit causado por doble llamada a 'st.set_page_config'.
+   - Implementada validación robusta para fechas de actualización nulas, evitando errores de tipo string.
+   - Eliminados bloques de código redundantes al final de 'frontend_app.py' que causaban KeyErrors.
+
+2. [MIGRACIÓN DE FUNNEL]
+   - Renombrado global de estados: "Estado 4: Descartado" pasa a ser "Estado 4: Cerrado".
+   - Actualización estética: La pestaña "Caídos" ahora se visualiza como "Cerrado".
+   - Sincronización SQL: Se actualizaron todos los registros históricos en Supabase para mantener la consistencia con el nuevo nombre.
+
+3. [RESET DE LEADS]
+   - Identificación y reseteo manual de los leads actuales (Hyundai Tucson y Toyota Corolla) al "Estado 1: 1er Contacto WhatsApp".
+   - Limpieza de estados de prueba en la base de datos.
+
+4. [GESTIÓN DE DESPLIEGUE]
+   - Recuperación de scripts críticos de la rama de backup MORNING: F1 (Test), F3 (Full Deploy) y F3_FAST_DEPLOY (Ipso Facto).
+   - Documentación de uso de scripts en 'manual deployment.txt'.
+
+5. [OPTIMIZACIÓN DE WHATSAPP & BROWSER]
+   - UI: La columna WhatsApp ahora muestra el número telefónico real como link dinámico (wa.me) sin prefijos hardcodeados.
+   - AUTOMATIZACIÓN: Forzado técnico de Google Chrome (ruta absoluta C:\Program Files\Google\Chrome\Application\chrome.exe) en el script del bot Selenium.
+   - LIMPIEZA: El disparador (.bat) ahora cierra procesos de Brave y Chrome antes de iniciar para asegurar independencia de sesiones.
+
+VERIFICACIÓN FINAL:
+------------------
+- URL Producción: crm-neoauto.geeksoft.tech (OK)
+- Conexión SSH: Operativa (F1 Test OK)
+- Sistema de Despliegue: FAST_DEPLOY operativo en < 10 segundos.
+- Navegador: Chrome lanza correctamente los chats de WhatsApp desde el CRM y el Bot.
+
+SESIÓN FINALIZADA CON ÉXITO.
+============================
