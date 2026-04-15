@@ -127,10 +127,9 @@ def fetch_leads():
         contacts = resp.data
         if not contacts: return []
         
-        # 2. Obtener Detalles de Autos (para Marca, Modelo, Año, Distrito)
+        # 2. Obtener Detalles de Autos (para Marca, Modelo, Año, Distrito, Precio, KM)
         urls = [c['url'] for c in contacts]
-        # Dividir en chunks si son demasiados (Supabase limit)
-        resp_details = supabase.table("autos_detalles").select("URL, Make, Model, Year, District").in_("URL", urls).execute()
+        resp_details = supabase.table("autos_detalles").select("URL, Make, Model, Year, District, Price, Kilometers").in_("URL", urls).execute()
         details = resp_details.data
         
         # 3. Merge en Pandas
@@ -138,17 +137,18 @@ def fetch_leads():
         df_d = pd.DataFrame(details)
         
         if not df_d.empty:
-            # Renombrar para unir
             df_d = df_d.rename(columns={"URL": "url"})
             df_final = pd.merge(df_c, df_d, on="url", how="left")
         else:
             df_final = df_c
-            for col in ["Make", "Model", "Year", "District"]: df_final[col] = "En Proceso"
+            for col in ["Make", "Model", "Year", "District", "Price", "Kilometers"]: df_final[col] = "N/A"
             
         return df_final.to_dict('records')
     except Exception as e:
         st.error(f"Error conectando a DB: {e}")
         return []
+
+# --- ... (resto de funciones move_lead_state y add_note_to_lead sin cambios) ---
 
 def move_lead_state(url, current_state, new_state, notes_history, new_note_text):
     notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido de {current_state}. {new_note_text}"
@@ -214,13 +214,16 @@ for tab, estado in zip(tabs, ESTADOS):
                 "Seleccionar": False,
                 "Vendedor": row.get('nombre_vendedor', 'N/A'),
                 "Vehiculo": f"{marca} {modelo}".strip(),
+                "Precio": f"${row.get('Price', 0):,.0f}" if row.get('Price') else "N/A",
                 "Anio": row.get('Year', 'N/A'),
                 "Distrito": row.get('District', 'N/A'),
+                "KM": f"{row.get('Kilometers', 0):,.0f} km" if row.get('Kilometers') else "N/A",
                 "Chat": f"https://wa.me/51{tel}" if tel and tel != "None" else None,
                 "NeoAuto": row['url'],
                 "Fecha": row['fecha_actualizacion'][:10],
                 "_raw_url": row['url'],
-                "_raw_notas": row.get('notas_actividad', {})
+                "_raw_notas": row.get('notas_actividad', {}),
+                "_raw_row": row.to_dict()
             })
             
         grid_df = pd.DataFrame(grid_data)
@@ -230,45 +233,51 @@ for tab, estado in zip(tabs, ESTADOS):
             grid_df,
             column_config={
                 "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
-                "Chat": st.column_config.LinkColumn("WhatsApp", display_text="Abrir Chrome"),
+                "Chat": st.column_config.LinkColumn("WhatsApp", display_text="Chat"),
                 "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
                 "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
-                "_raw_url": None,
-                "_raw_notas": None
+                "_raw_url": None, "_raw_notas": None, "_raw_row": None
             },
             hide_index=True,
             use_container_width=True,
-            key=f"grid_v41_{estado}"
+            key=f"grid_v45_{estado}"
         )
         
         seleccionados = edited_df[edited_df["Seleccionar"] == True]
         
         if not seleccionados.empty:
             lead = seleccionados.iloc[0]
+            raw = lead["_raw_row"]
             st.divider()
             
-            # --- PANEL DE HERRAMIENTAS (SIMETRIA ABSOLUTA V44.2) ---
+            # --- PANEL DE HERRAMIENTAS (SIMETRIA V45 - 2x3 GRID EN COL 3) ---
             st.markdown(f"#### Panel de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
             
-            # FILA DE INPUTS
             c1, c2, c3 = st.columns(3)
             
             with c1:
                 st.write("**Movimiento de Estado**")
                 n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
-                n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Ej: No contesta")
+                n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Resumen...")
             
             with c2:
                 st.write("**Bitacora / Notas**")
-                # Altura ajustada para que el fondo del text_area toque el fondo del input de la col1
                 n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['_raw_url']}", height=128, placeholder="Escribe aqui...")
 
             with c3:
                 st.write("**Datos del Vehiculo**")
-                st.text_input("Año:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
-                st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dst_{lead['_raw_url']}")
+                # Micro-grilla 3x2 para los 6 atributos
+                m1, m2 = st.columns(2)
+                with m1:
+                    st.text_input("Marca:", value=raw.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['_raw_url']}")
+                    st.text_input("Precio:", value=lead['Precio'], disabled=True, key=f"pr_{lead['_raw_url']}")
+                    st.text_input("Anio:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
+                with m2:
+                    st.text_input("Modelo:", value=raw.get('Model', 'N/A'), disabled=True, key=f"md_{lead['_raw_url']}")
+                    st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dt_{lead['_raw_url']}")
+                    st.text_input("KM:", value=lead['KM'], disabled=True, key=f"km_{lead['_raw_url']}")
 
-            # FILA DE BOTONES (INDEPENDIENTE PARA SIMETRIA TOTAL)
+            # FILA DE BOTONES (ALINEACION DE SUELO TOTAL)
             b1, b2, b3 = st.columns(3)
             with b1:
                 if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
@@ -286,6 +295,21 @@ for tab, estado in zip(tabs, ESTADOS):
                 Ver Aviso en NeoAuto
                 </a>
                 ''', unsafe_allow_html=True)
+
+            # --- ZONA DE HISTORIAL ---
+            st.divider()
+            st.markdown("##### Bitacora de Actividad (Historial)")
+            notas = lead['_raw_notas']
+            if type(notas) is str: 
+                try: notas = json.loads(notas)
+                except: notas = {}
+            
+            if not notas:
+                st.caption("No hay actividad registrada todavia.")
+            else:
+                for key, val in notas.items():
+                    st.markdown(f"* **{key}**: {val}")
+
 
             # --- ZONA DE HISTORIAL ---
             st.divider()
