@@ -1,0 +1,24 @@
+=====================================================================
+REGISTRO DE AVANCE - CRM NEOAUTO / BOT LOCAL - 14/04/2026
+=====================================================================
+
+--- 1. OPTIMIZACIÓN DE INTERFAZ (FRONTEND) ---
+- NIVELACIÓN DE PANELES: Se ajustaron las alturas de 'Breve motivo' (150px) y 'Nota de seguimiento' (245px) para lograr simetría absoluta con el panel de 'Datos del Vehículo'.
+- DENSIDAD DE CAMPOS: Se redujeron márgenes superiores y se eliminaron encabezados redundantes para maximizar la visibilidad en el dashboard.
+- BLINDAJE NUMÉRICO: Implementación de la función 'safe_val' para Precios y Kilómetros, evitando crashes por datos tipo string (como "N/A" o "Consultar").
+
+--- 2. SINCRONIZACIÓN Y BASE DE DATOS ---
+- CORRECCIÓN DE TABLA: Se redirigió el guardado del bot local de 'crm_leads' a 'crm_contactos'.
+- MAPEO DE CAMPOS: Sincronización de columnas (url, telefono_whatsapp, nombre_vendedor, estado_embudo, fecha_actualizacion, notas_actividad).
+- INTEGRIDAD DE DATOS: Asegurada la unión con 'autos_detalles_diarios' usando la URL como ID único para jalar datos técnicos del auto.
+- FIX BITÁCORA: Reparado el historial de actividad para leer correctamente 'notas_actividad' desde Supabase.
+
+--- 3. AUTOMATIZACIÓN LOCAL (ANNY-PROOF) ---
+- DISPARADOR DEFINITIVO: Creación de 'DISPARAR_BOT_ANNY.bat' en la raíz para ejecución con un solo clic.
+- FIX .ENV: Corregida la ruta de carga de credenciales (ahora busca en la raíz del proyecto).
+- COMPATIBILIDAD WINDOWS: Eliminación de emojis y caracteres especiales de los prints de consola para evitar el error 'charmap'.
+- LOGS DE DIAGNÓSTICO: Mejorada la salida de errores en 'auto_contact_neoauto.log' para mayor visibilidad con logger.info.
+
+=====================================================================
+ESTADO FINAL: SISTEMA ESTABLE / BOT LOCAL SINCRONIZADO
+=====================================================================
