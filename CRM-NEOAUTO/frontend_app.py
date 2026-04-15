@@ -377,14 +377,17 @@ def main_app():
                 components.iframe(calendar_url, height=600, scrolling=True)
 
     with tabs[-1]:
-        st.subheader("Analizador de Precio de Leads")
-        
-        url_input = st.text_input("Ingresa la URL del vehículo (O presiona Analizar con el campo vacío para ingreso manual):")
-        
+        st.write("Analizador de Precio de Leads")
+        c_url, c_btn = st.columns([5, 1])
+        with c_url:
+            url_input = st.text_input("URL", placeholder="Pega el enlace o deja en blanco para ingreso manual...", label_visibility="collapsed")
+        with c_btn:
+            buscar = st.button("Buscar / Extraer", type="primary", use_container_width=True)
+            
         if "analyzer_data" not in st.session_state:
             st.session_state.analyzer_data = None
             
-        if st.button("🔎 Buscar URL y Extraer", type="primary"):
+        if buscar:
             if url_input:
                 resp = supabase.table("autos_detalles_diarios").select("*").eq("URL", url_input).execute()
                 if resp.data:
@@ -397,28 +400,25 @@ def main_app():
                         "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0,
                         "Transmission": data.get("Transmission", "N/A")
                     }
-                    st.success("✅ Datos extraídos de la base de datos.")
                 else:
                     st.session_state.analyzer_data = "MANUAL"
-                    st.warning("⚠️ El vehículo no se encuentra en la base de datos de Neoauto de hoy. Por favor ingresa los datos a mano.")
+                    st.caption("Vehículo no encontrado en BD diaria. Ingrese datos manual:")
             else:
                 st.session_state.analyzer_data = "MANUAL"
                 
         if st.session_state.analyzer_data == "MANUAL":
-            st.markdown("### 📝 Ingreso Manual de Datos")
             with st.form("manual_analysis_form"):
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    m_make = st.text_input("Marca (Ej: Subaru)")
-                    m_price = st.number_input("Precio ($)", min_value=0, value=10000, step=100)
-                with c2:
-                    m_model = st.text_input("Modelo (Ej: Forester)")
-                    m_km = st.number_input("Kilometraje", min_value=0, value=50000, step=1000)
-                with c3:
-                    m_year = st.number_input("Año", min_value=1990, max_value=datetime.datetime.now().year, value=2018)
-                    m_trans = st.selectbox("Transmisión", ["N/A", "Automática", "Mecánica"])
+                # Todo en una sola fila minimalista
+                c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 2, 1.5, 2, 2, 2, 2])
+                with c1: m_make = st.text_input("Marca", label_visibility="collapsed", placeholder="Marca")
+                with c2: m_model = st.text_input("Modelo", label_visibility="collapsed", placeholder="Modelo")
+                with c3: m_year = st.number_input("Año", min_value=1990, value=2018, format="%d", label_visibility="collapsed")
+                with c4: m_price = st.number_input("US$", min_value=0, value=10000, step=100, label_visibility="collapsed")
+                with c5: m_km = st.number_input("KM", min_value=0, value=50000, step=1000, label_visibility="collapsed")
+                with c6: m_trans = st.selectbox("Trans.", ["N/A", "Automática", "Mecánica"], label_visibility="collapsed")
+                with c7: submit = st.form_submit_button("Calcular", use_container_width=True)
                 
-                if st.form_submit_button("📊 Calcular Rentabilidad", use_container_width=True):
+                if submit:
                     if m_make and m_model:
                         st.session_state.analyzer_data = {
                             "Make": m_make.strip().capitalize(),
@@ -429,15 +429,11 @@ def main_app():
                             "Transmission": m_trans
                         }
                         st.rerun()
-                    else:
-                        st.error("Marca y Modelo son obligatorios.")
 
         if isinstance(st.session_state.analyzer_data, dict):
             t_data = st.session_state.analyzer_data
-            st.markdown("---")
-            st.markdown(f"### 📊 Resultados del Mercado: {t_data['Make']} {t_data['Model']} {t_data['Year']}")
             
-            with st.spinner("Analizando base de datos..."):
+            with st.spinner("..."):
                 query = supabase.table("autos_detalles_diarios") \
                             .select("Price, Kilometers") \
                             .eq("Make", t_data['Make']) \
@@ -448,7 +444,7 @@ def main_app():
                 df_m = pd.DataFrame(resp.data)
                 
                 if df_m.empty:
-                    st.info(f"No hay suficientes datos históricos para comparar {t_data['Make']} {t_data['Model']} {t_data['Year']}.")
+                    st.caption(f"Sin históricos para: {t_data['Make']} {t_data['Model']} {t_data['Year']}.")
                 else:
                     df_m['Price'] = pd.to_numeric(df_m['Price'], errors='coerce')
                     df_m['Kilometers'] = pd.to_numeric(df_m['Kilometers'], errors='coerce')
@@ -460,24 +456,23 @@ def main_app():
                     
                     pct_diff = ((t_data['Price'] - med_price) / med_price) * 100 if med_price > 0 else 0
                     
-                    st.markdown(f"**Muestra evaluada:** {count} vehículos similares.")
+                    color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
+                    verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
+                    dif_text = f"Ahorro: ${(med_price - t_data['Price']):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_data['Price'] - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
                     
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Precio del Lead", f"${t_data['Price']:,.0f}", f"{pct_diff:.1f}% vs Mercado", delta_color="inverse")
-                    c2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
-                    
-                    diff_km = t_data['Kilometers'] - med_km
-                    c3.metric("Kilometraje del Lead", f"{t_data['Kilometers']:,.0f} km", f"{diff_km:,.0f} km vs Mercado", delta_color="inverse")
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    if pct_diff < -5:
-                        dif = med_price - t_data['Price']
-                        st.success(f"### ✅ BUEN TRATO \nPrecio {abs(pct_diff):.1f}% **POR DEBAJO** del mercado. Ahorro estimado: **${dif:,.0f}**")
-                    elif pct_diff > 5:
-                        dif = t_data['Price'] - med_price
-                        st.error(f"### ❌ MAL TRATO \nPrecio {pct_diff:.1f}% **POR ENCIMA** del mercado. Sobreprecio: **${dif:,.0f}**")
-                    else:
-                        st.info(f"### ⚖️ TRATO JUSTO \nEl precio está dentro del {abs(pct_diff):.1f}% del valor estándar de mercado.")
+                    html_compact = f"""
+                    <div style="background-color: #f8f9fa; border-left: 4px solid {color}; padding: 8px 12px; border-radius: 4px; font-family: sans-serif; font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <div style="font-size: 12px; color: #555;"><b>{t_data['Make']} {t_data['Model']} {t_data['Year']}</b> (vs {count} un.)</div>
+                        <div>
+                            <span>Lead: <b>${t_data['Price']:,.0f}</b> ({t_data['Kilometers']:,.0f} km)</span> &nbsp;|&nbsp; 
+                            <span style="color:#666;">Mercado: ${med_price:,.0f} ({med_km:,.0f} km)</span>
+                        </div>
+                        <div style="color: {color}; font-weight: bold;">
+                            {verdict} ({abs(pct_diff):.1f}%) | {dif_text}
+                        </div>
+                    </div>
+                    """
+                    st.markdown(html_compact, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     if "user_info" not in st.session_state:
