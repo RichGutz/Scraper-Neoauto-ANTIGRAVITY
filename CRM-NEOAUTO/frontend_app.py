@@ -177,9 +177,9 @@ def main_app():
     df = pd.DataFrame(all_leads_data)
 
     # Pestañas Superiores (Sin emojis)
-    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos"])
+    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos", "Analizador"])
 
-    for tab, estado in zip(tabs, ESTADOS):
+    for tab, estado in zip(tabs[:-1], ESTADOS):
         with tab:
             state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
             st.subheader(f"{estado} ({len(state_df)})")
@@ -375,6 +375,109 @@ def main_app():
                 
                 import streamlit.components.v1 as components
                 components.iframe(calendar_url, height=600, scrolling=True)
+
+    with tabs[-1]:
+        st.subheader("Analizador de Precio de Leads")
+        
+        url_input = st.text_input("Ingresa la URL del vehículo (O presiona Analizar con el campo vacío para ingreso manual):")
+        
+        if "analyzer_data" not in st.session_state:
+            st.session_state.analyzer_data = None
+            
+        if st.button("🔎 Buscar URL y Extraer", type="primary"):
+            if url_input:
+                resp = supabase.table("autos_detalles_diarios").select("*").eq("URL", url_input).execute()
+                if resp.data:
+                    data = resp.data[0]
+                    st.session_state.analyzer_data = {
+                        "Make": data.get("Make"),
+                        "Model": data.get("Model"),
+                        "Year": int(data.get("Year")) if data.get("Year") else 0,
+                        "Price": float(data.get("Price")) if data.get("Price") else 0.0,
+                        "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0,
+                        "Transmission": data.get("Transmission", "N/A")
+                    }
+                    st.success("✅ Datos extraídos de la base de datos.")
+                else:
+                    st.session_state.analyzer_data = "MANUAL"
+                    st.warning("⚠️ El vehículo no se encuentra en la base de datos de Neoauto de hoy. Por favor ingresa los datos a mano.")
+            else:
+                st.session_state.analyzer_data = "MANUAL"
+                
+        if st.session_state.analyzer_data == "MANUAL":
+            st.markdown("### 📝 Ingreso Manual de Datos")
+            with st.form("manual_analysis_form"):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    m_make = st.text_input("Marca (Ej: Subaru)")
+                    m_price = st.number_input("Precio ($)", min_value=0, value=10000, step=100)
+                with c2:
+                    m_model = st.text_input("Modelo (Ej: Forester)")
+                    m_km = st.number_input("Kilometraje", min_value=0, value=50000, step=1000)
+                with c3:
+                    m_year = st.number_input("Año", min_value=1990, max_value=datetime.datetime.now().year, value=2018)
+                    m_trans = st.selectbox("Transmisión", ["N/A", "Automática", "Mecánica"])
+                
+                if st.form_submit_button("📊 Calcular Rentabilidad", use_container_width=True):
+                    if m_make and m_model:
+                        st.session_state.analyzer_data = {
+                            "Make": m_make.strip().capitalize(),
+                            "Model": m_model.strip().upper(),
+                            "Year": m_year,
+                            "Price": m_price,
+                            "Kilometers": m_km,
+                            "Transmission": m_trans
+                        }
+                        st.rerun()
+                    else:
+                        st.error("Marca y Modelo son obligatorios.")
+
+        if isinstance(st.session_state.analyzer_data, dict):
+            t_data = st.session_state.analyzer_data
+            st.markdown("---")
+            st.markdown(f"### 📊 Resultados del Mercado: {t_data['Make']} {t_data['Model']} {t_data['Year']}")
+            
+            with st.spinner("Analizando base de datos..."):
+                query = supabase.table("autos_detalles_diarios") \
+                            .select("Price, Kilometers") \
+                            .eq("Make", t_data['Make']) \
+                            .ilike("Model", f"%{t_data['Model']}%") \
+                            .eq("Year", t_data['Year'])
+                
+                resp = query.execute()
+                df_m = pd.DataFrame(resp.data)
+                
+                if df_m.empty:
+                    st.info(f"No hay suficientes datos históricos para comparar {t_data['Make']} {t_data['Model']} {t_data['Year']}.")
+                else:
+                    df_m['Price'] = pd.to_numeric(df_m['Price'], errors='coerce')
+                    df_m['Kilometers'] = pd.to_numeric(df_m['Kilometers'], errors='coerce')
+                    df_m = df_m.dropna(subset=['Price'])
+                    
+                    med_price = df_m['Price'].median()
+                    med_km = df_m['Kilometers'].median()
+                    count = len(df_m)
+                    
+                    pct_diff = ((t_data['Price'] - med_price) / med_price) * 100 if med_price > 0 else 0
+                    
+                    st.markdown(f"**Muestra evaluada:** {count} vehículos similares.")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Precio del Lead", f"${t_data['Price']:,.0f}", f"{pct_diff:.1f}% vs Mercado", delta_color="inverse")
+                    c2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
+                    
+                    diff_km = t_data['Kilometers'] - med_km
+                    c3.metric("Kilometraje del Lead", f"{t_data['Kilometers']:,.0f} km", f"{diff_km:,.0f} km vs Mercado", delta_color="inverse")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if pct_diff < -5:
+                        dif = med_price - t_data['Price']
+                        st.success(f"### ✅ BUEN TRATO \nPrecio {abs(pct_diff):.1f}% **POR DEBAJO** del mercado. Ahorro estimado: **${dif:,.0f}**")
+                    elif pct_diff > 5:
+                        dif = t_data['Price'] - med_price
+                        st.error(f"### ❌ MAL TRATO \nPrecio {pct_diff:.1f}% **POR ENCIMA** del mercado. Sobreprecio: **${dif:,.0f}**")
+                    else:
+                        st.info(f"### ⚖️ TRATO JUSTO \nEl precio está dentro del {abs(pct_diff):.1f}% del valor estándar de mercado.")
 
 if __name__ == "__main__":
     if "user_info" not in st.session_state:
