@@ -138,7 +138,7 @@ def fetch_leads():
         
         # 2. Obtener Detalles de Autos (para Marca, Modelo, Año, Distrito, Precio, KM)
         urls = [c['url'] for c in contacts]
-        resp_details = supabase.table("autos_detalles").select("URL, Make, Model, Year, District, Price, Kilometers").in_("URL", urls).execute()
+        resp_details = supabase.table("autos_detalles_diarios").select("URL, Make, Model, Year, District, Price, Kilometers").in_("URL", urls).execute()
         details = resp_details.data
         
         # 3. Merge en Pandas
