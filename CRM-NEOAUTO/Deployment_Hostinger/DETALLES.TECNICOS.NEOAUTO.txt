@@ -1,0 +1,33 @@
+# DETALLES TECNICOS - CRM NEOAUTO V40 (HOSTINGER VPS)
+# Actualizado: 2026-04-14 - Limpieza de Secretos y UI de Tablas
+
+=======================================================================
+ESTADO ACTUAL
+=======================================================================
+URL: https://crm-neoauto.geeksoft.tech
+MODO: Producción (Streamlit + Nginx + SSL Certbot)
+UI: Grid Maestro (Alta Densidad) sin Emojis.
+
+=======================================================================
+PROPIEDADES VPS
+=======================================================================
+IP: 91.108.125.253
+USER: root
+PASS: doHtFib1poV+f0F7
+DIR: /opt/crm_neoauto
+APP PORT: 8502
+
+=======================================================================
+COMPONENTES CLAVE
+=======================================================================
+1. DB: Supabase (Tabla crm_contactos)
+2. BOT: auto_contact_neoauto.py (Lee Gmail Anny -> Dispara WA Web)
+3. UI: frontend_app.py (Interfaz de control del funnel)
+4. DEPLOY: F3_FAST_DEPLOY.py (Actualización en < 5 seg)
+
+=======================================================================
+NOTAS DE SEGURIDAD
+=======================================================================
+- El historial de Git ha sido saneado para eliminar tokens accidentales.
+- NO subir archivos .json de credenciales de Google al repo publico.
+=======================================================================

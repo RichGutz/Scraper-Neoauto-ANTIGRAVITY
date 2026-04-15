@@ -16,7 +16,7 @@ st.set_page_config(
 # --- ESTILOS MODERNOS ---
 st.markdown("""
 <style>
-    /* Asegurar que las tabs resalten visualmente y tengan 50% mas de amplitud en promedio */
+    /* Tabs Corporativos */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         display: flex;
@@ -24,7 +24,7 @@ st.markdown("""
         width: 100%;
     }
     .stTabs [data-baseweb="tab"] {
-        flex-grow: 1; /* Forzar el estiramiento 50% */
+        flex-grow: 1;
         height: 60px;
         font-size: 1rem;
         white-space: pre-wrap;
@@ -39,25 +39,6 @@ st.markdown("""
         border-bottom: 3px solid #0068c9;
         font-weight: bold;
     }
-    /* Estilo para las cards de leads */
-    .lead-card {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        background: white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-        margin-bottom: 1rem;
-        border-left: 4px solid #1a4e8c;
-    }
-    .lead-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #1f2937;
-        margin-bottom: 0.2rem;
-    }
-    .lead-info {
-        font-size: 0.9rem;
-        color: #4b5563;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,17 +46,9 @@ st.markdown("""
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
 def init_connection() -> Client:
-    # Buscar el .env en la raiz del proyecto Scraper.Neoauto
     load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
-    
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_KEY")
-    
-    if not url or not key:
-        # Fallback a Secrets si estamos en Streamlit Cloud (por si acaso)
-        url = st.secrets.get("SUPABASE_URL")
-        key = st.secrets.get("SUPABASE_KEY")
-        
     return create_client(url, key)
 
 supabase = init_connection()
@@ -100,9 +73,7 @@ def fetch_leads():
         return []
 
 def move_lead_state(url, current_state, new_state, notes_history, new_note_text):
-    # Actualizar el JSONB
     notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido desde {current_state}. Nota: {new_note_text}"
-    
     try:
         supabase.table("crm_contactos").update({
             "estado_embudo": new_state,
@@ -129,142 +100,120 @@ def add_note_to_lead(url, notes_history, state, new_note_text):
 
 
 # --- HEADER ---
-st.title("🚗 CRM NeoAuto")
-st.markdown("Gestión del Funnel de Compras.")
+st.title("CRM NeoAuto")
+st.markdown("Gestión del pipeline de compras.")
 st.divider()
 
 # --- CARGA DE DATOS ---
-with st.spinner("Cargando pipeline..."):
+with st.spinner("Cargando contactos..."):
     all_leads = fetch_leads()
 
 if not all_leads:
-    st.info("No hay contactos en la base de datos todavía. Procesa los correos de NeoAuto usando el bot para alimentarlo.")
+    st.info("No hay contactos en la base de datos.")
     st.stop()
 
 df = pd.DataFrame(all_leads)
 
-# Pestañas Superiores
-tabs = st.tabs(["💬 WhatsApp", "🗓️ Citas", "👁️ Visitas", "❌ Caídos", "🚗 Comprados", "💰 Vendidos"])
+# Pestañas Superiores (Sin emojis)
+tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Caidos", "Comprados", "Vendidos"])
 
-# Iterar sobre cada Estado y su Tab
 for tab, estado in zip(tabs, ESTADOS):
     with tab:
-        # Filtrar DF para este estado
         state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
-        
         st.subheader(f"{estado} ({len(state_df)})")
         
         if state_df.empty:
-            st.write("No hay contactos activos en esta etapa.")
+            st.write("Sin contactos en esta etapa.")
             continue
-        
-        # Grid para Cards de Leads vs Visualizador
-        col_list, col_viewer = st.columns([1, 1.5])
-        
-        with col_list:
-            # Renderizamos lista compacta de leads
-            st.markdown("##### Leads Activos")
             
-            for index, row in state_df.iterrows():
-                # Card
-                url = row['url']
-                nombre = row['nombre_vendedor'] or "Sin Nombre"
-                telefono = row['telefono_whatsapp'] or "Sin Teléfono"
-                fecha = row['fecha_actualizacion'][:10]
-                
-                with st.container():
-                    st.markdown(f"""
-                    <div class="lead-card">
-                        <div class="lead-title">{nombre}</div>
-                        <div class="lead-info">📱 {telefono} | 📅 {fecha}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Botón para inspeccionar
-                    if st.button(f"🔍 Inspeccionar Lead", key=f"btn_insp_{url}_{estado}"):
-                        st.session_state.current_lead = row.to_dict()
-                        
-        with col_viewer:
-            if 'current_lead' in st.session_state and st.session_state.current_lead['estado_embudo'] == estado:
-                lead = st.session_state.current_lead
-                st.markdown(f"### Detalles del Lead")
-                st.write(f"**Vendedor:** {lead.get('nombre_vendedor', 'N/A')}")
-                st.write(f"**WhatsApp:** +51{lead.get('telefono_whatsapp', 'N/A')} [Contactar](https://wa.me/51{lead.get('telefono_whatsapp', '')})")
-                st.write(f"**Publicación:** [Ver Aviso NeoAuto]({lead.get('url', '#')})")
-                
-                if lead.get('id_evento_calendar'):
-                    st.info(f"📅 Google Calendar Enlazado: {lead['id_evento_calendar']}")
-                
-                st.divider()
-                st.markdown("#### 📝 Historial de Actividad (JSONB)")
+        # Preparar Grilla
+        grid_data = []
+        for index, row in state_df.iterrows():
+            tel = str(row['telefono_whatsapp']).replace("+51", "").replace(" ", "")
+            grid_data.append({
+                "Seleccionar": False,
+                "Vendedor": row['nombre_vendedor'] or "N/A",
+                "WhatsApp": f"https://wa.me/51{tel}" if tel and tel != "None" else None,
+                "Vehiculo": row['url'],
+                "Fecha": row['fecha_actualizacion'][:10],
+                "_raw_url": row['url']
+            })
+            
+        grid_df = pd.DataFrame(grid_data)
+        
+        # Grid Maestro
+        edited_df = st.data_editor(
+            grid_df,
+            column_config={
+                "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
+                "WhatsApp": st.column_config.LinkColumn("WhatsApp", display_text="Chat"),
+                "Vehiculo": st.column_config.LinkColumn("NeoAuto", display_text="Aviso"),
+                "_raw_url": None
+            },
+            hide_index=True,
+            use_container_width=True,
+            key=f"grid_v40_{estado}"
+        )
+        
+        seleccionados = edited_df[edited_df["Seleccionar"] == True]
+        
+        if not seleccionados.empty:
+            target_url = seleccionados.iloc[0]["_raw_url"]
+            lead_row = state_df[state_df['url'] == target_url].iloc[0]
+            lead = lead_row.to_dict()
+            
+            st.divider()
+            
+            # --- PANEL DE ACCIONES ---
+            st.markdown(f"### Lead: {lead.get('nombre_vendedor', 'N/A')}")
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.markdown("#### Historial")
                 notas = lead.get('notas_actividad', {})
                 if type(notas) is str:
                     try:
                         notas = json.loads(notas)
                     except:
-                        notas = {"Error": "No se pudo formatear el JSON"}
+                        notas = {"Error": "Formato invalido"}
                 
-                for key, note_text in notas.items():
-                    st.markdown(f"> **{key}**: {note_text}")
+                for key, val in notas.items():
+                    st.markdown(f"> **{key}**: {val}")
                     
-                st.divider()
-                st.markdown("#### ⚙️ Acciones")
+            with col2:
+                st.markdown("#### Herramientas")
                 
-                # Accion NUEVA: Cita Calendar (Solo en Estado 2)
+                # Cita Calendar (Estado 2)
                 if estado == "Estado 2: Cita Concertada":
-                    with st.expander("📅 Generar Invitación de Google Calendar", expanded=True):
-                        st.caption("Usa este panel para armar la invitación. Se abrirá la cuenta de tu navegador actual.")
-                        cal_date = st.date_input("Fecha de cita", key=f"cal_d_{lead['url']}")
-                        cal_time = st.time_input("Hora de cita", key=f"cal_t_{lead['url']}")
-                        cal_mail = st.text_input("Correo electrónico del otro asistente (o cliente):", placeholder="ejemplo@gmail.com", key=f"cal_m_{lead['url']}")
-                        cal_title = st.text_input("Título Evento", value=f"Revisión Auto - {lead.get('nombre_vendedor', 'Cliente')}", key=f"cal_title_{lead['url']}")
+                    with st.expander("Google Calendar Invite", expanded=True):
+                        c_date = st.date_input("Fecha", key=f"d_{lead['url']}")
+                        c_time = st.time_input("Hora", key=f"t_{lead['url']}")
+                        c_mail = st.text_input("Email invitado", key=f"m_{lead['url']}")
                         
-                        if st.button("🔗 Crear Link Mágico de Calendar", key=f"cal_btn_{lead['url']}"):
+                        if st.button("Generar Link Calendar", key=f"btn_c_{lead['url']}"):
                             import urllib.parse
-                            start_dt = pd.to_datetime(f"{cal_date} {cal_time}")
-                            end_dt = start_dt + pd.Timedelta(hours=1)
-                            fmt = "%Y%m%dT%H%M%S"
-                            dates_str = f"{start_dt.strftime(fmt)}/{end_dt.strftime(fmt)}"
-                            
-                            query = {
-                                "action": "TEMPLATE",
-                                "text": cal_title,
-                                "dates": dates_str,
-                                "details": f"Contacto WhatsApp: +51{lead.get('telefono_whatsapp', '')}",
-                            }
-                            if cal_mail.strip():
-                                query["add"] = cal_mail.strip()
-                                
-                            cal_link = f"https://calendar.google.com/calendar/u/0/render?{urllib.parse.urlencode(query)}"
-                            
-                            st.markdown(f'''
-                            <a href="{cal_link}" target="_blank" style="background-color:#1a73e8;color:white;padding:10px 15px;border-radius:5px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px;">
-                            👉 Clic AQUÍ para enviar la invitación en tu Google Calendar
-                            </a>
-                            ''', unsafe_allow_html=True)
-
+                            start = pd.to_datetime(f"{c_date} {c_time}")
+                            end = start + pd.Timedelta(hours=1)
+                            dates = f"{start.strftime('%Y%m%dT%H%M%S')}/{end.strftime('%Y%m%dT%H%M%S')}"
+                            q = {"action": "TEMPLATE", "text": f"Cita Auto - {lead['nombre_vendedor']}", "dates": dates}
+                            if c_mail: q["add"] = c_mail
+                            link = f"https://calendar.google.com/calendar/u/0/render?{urllib.parse.urlencode(q)}"
+                            st.markdown(f'[Abrir Calendario]({link})')
                 
-                # Accion 1: Agregar Nota Rápida
-                with st.expander("➕ Agregar Nota en este Estado"):
-                    nueva_nota = st.text_area("Nota:", key=f"note_{lead['url']}")
-                    if st.button("Guardar Nota", key=f"save_note_{lead['url']}"):
-                        if add_note_to_lead(lead['url'], notas, estado, nueva_nota):
-                            st.success("Nota agregada")
+                # Notas
+                with st.expander("Agregar Nota"):
+                    n_text = st.text_area("Texto:", key=f"area_{lead['url']}")
+                    if st.button("Guardar", key=f"save_{lead['url']}"):
+                        if add_note_to_lead(lead['url'], notas, estado, n_text):
+                            st.success("Guardado")
                             st.rerun()
 
-                # Accion 2: Cambio de Estado
-                with st.expander("➡️ Mover a otro Estado"):
-                    avanzar_a = st.selectbox(
-                        "Seleccionar nuevo estado:", 
-                        [e for e in ESTADOS if e != estado],
-                        key=f"move_sel_{lead['url']}"
-                    )
-                    motivo = st.text_input("Nota/Motivo del cambio:", key=f"motivo_{lead['url']}")
-                    if st.button("Confirmar Movimiento", type="primary", key=f"confirm_move_{lead['url']}"):
-                        if move_lead_state(lead['url'], estado, avanzar_a, notas, motivo):
-                            st.success(f"Movido a {avanzar_a}")
-                            # Limpiar seleccion para no mostrarlo en el estado viejo
-                            del st.session_state.current_lead
+                # Mover
+                with st.expander("Cambiar Estado", expanded=True):
+                    next_s = st.selectbox("Nuevo estado:", [e for e in ESTADOS if e != estado], key=f"sel_{lead['url']}")
+                    motivo = st.text_input("Motivo:", key=f"mot_{lead['url']}")
+                    if st.button("Confirmar", type="primary", key=f"conf_{lead['url']}"):
+                            st.success("Actualizado")
                             st.rerun()
-            else:
-                st.info("👈 Selecciona 'Inspeccionar Lead' en un contacto para ver los detalles y actualizar su estado.")
+
