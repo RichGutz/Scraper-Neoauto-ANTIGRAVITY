@@ -247,63 +247,49 @@ for tab, estado in zip(tabs, ESTADOS):
             lead = seleccionados.iloc[0]
             st.divider()
             
-            # --- PANEL DE HERRAMIENTAS (SIMETRIA V43 - LIMPIEZA TOTAL) ---
-            st.markdown(f"#### Herramientas de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
+            # --- PANEL DE HERRAMIENTAS (MATRIZ SIMETRICA 3x4 - V44.1) ---
+            st.markdown(f"#### Panel de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
             
-            h_col1, h_col2, h_col3 = st.columns([1.2, 1.2, 1.5])
+            c1, c2, c3 = st.columns(3)
             
-            with h_col1:
-                # 1. Columna de Movimiento
-                st.write("**Mover de Etapa**")
-                next_s = st.selectbox("Seleccionar nuevo:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
-                motivo = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Resumen...")
+            with c1:
+                # FILA 1 & 2: MOVIMIENTO
+                st.write("**Movimiento de Estado**")
+                n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
+                n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Ej: No contesta")
+                # FILA 3: BOTONERA ALINEADA
                 if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
-                    if move_lead_state(lead['_raw_url'], estado, next_s, lead['_raw_notas'], motivo):
-                        st.success("Listo")
+                    if move_lead_state(lead['_raw_url'], estado, n_state, lead['_raw_notas'], n_reason):
+                        st.success("Estado actualizado")
                         st.rerun()
             
-            with h_col2:
-                # 2. Columna de Notas (Altura calculada para coincidir con cajas de Col 1)
-                st.write("**Notas del Lead**")
-                n_text = st.text_area("Escribir nota:", key=f"txt_{lead['_raw_url']}", height=128, placeholder="Seguimiento...")
+            with c2:
+                # FILA 1 & 2: NOTAS (Altura calculada para cubrir ambas filas del col1)
+                st.write("**Bitacora / Notas**")
+                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['_raw_url']}", height=125, placeholder="Escribe aqui...")
+                # FILA 3: BOTONERA ALINEADA
                 if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['_raw_url']}"):
                     if add_note_to_lead(lead['_raw_url'], lead['_raw_notas'], estado, n_text):
-                        st.success("Guardado")
+                        st.success("Nota guardada")
                         st.rerun()
 
-            with h_col3:
-                # 3. Columna de Info/Calendario (Sin basura visual)
-                if estado == "Estado 2: Cita Concertada":
-                    st.write("**Agenda Calendar**")
-                    c_col_a, c_col_b = st.columns(2)
-                    with c_col_a: c_d = st.date_input("Fecha", key=f"cd_{lead['_raw_url']}")
-                    with c_col_b: c_t = st.time_input("Hora", key=f"ct_{lead['_raw_url']}")
-                    # Espaciador invisible para empujar el boton al fondo
-                    st.markdown('<div style="height: 15px;"></div>', unsafe_allow_html=True)
-                    if st.button("Generar Enlace Calendar", use_container_width=True, key=f"btn_cal_{lead['_raw_url']}"):
-                         import urllib.parse
-                         start = pd.to_datetime(f"{c_d} {c_t}")
-                         end = start + pd.Timedelta(hours=1)
-                         dates = f"{start.strftime('%Y%m%dT%H%M%S')}/{end.strftime('%Y%m%dT%H%M%S')}"
-                         q = {"action": "TEMPLATE", "text": f"Cita Auto - {lead['Vehiculo']}", "dates": dates}
-                         link = f"https://calendar.google.com/calendar/u/0/render?{urllib.parse.urlencode(q)}"
-                         st.markdown(f'<a href="{link}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:5px;border-radius:4px;text-decoration:none;font-weight:bold;">Lanzar Calendario</a>', unsafe_allow_html=True)
-                else:
-                    st.write("**Informacion Tecnica**")
-                    # Layout limpio y alineado al fondo
-                    st.markdown(f"""
-                    <div style="height: 128px; display: flex; flex-direction: column; justify-content: center; border: 1px solid #e6e9ef; border-radius: 4px; padding: 10px;">
-                        <p style="margin:0;"><b>Año:</b> {lead['Anio']}</p>
-                        <p style="margin:0;"><b>Distrito:</b> {lead['Distrito']}</p>
-                        <p style="margin:10px 0 0 0; font-size: 0.8rem; color: #888;">ID: {lead['_raw_url'][-7:]}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    # Boton invisible/espaciador para mantener la linea con los otros botones
-                    st.button("Detalles del Vehiculo", disabled=True, use_container_width=True, key=f"dmy_{lead['_raw_url']}")
-            
-            # --- ZONA DE HISTORIAL (ABAJO DEL TODO) ---
+            with c3:
+                # FILA 1 & 2: INFO VEHICULO
+                st.write("**Datos del Vehiculo**")
+                # Usamos text_inputs deshabilitados para mantener simetria perfecta con col1
+                st.text_input("Año:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
+                st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dst_{lead['_raw_url']}")
+                
+                # FILA 3: BOTONERA ALINEADA (Link directo a NeoAuto)
+                st.markdown(f'''
+                <a href="{lead['_raw_url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;margin-top:2px;">
+                Ver Aviso en NeoAuto
+                </a>
+                ''', unsafe_allow_html=True)
+
+            # --- ZONA DE HISTORIAL (AUDITORIA AL PIE) ---
             st.divider()
-            st.markdown("##### Bitacora de Actividad")
+            st.markdown("##### Bitacora de Actividad (Historial)")
             notas = lead['_raw_notas']
             if type(notas) is str: 
                 try: notas = json.loads(notas)
@@ -314,5 +300,6 @@ for tab, estado in zip(tabs, ESTADOS):
             else:
                 for key, val in notas.items():
                     st.markdown(f"* **{key}**: {val}")
+
 
 
