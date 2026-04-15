@@ -18,7 +18,7 @@ load_dotenv(local_env_path)
 GH_TOKEN = os.getenv("GH_TOKEN")
 
 REPO_URL    = f"https://{GH_TOKEN}@github.com/RichGutz/Scraper-Neoauto-ANTIGRAVITY.git"
-BRANCH      = "funcional.hostinger.21.03.26"
+BRANCH      = "master"
 APP_DIR     = "/opt/crm_neoauto"
 VENV_DIR    = f"{APP_DIR}/venv"
 SERVICE     = "crm_neoauto"

@@ -67,7 +67,7 @@ ESTADOS = [
     "Estado 1: 1er Contacto WhatsApp",
     "Estado 2: Cita Concertada",
     "Estado 3: Visita Ejecutada",
-    "Estado 4: Descartado",
+    "Estado 4: Cerrado",
     "Estado 5: Comprado (Stock)",
     "Estado 6: Vendido"
 ]
@@ -145,7 +145,7 @@ if not all_leads_data:
 df = pd.DataFrame(all_leads_data)
 
 # Pestañas Superiores (Sin emojis)
-tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Caidos", "Comprados", "Vendidos"])
+tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos"])
 
 for tab, estado in zip(tabs, ESTADOS):
     with tab:

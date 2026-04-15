@@ -18,7 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 local_env_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(local_env_path)
 
-BRANCH      = "funcional.hostinger.21.03.26"
+BRANCH      = "master"
 APP_DIR     = "/opt/crm_neoauto"
 SERVICE     = "crm_neoauto"
 
