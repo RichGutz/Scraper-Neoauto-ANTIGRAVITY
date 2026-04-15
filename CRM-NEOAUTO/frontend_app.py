@@ -305,109 +305,102 @@ def main_app():
                     gyp_data = fetch_gyp(lead['url'])
                     g = gyp_data or {}
 
-                    st.markdown("##### Ganancia y Perdida")
+                    bcol1, bcol2 = st.columns([4, 1])
+                    with bcol1:
+                        st.markdown("##### Ganancia y Perdida (GyP)")
+                    with bcol2:
+                        tc = st.number_input("T. Cambio (USD/PEN)", min_value=1.0, value=float(g.get("tipo_cambio", 3.4)), step=0.01, format="%.2f", key=f"tc_{lead['url']}")
 
-                    # Tipo de cambio arriba — afecta toda la conversion
-                    tc = st.number_input(
-                        "Tipo de Cambio (USD/PEN)",
-                        min_value=1.0, max_value=10.0,
-                        value=float(g.get("tipo_cambio", 3.4)),
-                        step=0.05, format="%.2f",
-                        key=f"tc_{lead['url']}"
-                    )
+                    # Encabezados
+                    h1, h2, h3, h4 = st.columns([3, 2, 2, 2])
+                    h1.markdown("**RUBRO**")
+                    h2.markdown("**INGRESA USD ($)**")
+                    h3.markdown("**INGRESA SOLES (S/)**")
+                    h4.markdown("**TOTAL USD ($)**")
 
-                    st.markdown("---")
+                    st.markdown("<hr style='margin:0px'>", unsafe_allow_html=True)
 
-                    # 3 columnas: USD | Soles | Todo en USD
-                    col_usd, col_pen, col_result = st.columns(3)
+                    rubros = [
+                        ("Precio de Venta", "precio_venta"),
+                        ("Precio de Compra", "precio_compra"),
+                        ("Gastos Notariales", "notarial"),
+                        ("Gastos Registrales", "registral"),
+                        ("Pintura y Aros", "pintura_aros"),
+                        ("Lavado", "lavado"),
+                        ("Combustible", "gasolina"),
+                        ("Cochera", "cochera"),
+                        ("Mecanica", "mecanica"),
+                        ("Llantas", "llantas"),
+                        ("Publicidad NeoAuto", "neoauto"),
+                        ("Cheque Gerencia", "cheque_gerencia"),
+                        ("Intereses", "intereses")
+                    ]
 
-                    with col_usd:
-                        st.markdown("**Valores en USD**")
-                        precio_compra = st.number_input("Precio Compra (USD)", min_value=0, value=int(g.get("precio_compra_usd", 0)), step=100, key=f"g_pc_{lead['url']}")
-                        precio_venta  = st.number_input("Precio Venta (USD)",  min_value=0, value=int(g.get("precio_venta_usd",  0)), step=100, key=f"g_pv_{lead['url']}")
+                    resultados_usd = {}
 
-                    with col_pen:
-                        st.markdown("**Costos en Soles (S/)")
-                        notarial       = st.number_input("Notarial",        min_value=0, value=int(g.get("notarial_pen",       0)), step=50,  key=f"g_not_{lead['url']}")
-                        registral      = st.number_input("Registral",       min_value=0, value=int(g.get("registral_pen",      0)), step=50,  key=f"g_reg_{lead['url']}")
-                        pintura_aros   = st.number_input("Pintura/Aros",    min_value=0, value=int(g.get("pintura_aros_pen",   0)), step=50,  key=f"g_pin_{lead['url']}")
-                        lavado         = st.number_input("Lavado",          min_value=0, value=int(g.get("lavado_pen",         0)), step=10,  key=f"g_lav_{lead['url']}")
-                        gasolina       = st.number_input("Gasolina",        min_value=0, value=int(g.get("gasolina_pen",       0)), step=10,  key=f"g_gas_{lead['url']}")
-                        cochera        = st.number_input("Cochera",         min_value=0, value=int(g.get("cochera_pen",        0)), step=50,  key=f"g_coc_{lead['url']}")
-                        mecanica       = st.number_input("Mecanica",        min_value=0, value=int(g.get("mecanica_pen",       0)), step=50,  key=f"g_mec_{lead['url']}")
-                        llantas        = st.number_input("Llantas",         min_value=0, value=int(g.get("llantas_pen",        0)), step=50,  key=f"g_lla_{lead['url']}")
-                        neoauto        = st.number_input("NeoAuto",         min_value=0, value=int(g.get("neoauto_pen",        0)), step=50,  key=f"g_neo_{lead['url']}")
-                        cheque_ger     = st.number_input("Cheque Gerencia", min_value=0, value=int(g.get("cheque_gerencia_pen",0)), step=50,  key=f"g_chq_{lead['url']}")
-                        intereses      = st.number_input("Intereses",       min_value=0, value=int(g.get("intereses_pen",      0)), step=50,  key=f"g_int_{lead['url']}")
-                        comentarios_txt= st.text_area("Comentarios", value=str(g.get("comentarios", "") or ""), height=80, key=f"g_com_{lead['url']}")
+                    for label, key_name in rubros:
+                        c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+                        c1.write(label)
+                        
+                        val_usd = c2.number_input("USD", min_value=0, value=int(g.get(f"{key_name}_usd", 0)), step=10, label_visibility="collapsed", key=f"u_{key_name}_{lead['url']}")
+                        val_pen = c3.number_input("PEN", min_value=0, value=0, step=10, label_visibility="collapsed", key=f"p_{key_name}_{lead['url']}")
+                        
+                        if val_usd > 0:
+                            total_usd = val_usd
+                        else:
+                            total_usd = round(val_pen / tc, 2) if val_pen > 0 else 0
+                            
+                        if key_name == "precio_venta":
+                            c4.markdown(f"<span style='color:green;font-weight:bold'>${total_usd:,.0f}</span>", unsafe_allow_html=True)
+                        else:
+                            c4.markdown(f"<span style='color:#d32f2f;'>-${total_usd:,.0f}</span>", unsafe_allow_html=True)
 
-                    with col_result:
-                        st.markdown("**Resumen en USD**")
+                        resultados_usd[key_name] = total_usd
 
-                        # Conversion de soles a USD
-                        total_pen_usd = (notarial + registral + pintura_aros + lavado + gasolina +
-                                         cochera + mecanica + llantas + neoauto + cheque_ger + intereses) / tc
+                    st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
+                    
+                    # Totales
+                    total_ingresos = resultados_usd["precio_venta"]
+                    total_costos = sum(resultados_usd[k] for k in resultados_usd if k != "precio_venta")
+                    utilidad = total_ingresos - total_costos
+                    margen_pct = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0.0
 
-                        total_costos_usd = precio_compra + total_pen_usd
-                        utilidad_bruta   = precio_venta - total_costos_usd
-                        margen_pct       = (utilidad_bruta / precio_venta * 100) if precio_venta > 0 else 0.0
+                    color = "green" if utilidad > 0 else "red"
+                    st.markdown(f"<h5 style='text-align:right'>UTILIDAD NETA: <span style='color:{color}'>${utilidad:,.0f} ({margen_pct:.1f}%)</span></h5>", unsafe_allow_html=True)
 
-                        st.metric("Precio Compra",    f"$ {precio_compra:,.0f}")
-                        st.metric("Costos S/ -> USD", f"$ {total_pen_usd:,.0f}")
-                        st.metric("Total Costos",     f"$ {total_costos_usd:,.0f}")
-                        st.metric("Precio Venta",     f"$ {precio_venta:,.0f}")
-                        color_util = "normal" if utilidad_bruta >= 0 else "inverse"
-                        st.metric("Utilidad Neta",    f"$ {utilidad_bruta:,.0f}", delta=f"{margen_pct:.1f}% margen", delta_color=color_util)
-
-                    st.markdown("---")
-
-                    # BOTONES GYP
-                    bg1, bg2, bg3 = st.columns(3)
-
-                    with bg1:
+                    st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
+                    
+                    col_com, col_btns = st.columns([3, 2])
+                    with col_com:
+                        # Extraer texto de comentarios, en BD es un JSONB
+                        com_val = g.get("comentarios", {})
+                        if isinstance(com_val, dict):
+                            com_text = com_val.get("texto", "")
+                        else:
+                            com_text = str(com_val)
+                        comentarios_txt = st.text_area("Comentarios:", value=com_text, height=85, label_visibility="collapsed", placeholder="Notas de GyP...", key=f"g_com_{lead['url']}")
+                        
+                    with col_btns:
                         if st.button("Guardar GyP", type="primary", use_container_width=True, key=f"btn_gyp_{lead['url']}"):
                             gyp_payload = {
-                                "tipo_cambio":         tc,
-                                "precio_compra_usd":   precio_compra,
-                                "precio_venta_usd":    precio_venta,
-                                "notarial_pen":        notarial,
-                                "registral_pen":       registral,
-                                "pintura_aros_pen":    pintura_aros,
-                                "lavado_pen":          lavado,
-                                "gasolina_pen":        gasolina,
-                                "cochera_pen":         cochera,
-                                "mecanica_pen":        mecanica,
-                                "llantas_pen":         llantas,
-                                "neoauto_pen":         neoauto,
-                                "cheque_gerencia_pen": cheque_ger,
-                                "intereses_pen":       intereses,
-                                "utilidad_neta_usd":   round(utilidad_bruta, 2),
-                                "comentarios":         {"texto": comentarios_txt} if comentarios_txt else {},
+                                "tipo_cambio": tc,
+                                "utilidad_neta_usd": round(utilidad, 2),
+                                "comentarios": {"texto": comentarios_txt} if comentarios_txt else {}
                             }
+                            for _, key_name in rubros:
+                                gyp_payload[f"{key_name}_usd"] = resultados_usd[key_name]
+                                
                             if save_gyp(lead['url'], gyp_payload):
-                                st.success("GyP guardado correctamente.")
+                                st.success("GyP guardado!")
                                 st.rerun()
 
-                    with bg2:
-                        vendido_habilitado = precio_venta > 0
+                        vendido_habilitado = total_ingresos > 0
                         if not vendido_habilitado:
-                            st.caption("Ingresa Precio Venta para habilitar.")
-                        if st.button(
-                            "Mover a Vendido",
-                            use_container_width=True,
-                            disabled=not vendido_habilitado,
-                            key=f"btn_vendido_{lead['url']}"
-                        ):
+                            st.caption("Ingresa Precio Venta para Vender.")
+                        if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
                             if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
                                 st.success("Lead movido a Vendido.")
                                 st.rerun()
-
-                    with bg3:
-                        st.markdown(f'''
-                        <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
-                        Ver Aviso en NeoAuto
-                        </a>
-                        ''', unsafe_allow_html=True)
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
