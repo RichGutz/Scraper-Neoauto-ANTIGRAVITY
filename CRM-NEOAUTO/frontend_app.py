@@ -226,6 +226,13 @@ for tab, estado in zip(tabs, ESTADOS):
             except:
                 precio_f = "N/A"
                 
+            # Fix: Asegurar que KM sea float antes de formatear
+            try:
+                km_val = float(row.get('Kilometers', 0))
+                km_f = f"{km_val:,.0f} km" if km_val > 0 else "N/A"
+            except:
+                km_f = "N/A"
+                
             grid_data.append({
                 "Seleccionar": False,
                 "Vendedor": row.get('nombre_vendedor', 'N/A'),
@@ -233,7 +240,7 @@ for tab, estado in zip(tabs, ESTADOS):
                 "Precio": precio_f,
                 "Anio": row.get('Year', 'N/A'),
                 "Distrito": row.get('District', 'N/A'),
-                "KM": f"{row.get('Kilometers', 0):,.0f} km" if row.get('Kilometers') else "N/A",
+                "KM": km_f,
                 "Chat": f"https://wa.me/51{tel}" if tel and tel != "None" else None,
                 "NeoAuto": row['url'],
                 "Fecha": row['fecha_actualizacion'][:10],
