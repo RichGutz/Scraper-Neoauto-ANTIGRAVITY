@@ -265,6 +265,13 @@ def main_app():
                 # --- PANEL DE HERRAMIENTAS (SIMETRIA V48 - FIX TYPE) ---
                 st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
                 
+                # Mostrar errores persistentes de calendario si existen
+                if "calendar_error" in st.session_state:
+                    st.error(f"⚠️ Atención: {st.session_state.calendar_error}")
+                    if st.button("Entendido, limpiar error"):
+                        del st.session_state.calendar_error
+                        st.rerun()
+
                 c1, c2, c3 = st.columns(3)
                 
                 with c1:
@@ -479,4 +486,5 @@ if __name__ == "__main__":
         login_ui()
     else:
         main_app()
+
 
