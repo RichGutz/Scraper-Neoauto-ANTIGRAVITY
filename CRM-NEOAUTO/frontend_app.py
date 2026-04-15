@@ -185,7 +185,7 @@ for tab, estado in zip(tabs, ESTADOS):
                 "Anio": row.get('Year', 'N/A'),
                 "Distrito": row.get('District', 'N/A'),
                 "KM": km_f,
-                "Chat": f"https://wa.me/51{tel}" if tel and tel != "None" else None,
+                "Chat": f"https://wa.me/{tel}" if tel and tel != "None" else None,
                 "NeoAuto": row['url'],
                 "Fecha": str(row.get('fecha_actualizacion', ''))[:10] if row.get('fecha_actualizacion') else "N/A",
                 "_raw_url": row['url'],
@@ -200,7 +200,7 @@ for tab, estado in zip(tabs, ESTADOS):
             grid_df,
             column_config={
                 "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
-                "Chat": st.column_config.LinkColumn("WhatsApp", display_text="Chat"),
+                "Chat": st.column_config.LinkColumn("WhatsApp", display_text=r"(\d+)"),
                 "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
                 "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
                 "_raw_url": None, "_raw_notas": None, "_raw_row": None

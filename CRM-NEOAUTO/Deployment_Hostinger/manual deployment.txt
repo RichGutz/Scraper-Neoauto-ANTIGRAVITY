@@ -1,1 +1,34 @@
-manual deployment.txt
+GUÍA DE DESPLIEGUE - CRM NEOAUTO (HOSTINGER)
+===========================================
+
+Este directorio contiene los scripts necesarios para gestionar el despliegue del CRM en el VPS de Hostinger.
+
+SCRIPTS DISPONIBLES:
+-------------------
+
+1. [F1_test_conexion.py]:
+   - PROPÓSITO: Validación de conectividad.
+   - FUNCIONAMIENTO: Realiza una conexión SSH básica usando paramiko para verificar que las credenciales (Host, User, Pass) sean correctas y que el servidor esté en línea.
+   - CUÁNDO USAR: Antes de un despliegue si hay dudas sobre el acceso al servidor.
+
+2. [F3_FAST_DEPLOY.py] (RECOMENDADO):
+   - PROPÓSITO: Actualización rápida "Ipso Facto".
+   - FUNCIONAMIENTO:
+     - Se conecta vía SSH.
+     - Ejecuta 'git pull' en el servidor para descargar los últimos cambios de la rama master.
+     - Reinicia el servicio de Streamlit mediante 'systemctl restart'.
+   - CUÁNDO USAR: Para cambios de UI, corrección de bugs en el código o ajustes de lógica que no requieran nuevas librerías.
+
+3. [F3_deploy_neoauto.py]:
+   - PROPÓSITO: Despliegue integral (Setup inicial o reconstrucción).
+   - FUNCIONAMIENTO: Es un orquestador completo que:
+     - Instala dependencias del sistema (apt-get).
+     - Clona el repositorio si no existe.
+     - Configura el entorno virtual (venv) y pip install.
+     - Configura Nginx (Reverse Proxy) y Certbot (SSL).
+     - Crea y habilita el servicio systemd.
+   - CUÁNDO USAR: Cuando se despliega en un servidor nuevo, si se agregan dependencias pesadas al sistema o si se necesita reconstruir el entorno completo.
+
+INSTRUCCIONES DE USO:
+--------------------
+Asegúrese de estar en la rama 'master' y haber hecho 'git push' a GitHub antes de ejecutar cualquier script F3, ya que el servidor jala el código directamente desde el repositorio remoto.

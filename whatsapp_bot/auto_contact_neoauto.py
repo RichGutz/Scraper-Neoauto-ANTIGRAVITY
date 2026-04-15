@@ -277,7 +277,7 @@ def enviar_whatsapp(driver, telefono, mensaje):
     """Envía mensaje por WhatsApp Web usando Selenium"""
     try:
         encoded_message = urllib.parse.quote(mensaje)
-        url = f"https://web.whatsapp.com/send?phone=51{telefono}&text={encoded_message}"
+        url = f"https://web.whatsapp.com/send?phone={telefono}&text={encoded_message}"
         
         logger.info(f"Abriendo WhatsApp para {telefono}...")
         driver.get(url)
@@ -352,6 +352,7 @@ def main():
     # Usar perfil DEDICADO para el bot (creará la carpeta si no existe)
     current_dir = os.path.dirname(os.path.abspath(__file__))
     profile_dir = os.path.join(current_dir, "whatsapp_bot_profile")
+    chrome_options.binary_location = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     chrome_options.add_argument(f"user-data-dir={profile_dir}")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
