@@ -247,47 +247,47 @@ for tab, estado in zip(tabs, ESTADOS):
             lead = seleccionados.iloc[0]
             st.divider()
             
-            # --- PANEL DE HERRAMIENTAS (MATRIZ SIMETRICA 3x4 - V44.1) ---
+            # --- PANEL DE HERRAMIENTAS (SIMETRIA ABSOLUTA V44.2) ---
             st.markdown(f"#### Panel de Gestion: {lead['Vendedor']} ({lead['Vehiculo']})")
             
+            # FILA DE INPUTS
             c1, c2, c3 = st.columns(3)
             
             with c1:
-                # FILA 1 & 2: MOVIMIENTO
                 st.write("**Movimiento de Estado**")
                 n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['_raw_url']}")
                 n_reason = st.text_input("Breve motivo:", key=f"mot_{lead['_raw_url']}", placeholder="Ej: No contesta")
-                # FILA 3: BOTONERA ALINEADA
+            
+            with c2:
+                st.write("**Bitacora / Notas**")
+                # Altura ajustada para que el fondo del text_area toque el fondo del input de la col1
+                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['_raw_url']}", height=128, placeholder="Escribe aqui...")
+
+            with c3:
+                st.write("**Datos del Vehiculo**")
+                st.text_input("Año:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
+                st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dst_{lead['_raw_url']}")
+
+            # FILA DE BOTONES (INDEPENDIENTE PARA SIMETRIA TOTAL)
+            b1, b2, b3 = st.columns(3)
+            with b1:
                 if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['_raw_url']}"):
                     if move_lead_state(lead['_raw_url'], estado, n_state, lead['_raw_notas'], n_reason):
                         st.success("Estado actualizado")
                         st.rerun()
-            
-            with c2:
-                # FILA 1 & 2: NOTAS (Altura calculada para cubrir ambas filas del col1)
-                st.write("**Bitacora / Notas**")
-                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['_raw_url']}", height=125, placeholder="Escribe aqui...")
-                # FILA 3: BOTONERA ALINEADA
+            with b2:
                 if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['_raw_url']}"):
                     if add_note_to_lead(lead['_raw_url'], lead['_raw_notas'], estado, n_text):
                         st.success("Nota guardada")
                         st.rerun()
-
-            with c3:
-                # FILA 1 & 2: INFO VEHICULO
-                st.write("**Datos del Vehiculo**")
-                # Usamos text_inputs deshabilitados para mantener simetria perfecta con col1
-                st.text_input("Año:", value=lead['Anio'], disabled=True, key=f"yr_{lead['_raw_url']}")
-                st.text_input("Distrito:", value=lead['Distrito'], disabled=True, key=f"dst_{lead['_raw_url']}")
-                
-                # FILA 3: BOTONERA ALINEADA (Link directo a NeoAuto)
+            with b3:
                 st.markdown(f'''
-                <a href="{lead['_raw_url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;margin-top:2px;">
+                <a href="{lead['_raw_url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
                 Ver Aviso en NeoAuto
                 </a>
                 ''', unsafe_allow_html=True)
 
-            # --- ZONA DE HISTORIAL (AUDITORIA AL PIE) ---
+            # --- ZONA DE HISTORIAL ---
             st.divider()
             st.markdown("##### Bitacora de Actividad (Historial)")
             notas = lead['_raw_notas']
@@ -300,6 +300,7 @@ for tab, estado in zip(tabs, ESTADOS):
             else:
                 for key, val in notas.items():
                     st.markdown(f"* **{key}**: {val}")
+
 
 
 
