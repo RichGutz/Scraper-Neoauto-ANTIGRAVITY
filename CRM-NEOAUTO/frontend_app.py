@@ -72,6 +72,15 @@ st.set_page_config(
 # --- ESTILOS MODERNOS ---
 st.markdown("""
 <style>
+    /* Eliminar Margen Superior */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+        padding-left: 5rem;
+        padding-right: 5rem;
+    }
+    header {visibility: hidden;}
+    
     /* Tabs Corporativos */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
@@ -178,8 +187,7 @@ def add_note_to_lead(url, notes_history, state, new_note_text):
 
 
 # --- HEADER ---
-st.title("CRM NeoAuto")
-st.markdown("Gestion de leads y funnel de compras.")
+st.title("CRM NeoAuto - Gestion de leads y funnel de compras.")
 st.divider()
 
 # --- CARGA DE DATOS ---
@@ -210,11 +218,19 @@ for tab, estado in zip(tabs, ESTADOS):
             tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
             marca = row.get('Make', 'N/A')
             modelo = row.get('Model', 'N/A')
+            
+            # Fix: Asegurar que Price sea float antes de formatear
+            try:
+                precio_val = float(row.get('Price', 0))
+                precio_f = f"${precio_val:,.0f}" if precio_val > 0 else "N/A"
+            except:
+                precio_f = "N/A"
+                
             grid_data.append({
                 "Seleccionar": False,
                 "Vendedor": row.get('nombre_vendedor', 'N/A'),
                 "Vehiculo": f"{marca} {modelo}".strip(),
-                "Precio": f"${row.get('Price', 0):,.0f}" if row.get('Price') else "N/A",
+                "Precio": precio_f,
                 "Anio": row.get('Year', 'N/A'),
                 "Distrito": row.get('District', 'N/A'),
                 "KM": f"{row.get('Kilometers', 0):,.0f} km" if row.get('Kilometers') else "N/A",
