@@ -4,6 +4,9 @@ import json
 from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
+import datetime
+from google_auth import get_google_creds
+from calendar_utils import create_calendar_event
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -103,8 +106,8 @@ def fetch_leads():
 
 # --- ... (resto de funciones move_lead_state y add_note_to_lead sin cambios) ---
 
-def move_lead_state(url, current_state, new_state, notes_history, new_note_text):
-    notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido de {current_state}. {new_note_text}"
+def move_lead_state(url, current_state, new_state, notes_history):
+    notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido de {current_state}."
     try:
         supabase.table("crm_contactos").update({
             "estado_embudo": new_state,
@@ -236,10 +239,12 @@ for tab, estado in zip(tabs, ESTADOS):
             c1, c2, c3 = st.columns(3)
             
             with c1:
-                st.write("**Movimiento de Estado**")
+                st.write("**Agenda de Visita**")
                 n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
-                # Altura calculada matematicamente para nivelar fondo (95px select + 150px area = base col 3)
-                n_reason = st.text_area("Breve motivo:", key=f"mot_{lead['url']}", height=150, placeholder="Ej: No contesta")
+                # Agendador compacto (sustituye a breve motivo)
+                v_date = st.date_input("Fecha:", min_value=datetime.date.today(), key=f"vdate_{lead['url']}")
+                v_time = st.time_input("Hora:", value=datetime.time(10, 0), key=f"vtime_{lead['url']}")
+                v_loc = st.text_input("Lugar/Direccion:", placeholder="Ej: Av. Primavera 123", key=f"vloc_{lead['url']}")
             
             with c2:
                 st.write("**Bitacora / Notas**")
@@ -276,7 +281,26 @@ for tab, estado in zip(tabs, ESTADOS):
             b1, b2, b3 = st.columns(3)
             with b1:
                 if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
-                    if move_lead_state(lead['url'], estado, n_state, n_history, n_reason):
+                    # Lógica de Calendario Especial
+                    if n_state == "Estado 2: Cita Concertada":
+                        creds = get_google_creds()
+                        if creds:
+                            # Título: Visita NeoAuto: [Vendedor] - [Tel] - [Auto Año]
+                            vendedor = lead.get('nombre_vendedor', 'Vendedor')
+                            telefono = lead.get('telefono_whatsapp', 'S/T')
+                            auto_info = f"{lead.get('Make', '')} {lead.get('Model', '')} {lead.get('Year', '')}".strip()
+                            event_title = f"Visita NeoAuto: {vendedor} - {telefono} - {auto_info}"
+                            
+                            # DateTime de inicio
+                            start_dt = datetime.datetime.combine(v_date, v_time)
+                            
+                            link = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
+                            if link:
+                                st.success(f"Cita agendada: [Ver en Google Calendar]({link})")
+                            else:
+                                st.warning("No se pudo crear el evento en el calendario.")
+
+                    if move_lead_state(lead['url'], estado, n_state, n_history):
                         st.success("Estado actualizado")
                         st.rerun()
             with b2:

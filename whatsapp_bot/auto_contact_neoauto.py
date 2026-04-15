@@ -38,9 +38,16 @@ except ImportError:
     print("ERROR: Faltan librerías de Google. Instala: pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib selenium webdriver-manager")
     exit()
 
-# --- CONFIGURACIÓN ---
-SCOPES = ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/contacts', 'https://www.googleapis.com/auth/gmail.send']
 NEOAUTO_EMAIL = 'contacto@neoauto.pe'
+
+# Importar autenticación compartida
+try:
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CRM-NEOAUTO'))
+    from google_auth import get_google_creds, SCOPES, TOKEN_PATH, CREDENTIALS_PATH
+except ImportError:
+    print("ADVERTENCIA: No se pudo importar google_auth para autenticación compartida.")
+
 # TEST_MODE = True forces sending to the hardcoded number irrespective of what's in# TEST_PHONE_NUMBER = "918063088" 
 # TEST_PHONE_NUMBER = "991090016"  # MODO PRUEBA DESACTIVADO - Envía a números reales 
 
@@ -61,24 +68,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def autenticar_google():
-    """Reutiliza la lógica de autenticación existente"""
-    creds = None
-    if TOKEN_PATH.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not CREDENTIALS_PATH.exists():
-                logger.error(f"ERROR: 'credentials.json' no encontrado en {CREDENTIALS_PATH}")
-                return None
-            flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
-            creds = flow.run_local_server(port=0)
-        
-        with open(TOKEN_PATH, 'w') as token:
-            token.write(creds.to_json())
-    return creds
+    """Llamada al módulo compartido de autenticación"""
+    return get_google_creds()
     
 def init_db():
     try:
