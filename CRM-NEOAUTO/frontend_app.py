@@ -350,7 +350,8 @@ for tab, estado in zip(tabs, ESTADOS):
             # --- ZONA DE HISTORIAL ---
             st.divider()
             st.markdown("##### Bitacora de Actividad (Historial)")
-            notas = lead['_raw_notas']
+            # Usamos el nombre real de la columna de la DB
+            notas = lead.get('notas_actividad', {})
             if type(notas) is str: 
                 try: notas = json.loads(notas)
                 except: notas = {}
