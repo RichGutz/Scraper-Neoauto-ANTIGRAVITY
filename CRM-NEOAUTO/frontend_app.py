@@ -294,13 +294,13 @@ for tab, estado in zip(tabs, ESTADOS):
             with c1:
                 st.write("**Movimiento de Estado**")
                 n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
-                # Altura ultra-aumentada para eliminar espacio blanco inferior
-                n_reason = st.text_area("Breve motivo:", key=f"mot_{lead['url']}", height=170, placeholder="Ej: No contesta")
+                # Altura calculada matematicamente para nivelar fondo (95px select + 150px area = base col 3)
+                n_reason = st.text_area("Breve motivo:", key=f"mot_{lead['url']}", height=150, placeholder="Ej: No contesta")
             
             with c2:
                 st.write("**Bitacora / Notas**")
-                # Altura ultra-aumentada para nivelar con el final de la col3
-                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=260, placeholder="Escribe aqui...")
+                # Altura calculada matematicamente para nivelar fondo (245px area = base col 3)
+                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=245, placeholder="Escribe aqui...")
 
             with c3:
                 st.write("**Datos del Vehiculo**")
