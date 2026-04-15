@@ -47,8 +47,9 @@ def create_calendar_event(creds, summary, location, start_dt, lead_name="Lead"):
         }
 
         event = service.events().insert(calendarId='primary', body=event, sendUpdates='all').execute()
-        return event.get('htmlLink')
+        return {"link": event.get('htmlLink')}
 
     except Exception as e:
-        print(f"Error creando evento en Calendar: {e}")
-        return None
+        error_msg = f"Error creando evento en Calendar: {str(e)}"
+        print(error_msg)
+        return {"error": str(e)}
