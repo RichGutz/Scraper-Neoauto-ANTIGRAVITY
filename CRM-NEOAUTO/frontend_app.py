@@ -323,11 +323,11 @@ def main_app():
                                 # DateTime de inicio
                                 start_dt = datetime.datetime.combine(v_date, v_time)
                                 
-                                link = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
-                                if link:
-                                    st.success(f"Cita agendada: [Ver en Google Calendar]({link})")
+                                res = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
+                                if "link" in res:
+                                    st.success(f"Cita agendada: [Ver en Google Calendar]({res['link']})")
                                 else:
-                                    st.warning("No se pudo crear el evento en el calendario.")
+                                    st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
 
                         if move_lead_state(lead['url'], estado, n_state, n_history):
                             st.success("Estado actualizado")
