@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import datetime
 from google_auth import get_google_creds
 from calendar_utils import create_calendar_event
+from streamlit_oauth import OAuth2Component
+import base64
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -54,6 +56,59 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+# --- CONFIG LOGIN OAUTH ---
+AUTHORIZE_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL      = "https://oauth2.googleapis.com/token"
+REVOKE_URL     = "https://oauth2.googleapis.com/revoke"
+
+# Se cargarán del .env (para local) o de las variables de entorno del servidor (VPS/Railway)
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+CLIENT_ID      = os.getenv("GOOGLE_CLIENT_ID")
+CLIENT_SECRET  = os.getenv("GOOGLE_CLIENT_SECRET")
+ALLOWED_EMAILS = ["annyred9@gmail.com", "rgutil@gmail.com"]
+
+def login_ui():
+    st.markdown("""<style>[data-testid="stSidebar"]{display:none;}</style>""", unsafe_allow_html=True)
+    _, col, _ = st.columns([1,2,1])
+    with col:
+        st.markdown("<h2 style='text-align:center;margin-top:20px'>CRM NeoAuto - Acceso Seguro</h2>", unsafe_allow_html=True)
+        st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Por favor, inicia sesión con tu cuenta de Google</h5><br>", unsafe_allow_html=True)
+        
+        if not CLIENT_ID or not CLIENT_SECRET:
+            st.error("Credenciales OAuth no configuradas (GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env).")
+            return
+
+        oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REVOKE_URL)
+        
+        # En VPS (Hostinger) se fuerza el callback a producción si está configurado en .env
+        env_redirect = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8501")
+        
+        try:
+            result = oauth2.authorize_button(
+                name="Iniciar Sesión con Google",
+                icon="https://www.google.com.tw/favicon.ico",
+                redirect_uri=env_redirect,
+                scope="openid email profile",
+                key="google", use_container_width=True, pkce="S256"
+            )
+        except Exception as e:
+            st.warning(f"Error OAuth: {e}")
+            return
+            
+        if result:
+            id_token = result.get("token", {}).get("id_token")
+            if id_token:
+                p = id_token.split(".")[1]; p += "="*(-len(p)%4)
+                decoded = json.loads(base64.b64decode(p))
+                email = decoded.get("email")
+                
+                if email in ALLOWED_EMAILS:
+                    st.session_state["user_info"] = decoded
+                    st.session_state["token"] = result["token"]
+                    st.rerun()
+                else:
+                    st.error(f"Acceso denegado. El email '{email}' no está autorizado.")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
@@ -133,217 +188,229 @@ def add_note_to_lead(url, notes_history, state, new_note_text):
         return False
 
 
-# --- HEADER ---
-st.title("CRM NeoAuto - Gestion de leads y funnel de compras.")
-st.divider()
+def main_app():
+    # --- HEADER ---
+    st.title(f"CRM NeoAuto - Bienvenido {st.session_state.user_info.get('name', '')}")
+    st.markdown(f"Usuario autenticado: `{st.session_state.user_info.get('email', '')}`")
+    st.divider()
 
-# --- CARGA DE DATOS ---
-with st.spinner("Sincronizando con Supabase..."):
-    all_leads_data = fetch_leads()
+    if st.button("Cerrar Sesión"):
+        st.session_state.clear()
+        st.rerun()
 
-if not all_leads_data:
-    st.info("No hay contactos en la base de datos.")
-    st.stop()
+    # --- CARGA DE DATOS ---
+    with st.spinner("Sincronizando con Supabase..."):
+        all_leads_data = fetch_leads()
 
-df = pd.DataFrame(all_leads_data)
+    if not all_leads_data:
+        st.info("No hay contactos en la base de datos.")
+        st.stop()
 
-# Pestañas Superiores (Sin emojis)
-tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos"])
+    df = pd.DataFrame(all_leads_data)
 
-for tab, estado in zip(tabs, ESTADOS):
-    with tab:
-        state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
-        st.subheader(f"{estado} ({len(state_df)})")
-        
-        if state_df.empty:
-            st.write("Sin contactos en esta etapa.")
-            continue
+    # Pestañas Superiores (Sin emojis)
+    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos"])
+
+    for tab, estado in zip(tabs, ESTADOS):
+        with tab:
+            state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
+            st.subheader(f"{estado} ({len(state_df)})")
             
-        # Preparar Grilla con datos enriquecidos
-        grid_data = []
-        for index, row in state_df.iterrows():
-            tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
-            marca = row.get('Make', 'N/A')
-            modelo = row.get('Model', 'N/A')
-            
-            # Fix: Asegurar que Price sea float antes de formatear
-            try:
-                precio_val = float(row.get('Price', 0))
-                precio_f = f"${precio_val:,.0f}" if precio_val > 0 else "N/A"
-            except:
-                precio_f = "N/A"
+            if state_df.empty:
+                st.write("Sin contactos en esta etapa.")
+                continue
                 
-            # Fix: Asegurar que KM sea float antes de formatear
-            try:
-                km_val = float(row.get('Kilometers', 0))
-                km_f = f"{km_val:,.0f} km" if km_val > 0 else "N/A"
-            except:
-                km_f = "N/A"
+            # Preparar Grilla con datos enriquecidos
+            grid_data = []
+            for index, row in state_df.iterrows():
+                tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
+                marca = row.get('Make', 'N/A')
+                modelo = row.get('Model', 'N/A')
                 
-            grid_data.append({
-                "Seleccionar": False,
-                "Vendedor": row.get('nombre_vendedor', 'N/A'),
-                "Vehiculo": f"{marca} {modelo}".strip(),
-                "Precio": precio_f,
-                "Anio": row.get('Year', 'N/A'),
-                "Distrito": row.get('District', 'N/A'),
-                "KM": km_f,
-                "Chat": f"https://wa.me/{tel}" if tel and tel != "None" else None,
-                "NeoAuto": row['url'],
-                "Fecha": str(row.get('fecha_actualizacion', ''))[:10] if row.get('fecha_actualizacion') else "N/A",
-                "_raw_url": row['url'],
-                "_raw_notas": row.get('notas_actividad', {}),
-                "_raw_row": row.to_dict()
-            })
-            
-        grid_df = pd.DataFrame(grid_data)
-        
-        # Grid Maestro Estilo Inandes
-        edited_df = st.data_editor(
-            grid_df,
-            column_config={
-                "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
-                "Chat": st.column_config.LinkColumn("WhatsApp", display_text=r"(\d+)"),
-                "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
-                "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
-                "_raw_url": None, "_raw_notas": None, "_raw_row": None
-            },
-            hide_index=True,
-            use_container_width=True,
-            key=f"grid_v45_{estado}"
-        )
-        
-        seleccionados = edited_df[edited_df["Seleccionar"] == True]
-        
-        if not seleccionados.empty:
-            lead_sel = seleccionados.iloc[0]
-            # Recuperamos el lead ORIGINAL del df base para evitar que sea un string
-            lead_res = df[df["url"] == lead_sel["_raw_url"]]
-            if lead_res.empty:
-                st.error("No se pudo recuperar la informacion del lead.")
-                st.stop()
-            
-            lead = lead_res.iloc[0]
-            # Mapeamos para que lead se comporte como el diccionario que esperan las herramientas
-            # pero manteniendo el acceso a las columnas enriquecidas
-            n_history = lead.get('notas_actividad', {})
-            if type(n_history) is str: 
-                try: n_history = json.loads(n_history)
-                except: n_history = {}
-            
-            st.divider()
-            
-            # --- PANEL DE HERRAMIENTAS (SIMETRIA V48 - FIX TYPE) ---
-            st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
-            
-            c1, c2, c3 = st.columns(3)
-            
-            with c1:
-                st.write("**Agenda de Visita**")
-                n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
-                # Agendador compacto (sustituye a breve motivo)
-                v_date = st.date_input("Fecha:", min_value=datetime.date.today(), key=f"vdate_{lead['url']}")
-                v_time = st.time_input("Hora:", value=datetime.time(10, 0), key=f"vtime_{lead['url']}")
-                v_loc = st.text_input("Lugar/Direccion:", placeholder="Ej: Av. Primavera 123", key=f"vloc_{lead['url']}")
-            
-            with c2:
-                st.write("**Bitacora / Notas**")
-                # Altura calculada matematicamente para nivelar fondo (245px area = base col 3)
-                n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=245, placeholder="Escribe aqui...")
-
-            with c3:
-                st.write("**Datos del Vehiculo**")
-                # Micro-grilla 3x2
-                m1, m2 = st.columns(2)
+                # Fix: Asegurar que Price sea float antes de formatear
+                try:
+                    precio_val = float(row.get('Price', 0))
+                    precio_f = f"${precio_val:,.0f}" if precio_val > 0 else "N/A"
+                except:
+                    precio_f = "N/A"
+                    
+                # Fix: Asegurar que KM sea float antes de formatear
+                try:
+                    km_val = float(row.get('Kilometers', 0))
+                    km_f = f"{km_val:,.0f} km" if km_val > 0 else "N/A"
+                except:
+                    km_f = "N/A"
+                    
+                grid_data.append({
+                    "Seleccionar": False,
+                    "Vendedor": row.get('nombre_vendedor', 'N/A'),
+                    "Vehiculo": f"{marca} {modelo}".strip(),
+                    "Precio": precio_f,
+                    "Anio": row.get('Year', 'N/A'),
+                    "Distrito": row.get('District', 'N/A'),
+                    "KM": km_f,
+                    "Chat": f"https://wa.me/{tel}" if tel and tel != "None" else None,
+                    "NeoAuto": row['url'],
+                    "Fecha": str(row.get('fecha_actualizacion', ''))[:10] if row.get('fecha_actualizacion') else "N/A",
+                    "_raw_url": row['url'],
+                    "_raw_notas": row.get('notas_actividad', {}),
+                    "_raw_row": row.to_dict()
+                })
                 
-                # Función de ayuda interna para evitar crashes numéricos
-                def safe_val(val, suffix="", is_price=False):
-                    try:
-                        # Si es N/A o vacío, retornar N/A
-                        if not val or str(val).strip().upper() == "N/A": return "N/A"
-                        # Limpiar y convertir
-                        clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
-                        if is_price: return f"${clean_num:,.0f}"
-                        return f"{clean_num:,.0f}{suffix}"
-                    except:
-                        return "N/A"
-
-                with m1:
-                    st.text_input("Marca:", value=lead.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['url']}")
-                    st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"pr_{lead['url']}")
-                    st.text_input("Anio:", value=lead.get('Year', 'N/A'), disabled=True, key=f"yr_{lead['url']}")
-                with m2:
-                    st.text_input("Modelo:", value=lead.get('Model', 'N/A'), disabled=True, key=f"md_{lead['url']}")
-                    st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
-                    st.text_input("KM:", value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"km_{lead['url']}")
-
-            # FILA DE BOTONES
-            b1, b2, b3 = st.columns(3)
-            with b1:
-                if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
-                    # Lógica de Calendario Especial
-                    if n_state == "Estado 2: Cita Concertada":
-                        creds = get_google_creds()
-                        if creds:
-                            # Título: Visita NeoAuto: [Vendedor] - [Tel] - [Auto Año]
-                            vendedor = lead.get('nombre_vendedor', 'Vendedor')
-                            telefono = lead.get('telefono_whatsapp', 'S/T')
-                            auto_info = f"{lead.get('Make', '')} {lead.get('Model', '')} {lead.get('Year', '')}".strip()
-                            event_title = f"Visita NeoAuto: {vendedor} - {telefono} - {auto_info}"
-                            
-                            # DateTime de inicio
-                            start_dt = datetime.datetime.combine(v_date, v_time)
-                            
-                            link = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
-                            if link:
-                                st.success(f"Cita agendada: [Ver en Google Calendar]({link})")
-                            else:
-                                st.warning("No se pudo crear el evento en el calendario.")
-
-                    if move_lead_state(lead['url'], estado, n_state, n_history):
-                        st.success("Estado actualizado")
-                        st.rerun()
-            with b2:
-                if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
-                    if add_note_to_lead(lead['url'], n_history, estado, n_text):
-                        st.success("Nota guardada")
-                        st.rerun()
-            with b3:
-                st.markdown(f'''
-                <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
-                Ver Aviso en NeoAuto
-                </a>
-                ''', unsafe_allow_html=True)
-
-            # --- ZONA DE HISTORIAL ---
-            st.divider()
-            st.markdown("##### Bitacora de Actividad (Historial)")
-            # Usamos el nombre real de la columna de la DB
-            notas = lead.get('notas_actividad', {})
-            if type(notas) is str: 
-                try: notas = json.loads(notas)
-                except: notas = {}
+            grid_df = pd.DataFrame(grid_data)
             
-            if not notas:
-                st.caption("No hay actividad registrada todavia.")
-            else:
-                for key, val in notas.items():
-                    st.markdown(f"* **{key}**: {val}")
-        
-        # --- WIDGET DE CALENDAR COMBINADO (SOLO EN PESTAÑA CITAS) ---
-        if estado == "Estado 2: Cita Concertada":
-            st.divider()
-            st.markdown("### 📅 Disponibilidad Semanal (Anny + Rich)")
-            
-            # URL Combinada: Anny (primary) + Rich (rich@kaizencapital.pe)
-            # wkst=1 (Lunes), mode=WEEK, hl=es (Español), ctz=America/Lima
-            calendar_url = (
-                "https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff"
-                "&src=primary&color=%23039BE5"
-                "&src=rich%40kaizencapital.pe&color=%23AD1457"
-                "&ctz=America%2FLima&mode=WEEK&hl=es"
+            # Grid Maestro Estilo Inandes
+            edited_df = st.data_editor(
+                grid_df,
+                column_config={
+                    "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
+                    "Chat": st.column_config.LinkColumn("WhatsApp", display_text=r"(\d+)"),
+                    "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
+                    "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
+                    "_raw_url": None, "_raw_notas": None, "_raw_row": None
+                },
+                hide_index=True,
+                use_container_width=True,
+                key=f"grid_v45_{estado}"
             )
             
-            import streamlit.components.v1 as components
-            components.iframe(calendar_url, height=600, scrolling=True)
+            seleccionados = edited_df[edited_df["Seleccionar"] == True]
+            
+            if not seleccionados.empty:
+                lead_sel = seleccionados.iloc[0]
+                # Recuperamos el lead ORIGINAL del df base para evitar que sea un string
+                lead_res = df[df["url"] == lead_sel["_raw_url"]]
+                if lead_res.empty:
+                    st.error("No se pudo recuperar la informacion del lead.")
+                    st.stop()
+                
+                lead = lead_res.iloc[0]
+                # Mapeamos para que lead se comporte como el diccionario que esperan las herramientas
+                # pero manteniendo el acceso a las columnas enriquecidas
+                n_history = lead.get('notas_actividad', {})
+                if type(n_history) is str: 
+                    try: n_history = json.loads(n_history)
+                    except: n_history = {}
+                
+                st.divider()
+                
+                # --- PANEL DE HERRAMIENTAS (SIMETRIA V48 - FIX TYPE) ---
+                st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
+                
+                c1, c2, c3 = st.columns(3)
+                
+                with c1:
+                    st.write("**Agenda de Visita**")
+                    n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
+                    # Agendador compacto (sustituye a breve motivo)
+                    v_date = st.date_input("Fecha:", min_value=datetime.date.today(), key=f"vdate_{lead['url']}")
+                    v_time = st.time_input("Hora:", value=datetime.time(10, 0), key=f"vtime_{lead['url']}")
+                    v_loc = st.text_input("Lugar/Direccion:", placeholder="Ej: Av. Primavera 123", key=f"vloc_{lead['url']}")
+                
+                with c2:
+                    st.write("**Bitacora / Notas**")
+                    # Altura calculada matematicamente para nivelar fondo (245px area = base col 3)
+                    n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=245, placeholder="Escribe aqui...")
+
+                with c3:
+                    st.write("**Datos del Vehiculo**")
+                    # Micro-grilla 3x2
+                    m1, m2 = st.columns(2)
+                    
+                    # Función de ayuda interna para evitar crashes numéricos
+                    def safe_val(val, suffix="", is_price=False):
+                        try:
+                            # Si es N/A o vacío, retornar N/A
+                            if not val or str(val).strip().upper() == "N/A": return "N/A"
+                            # Limpiar y convertir
+                            clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
+                            if is_price: return f"${clean_num:,.0f}"
+                            return f"{clean_num:,.0f}{suffix}"
+                        except:
+                            return "N/A"
+
+                    with m1:
+                        st.text_input("Marca:", value=lead.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['url']}")
+                        st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"pr_{lead['url']}")
+                        st.text_input("Anio:", value=lead.get('Year', 'N/A'), disabled=True, key=f"yr_{lead['url']}")
+                    with m2:
+                        st.text_input("Modelo:", value=lead.get('Model', 'N/A'), disabled=True, key=f"md_{lead['url']}")
+                        st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
+                        st.text_input("KM:", value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"km_{lead['url']}")
+
+                # FILA DE BOTONES
+                b1, b2, b3 = st.columns(3)
+                with b1:
+                    if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
+                        # Lógica de Calendario Especial
+                        if n_state == "Estado 2: Cita Concertada":
+                            creds = get_google_creds()
+                            if creds:
+                                # Título: Visita NeoAuto: [Vendedor] - [Tel] - [Auto Año]
+                                vendedor = lead.get('nombre_vendedor', 'Vendedor')
+                                telefono = lead.get('telefono_whatsapp', 'S/T')
+                                auto_info = f"{lead.get('Make', '')} {lead.get('Model', '')} {lead.get('Year', '')}".strip()
+                                event_title = f"Visita NeoAuto: {vendedor} - {telefono} - {auto_info}"
+                                
+                                # DateTime de inicio
+                                start_dt = datetime.datetime.combine(v_date, v_time)
+                                
+                                link = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
+                                if link:
+                                    st.success(f"Cita agendada: [Ver en Google Calendar]({link})")
+                                else:
+                                    st.warning("No se pudo crear el evento en el calendario.")
+
+                        if move_lead_state(lead['url'], estado, n_state, n_history):
+                            st.success("Estado actualizado")
+                            st.rerun()
+                with b2:
+                    if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
+                        if add_note_to_lead(lead['url'], n_history, estado, n_text):
+                            st.success("Nota guardada")
+                            st.rerun()
+                with b3:
+                    st.markdown(f'''
+                    <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
+                    Ver Aviso en NeoAuto
+                    </a>
+                    ''', unsafe_allow_html=True)
+
+                # --- ZONA DE HISTORIAL ---
+                st.divider()
+                st.markdown("##### Bitacora de Actividad (Historial)")
+                # Usamos el nombre real de la columna de la DB
+                notas = lead.get('notas_actividad', {})
+                if type(notas) is str: 
+                    try: notas = json.loads(notas)
+                    except: notas = {}
+                
+                if not notas:
+                    st.caption("No hay actividad registrada todavia.")
+                else:
+                    for key, val in notas.items():
+                        st.markdown(f"* **{key}**: {val}")
+            
+            # --- WIDGET DE CALENDAR COMBINADO (SOLO EN PESTAÑA CITAS) ---
+            if estado == "Estado 2: Cita Concertada":
+                st.divider()
+                st.markdown("### 📅 Disponibilidad Semanal (Anny + Rich)")
+                
+                # URL Combinada: Anny (primary) + Rich (rich@kaizencapital.pe)
+                # wkst=1 (Lunes), mode=WEEK, hl=es (Español), ctz=America/Lima
+                calendar_url = (
+                    "https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff"
+                    "&src=primary&color=%23039BE5"
+                    "&src=rich%40kaizencapital.pe&color=%23AD1457"
+                    "&ctz=America%2FLima&mode=WEEK&hl=es"
+                )
+                
+                import streamlit.components.v1 as components
+                components.iframe(calendar_url, height=600, scrolling=True)
+
+if __name__ == "__main__":
+    if "user_info" not in st.session_state:
+        login_ui()
+    else:
+        main_app()
 
