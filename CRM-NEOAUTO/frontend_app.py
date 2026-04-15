@@ -329,4 +329,21 @@ for tab, estado in zip(tabs, ESTADOS):
             else:
                 for key, val in notas.items():
                     st.markdown(f"* **{key}**: {val}")
+        
+        # --- WIDGET DE CALENDAR COMBINADO (SOLO EN PESTAÑA CITAS) ---
+        if estado == "Estado 2: Cita Concertada":
+            st.divider()
+            st.markdown("### 📅 Disponibilidad Semanal (Anny + Rich)")
+            
+            # URL Combinada: Anny (primary) + Rich (rich@kaizencapital.pe)
+            # wkst=1 (Lunes), mode=WEEK, hl=es (Español), ctz=America/Lima
+            calendar_url = (
+                "https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff"
+                "&src=primary&color=%23039BE5"
+                "&src=rich%40kaizencapital.pe&color=%23AD1457"
+                "&ctz=America%2FLima&mode=WEEK&hl=es"
+            )
+            
+            import streamlit.components.v1 as components
+            components.iframe(calendar_url, height=600, scrolling=True)
 
