@@ -127,7 +127,32 @@ def fetch_leads():
         st.error(f"Error conectando a DB: {e}")
         return []
 
-# --- ... (resto de funciones move_lead_state y add_note_to_lead sin cambios) ---
+# --- FUNCIONES GYP ---
+
+def fetch_gyp(lead_url):
+    """Trae el registro de crm_gyp para un lead. Retorna dict o None."""
+    try:
+        res = supabase.table("crm_gyp").select("*").eq("lead_url", lead_url).execute()
+        return res.data[0] if res.data else None
+    except Exception as e:
+        st.error(f"Error al leer GyP: {e}")
+        return None
+
+def save_gyp(lead_url, payload):
+    """Upsert del registro GyP. Retorna True/False."""
+    try:
+        existing = supabase.table("crm_gyp").select("id").eq("lead_url", lead_url).execute()
+        if existing.data:
+            supabase.table("crm_gyp").update(payload).eq("lead_url", lead_url).execute()
+        else:
+            payload["lead_url"] = lead_url
+            supabase.table("crm_gyp").insert(payload).execute()
+        return True
+    except Exception as e:
+        st.error(f"Error al guardar GyP: {e}")
+        return False
+
+# --- FUNCIONES DE FLUJO ---
 
 def move_lead_state(url, current_state, new_state, notes_history):
     notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido de {current_state}."
@@ -261,115 +286,217 @@ def main_app():
                     except: n_history = {}
                 
                 st.divider()
-                
-                # --- PANEL DE HERRAMIENTAS (SIMETRIA V48 - FIX TYPE) ---
+
+                # --- PANEL DE HERRAMIENTAS ---
                 st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
-                
+
                 # Mostrar errores persistentes de calendario si existen
                 if "calendar_error" in st.session_state:
-                    st.error(f"⚠️ Atención: {st.session_state.calendar_error}")
+                    st.error(f"Atencion: {st.session_state.calendar_error}")
                     if st.button("Entendido, limpiar error"):
                         del st.session_state.calendar_error
                         st.rerun()
 
-                c1, c2, c3 = st.columns(3)
-                
-                with c1:
-                    st.write("**Agenda de Visita**")
-                    n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
-                    # Agendador compacto (sustituye a breve motivo)
-                    v_date = st.date_input("Fecha:", min_value=datetime.date.today(), key=f"vdate_{lead['url']}")
-                    v_time = st.time_input("Hora:", value=datetime.time(10, 0), key=f"vtime_{lead['url']}")
-                    v_loc = st.text_input("Lugar/Direccion:", placeholder="Ej: Av. Primavera 123", key=f"vloc_{lead['url']}")
-                
-                with c2:
-                    st.write("**Bitacora / Notas**")
-                    # Altura calculada matematicamente para nivelar fondo (245px area = base col 3)
-                    n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=245, placeholder="Escribe aqui...")
+                # ============================================================
+                # PANEL GYP — solo para Estado 5: Comprado (Stock)
+                # ============================================================
+                if estado == "Estado 5: Comprado (Stock)":
 
-                with c3:
-                    st.write("**Datos del Vehiculo**")
-                    # Micro-grilla 3x2
-                    m1, m2 = st.columns(2)
-                    
-                    # Función de ayuda interna para evitar crashes numéricos
-                    def safe_val(val, suffix="", is_price=False):
-                        try:
-                            # Si es N/A o vacío, retornar N/A
-                            if not val or str(val).strip().upper() == "N/A": return "N/A"
-                            # Limpiar y convertir
-                            clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
-                            if is_price: return f"${clean_num:,.0f}"
-                            return f"{clean_num:,.0f}{suffix}"
-                        except:
-                            return "N/A"
+                    gyp_data = fetch_gyp(lead['url'])
+                    g = gyp_data or {}
 
-                    with m1:
-                        st.text_input("Marca:", value=lead.get('Make', 'N/A'), disabled=True, key=f"mk_{lead['url']}")
-                        st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"pr_{lead['url']}")
-                        st.text_input("Anio:", value=lead.get('Year', 'N/A'), disabled=True, key=f"yr_{lead['url']}")
-                    with m2:
-                        st.text_input("Modelo:", value=lead.get('Model', 'N/A'), disabled=True, key=f"md_{lead['url']}")
-                        st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
-                        st.text_input("KM:", value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"km_{lead['url']}")
+                    st.markdown("##### Ganancia y Perdida")
 
-                # FILA DE BOTONES
-                b1, b2, b3 = st.columns(3)
-                with b1:
-                    if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
-                        # Lógica de Calendario Especial
-                        if n_state == "Estado 2: Cita Concertada":
-                            creds = get_google_creds()
-                            if creds:
-                                # Título: Visita NeoAuto: [Vendedor] - [Tel] - [Auto Año]
-                                vendedor = lead.get('nombre_vendedor', 'Vendedor')
-                                telefono = lead.get('telefono_whatsapp', 'S/T')
-                                auto_info = f"{lead.get('Make', '')} {lead.get('Model', '')} {lead.get('Year', '')}".strip()
-                                event_title = f"Visita NeoAuto: {vendedor} - {telefono} - {auto_info}"
-                                
-                                # DateTime de inicio
-                                start_dt = datetime.datetime.combine(v_date, v_time)
-                                
-                                res = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
-                                if "link" in res:
-                                    st.success(f"Cita agendada: [Ver en Google Calendar]({res['link']})")
-                                else:
-                                    st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
+                    # Tipo de cambio arriba — afecta toda la conversion
+                    tc = st.number_input(
+                        "Tipo de Cambio (USD/PEN)",
+                        min_value=1.0, max_value=10.0,
+                        value=float(g.get("tipo_cambio", 3.4)),
+                        step=0.05, format="%.2f",
+                        key=f"tc_{lead['url']}"
+                    )
 
-                        if move_lead_state(lead['url'], estado, n_state, n_history):
-                            st.success("Estado actualizado")
-                            st.rerun()
-                with b2:
-                    if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
-                        if add_note_to_lead(lead['url'], n_history, estado, n_text):
-                            st.success("Nota guardada")
-                            st.rerun()
-                with b3:
-                    st.markdown(f'''
-                    <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
-                    Ver Aviso en NeoAuto
-                    </a>
-                    ''', unsafe_allow_html=True)
+                    st.markdown("---")
 
-                # --- ZONA DE HISTORIAL ---
-                st.divider()
-                st.markdown("##### Bitacora de Actividad (Historial)")
-                # Usamos el nombre real de la columna de la DB
-                notas = lead.get('notas_actividad', {})
-                if type(notas) is str: 
-                    try: notas = json.loads(notas)
-                    except: notas = {}
-                
-                if not notas:
-                    st.caption("No hay actividad registrada todavia.")
+                    # 3 columnas: USD | Soles | Todo en USD
+                    col_usd, col_pen, col_result = st.columns(3)
+
+                    with col_usd:
+                        st.markdown("**Valores en USD**")
+                        precio_compra = st.number_input("Precio Compra (USD)", min_value=0, value=int(g.get("precio_compra_usd", 0)), step=100, key=f"g_pc_{lead['url']}")
+                        precio_venta  = st.number_input("Precio Venta (USD)",  min_value=0, value=int(g.get("precio_venta_usd",  0)), step=100, key=f"g_pv_{lead['url']}")
+
+                    with col_pen:
+                        st.markdown("**Costos en Soles (S/)")
+                        notarial       = st.number_input("Notarial",        min_value=0, value=int(g.get("notarial_pen",       0)), step=50,  key=f"g_not_{lead['url']}")
+                        registral      = st.number_input("Registral",       min_value=0, value=int(g.get("registral_pen",      0)), step=50,  key=f"g_reg_{lead['url']}")
+                        pintura_aros   = st.number_input("Pintura/Aros",    min_value=0, value=int(g.get("pintura_aros_pen",   0)), step=50,  key=f"g_pin_{lead['url']}")
+                        lavado         = st.number_input("Lavado",          min_value=0, value=int(g.get("lavado_pen",         0)), step=10,  key=f"g_lav_{lead['url']}")
+                        gasolina       = st.number_input("Gasolina",        min_value=0, value=int(g.get("gasolina_pen",       0)), step=10,  key=f"g_gas_{lead['url']}")
+                        cochera        = st.number_input("Cochera",         min_value=0, value=int(g.get("cochera_pen",        0)), step=50,  key=f"g_coc_{lead['url']}")
+                        mecanica       = st.number_input("Mecanica",        min_value=0, value=int(g.get("mecanica_pen",       0)), step=50,  key=f"g_mec_{lead['url']}")
+                        llantas        = st.number_input("Llantas",         min_value=0, value=int(g.get("llantas_pen",        0)), step=50,  key=f"g_lla_{lead['url']}")
+                        neoauto        = st.number_input("NeoAuto",         min_value=0, value=int(g.get("neoauto_pen",        0)), step=50,  key=f"g_neo_{lead['url']}")
+                        cheque_ger     = st.number_input("Cheque Gerencia", min_value=0, value=int(g.get("cheque_gerencia_pen",0)), step=50,  key=f"g_chq_{lead['url']}")
+                        intereses      = st.number_input("Intereses",       min_value=0, value=int(g.get("intereses_pen",      0)), step=50,  key=f"g_int_{lead['url']}")
+                        comentarios_txt= st.text_area("Comentarios", value=str(g.get("comentarios", "") or ""), height=80, key=f"g_com_{lead['url']}")
+
+                    with col_result:
+                        st.markdown("**Resumen en USD**")
+
+                        # Conversion de soles a USD
+                        total_pen_usd = (notarial + registral + pintura_aros + lavado + gasolina +
+                                         cochera + mecanica + llantas + neoauto + cheque_ger + intereses) / tc
+
+                        total_costos_usd = precio_compra + total_pen_usd
+                        utilidad_bruta   = precio_venta - total_costos_usd
+                        margen_pct       = (utilidad_bruta / precio_venta * 100) if precio_venta > 0 else 0.0
+
+                        st.metric("Precio Compra",    f"$ {precio_compra:,.0f}")
+                        st.metric("Costos S/ -> USD", f"$ {total_pen_usd:,.0f}")
+                        st.metric("Total Costos",     f"$ {total_costos_usd:,.0f}")
+                        st.metric("Precio Venta",     f"$ {precio_venta:,.0f}")
+                        color_util = "normal" if utilidad_bruta >= 0 else "inverse"
+                        st.metric("Utilidad Neta",    f"$ {utilidad_bruta:,.0f}", delta=f"{margen_pct:.1f}% margen", delta_color=color_util)
+
+                    st.markdown("---")
+
+                    # BOTONES GYP
+                    bg1, bg2, bg3 = st.columns(3)
+
+                    with bg1:
+                        if st.button("Guardar GyP", type="primary", use_container_width=True, key=f"btn_gyp_{lead['url']}"):
+                            gyp_payload = {
+                                "tipo_cambio":         tc,
+                                "precio_compra_usd":   precio_compra,
+                                "precio_venta_usd":    precio_venta,
+                                "notarial_pen":        notarial,
+                                "registral_pen":       registral,
+                                "pintura_aros_pen":    pintura_aros,
+                                "lavado_pen":          lavado,
+                                "gasolina_pen":        gasolina,
+                                "cochera_pen":         cochera,
+                                "mecanica_pen":        mecanica,
+                                "llantas_pen":         llantas,
+                                "neoauto_pen":         neoauto,
+                                "cheque_gerencia_pen": cheque_ger,
+                                "intereses_pen":       intereses,
+                                "utilidad_neta_usd":   round(utilidad_bruta, 2),
+                                "comentarios":         {"texto": comentarios_txt} if comentarios_txt else {},
+                            }
+                            if save_gyp(lead['url'], gyp_payload):
+                                st.success("GyP guardado correctamente.")
+                                st.rerun()
+
+                    with bg2:
+                        vendido_habilitado = precio_venta > 0
+                        if not vendido_habilitado:
+                            st.caption("Ingresa Precio Venta para habilitar.")
+                        if st.button(
+                            "Mover a Vendido",
+                            use_container_width=True,
+                            disabled=not vendido_habilitado,
+                            key=f"btn_vendido_{lead['url']}"
+                        ):
+                            if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
+                                st.success("Lead movido a Vendido.")
+                                st.rerun()
+
+                    with bg3:
+                        st.markdown(f'''
+                        <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
+                        Ver Aviso en NeoAuto
+                        </a>
+                        ''', unsafe_allow_html=True)
+
+                # ============================================================
+                # PANEL ESTANDAR — todos los demas estados
+                # ============================================================
                 else:
-                    for key, val in notas.items():
-                        st.markdown(f"* **{key}**: {val}")
+                    c1, c2, c3 = st.columns(3)
+
+                    with c1:
+                        st.write("**Agenda de Visita**")
+                        n_state = st.selectbox("Cambiar a:", [e for e in ESTADOS if e != estado], key=f"mv_{lead['url']}")
+                        v_date = st.date_input("Fecha:", min_value=datetime.date.today(), key=f"vdate_{lead['url']}")
+                        v_time = st.time_input("Hora:", value=datetime.time(10, 0), key=f"vtime_{lead['url']}")
+                        v_loc  = st.text_input("Lugar/Direccion:", placeholder="Ej: Av. Primavera 123", key=f"vloc_{lead['url']}")
+
+                    with c2:
+                        st.write("**Bitacora / Notas**")
+                        n_text = st.text_area("Nota de seguimiento:", key=f"txt_{lead['url']}", height=245, placeholder="Escribe aqui...")
+
+                    with c3:
+                        st.write("**Datos del Vehiculo**")
+                        m1, m2 = st.columns(2)
+
+                        def safe_val(val, suffix="", is_price=False):
+                            try:
+                                if not val or str(val).strip().upper() == "N/A": return "N/A"
+                                clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
+                                if is_price: return f"${clean_num:,.0f}"
+                                return f"{clean_num:,.0f}{suffix}"
+                            except:
+                                return "N/A"
+
+                        with m1:
+                            st.text_input("Marca:",  value=lead.get('Make', 'N/A'),     disabled=True, key=f"mk_{lead['url']}")
+                            st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"pr_{lead['url']}")
+                            st.text_input("Anio:",   value=lead.get('Year', 'N/A'),     disabled=True, key=f"yr_{lead['url']}")
+                        with m2:
+                            st.text_input("Modelo:",   value=lead.get('Model', 'N/A'),    disabled=True, key=f"md_{lead['url']}")
+                            st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"dt_{lead['url']}")
+                            st.text_input("KM:",       value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"km_{lead['url']}")
+
+                    # FILA DE BOTONES
+                    b1, b2, b3 = st.columns(3)
+                    with b1:
+                        if st.button("Confirmar Movimiento", type="primary", use_container_width=True, key=f"btn_mv_{lead['url']}"):
+                            if n_state == "Estado 2: Cita Concertada":
+                                creds = get_google_creds()
+                                if creds:
+                                    vendedor   = lead.get('nombre_vendedor', 'Vendedor')
+                                    telefono   = lead.get('telefono_whatsapp', 'S/T')
+                                    auto_info  = f"{lead.get('Make', '')} {lead.get('Model', '')} {lead.get('Year', '')}".strip()
+                                    event_title = f"Visita NeoAuto: {vendedor} - {telefono} - {auto_info}"
+                                    start_dt   = datetime.datetime.combine(v_date, v_time)
+                                    res = create_calendar_event(creds, event_title, v_loc, start_dt, vendedor)
+                                    if "link" in res:
+                                        st.success(f"Cita agendada: [Ver en Google Calendar]({res['link']})")
+                                    else:
+                                        st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
+                            if move_lead_state(lead['url'], estado, n_state, n_history):
+                                st.success("Estado actualizado")
+                                st.rerun()
+                    with b2:
+                        if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
+                            if add_note_to_lead(lead['url'], n_history, estado, n_text):
+                                st.success("Nota guardada")
+                                st.rerun()
+                    with b3:
+                        st.markdown(f'''
+                        <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
+                        Ver Aviso en NeoAuto
+                        </a>
+                        ''', unsafe_allow_html=True)
+
+                    # --- ZONA DE HISTORIAL ---
+                    st.divider()
+                    st.markdown("##### Bitacora de Actividad (Historial)")
+                    notas = lead.get('notas_actividad', {})
+                    if type(notas) is str:
+                        try: notas = json.loads(notas)
+                        except: notas = {}
+                    if not notas:
+                        st.caption("No hay actividad registrada todavia.")
+                    else:
+                        for key, val in notas.items():
+                            st.markdown(f"* **{key}**: {val}")
             
             # --- WIDGET DE CALENDAR COMBINADO (SOLO EN PESTAÑA CITAS) ---
             if estado == "Estado 2: Cita Concertada":
                 st.divider()
-                st.markdown("### 📅 Disponibilidad Semanal (Anny + Rich)")
+                st.markdown("### Disponibilidad Semanal (Anny + Rich)")
                 
                 # URL Combinada: Anny (annyred9@gmail.com) + Rich (rich@kaizencapital.pe)
                 calendar_url = (
