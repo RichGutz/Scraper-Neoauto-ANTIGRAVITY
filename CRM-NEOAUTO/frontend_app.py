@@ -61,7 +61,7 @@ SECRET_PASS = "VivaLaVida2026$"
 
 def login_ui():
     st.markdown("""<style>[data-testid="stSidebar"]{display:none;}</style>""", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1.5, 1, 1.5])
+    col1, col2, col3 = st.columns([2, 1, 2])
     with col2:
         st.markdown("<h2 style='text-align:center;margin-top:20px'>CRM NeoAuto - Acceso Seguro</h2>", unsafe_allow_html=True)
         st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Introduce tus credenciales de acceso</h5><br>", unsafe_allow_html=True)
@@ -202,7 +202,7 @@ def main_app():
     df = pd.DataFrame(all_leads_data)
 
     # Pestañas Superiores (Sin emojis)
-    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Cerrado", "Comprados", "Vendidos", "Analizador"])
+    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Comprados", "Vendidos", "Cerrado", "Analizador"])
 
     for tab, estado in zip(tabs[:-1], ESTADOS):
         with tab:
