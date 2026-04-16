@@ -38,3 +38,22 @@ VERIFICACIÓN FINAL:
 
 SESIÓN FINALIZADA CON ÉXITO.
 ============================
+
+SESIÓN TARDE/NOCHE - MÓDULO GyP
+================================
+1. [ARQUITECTURA DE DATOS GyP]
+   - Se migró el esquema de Supabase (`crm_gyp`) para almacenar valores absolutos 100% en Dólares (`_usd`), descartando las columnas en Soles (`_pen`).
+   - El payload del webhook guarda automáticamente un diccionario JSONB unificado en el campo `comentarios` para las notas adicionales.
+
+2. [UI/UX - MINIMALISMO & CÁLCULO EN VIVO]
+   - Refactorización de 3 a 6 columnas espaciadas para la sección "Comprados (Stock)". Las cajas numéricas se redujeron a la mitad para mayor estética.
+   - Cálculos en vivo (Client-side) para Utilidad Neta en USD y Margen % (con *warning tags* verde/rojo según rentabilidad).
+   - El Tipo de Cambio se globalizó en la cabecera.
+
+3. [LÓGICA EXCLUYENTE & SEGURIDAD (GATEKEEPER)]
+   - Mecanismo "One-or-Another": Se inyectó lógica dinámica basada en estados de sesión en Streamlit. Si se ingresa "USD", la caja "PEN" se bloquea (disabled) y viceversa.
+   - El botón de transición "Mover a Vendido" nace deshabilitado hasta que el Vehículo posea un registro real mayor a $0 en `precio_venta_usd`.
+   - Modificación siempre permitida: El botón de "Guardar GyP" funciona como un `UPSERT`, permitiendo corregir o añadir rubros sobre la misma marcha sin corromper el pipeline.
+
+4. [DESPLIEGUE FINAL]
+   - Todo desplegado en caliente en Hostinger `crm-neoauto.geeksoft.tech` usando el script F3.
