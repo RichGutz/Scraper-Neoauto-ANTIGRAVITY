@@ -311,12 +311,12 @@ def main_app():
                     with bcol2:
                         tc = st.number_input("T. Cambio (USD/PEN)", min_value=1.0, value=float(g.get("tipo_cambio", 3.4)), step=0.01, format="%.2f", key=f"tc_{lead['url']}")
 
-                    # Encabezados
-                    h1, h2, h3, h4 = st.columns([3, 2, 2, 2])
+                    # Encabezados (ajustados a 6 columnas con espaciadores para cajas angostas)
+                    h1, h2, h_s1, h3, h_s2, h4 = st.columns([3, 1, 0.3, 1, 0.5, 1.5])
                     h1.markdown("**RUBRO**")
-                    h2.markdown("**INGRESA USD ($)**")
-                    h3.markdown("**INGRESA SOLES (S/)**")
-                    h4.markdown("**TOTAL USD ($)**")
+                    h2.markdown("**USD ($)**")
+                    h3.markdown("**SOLES (S/)**")
+                    h4.markdown("<div style='text-align:center;'>**TOTAL USD ($)**</div>", unsafe_allow_html=True)
 
                     st.markdown("<hr style='margin:0px'>", unsafe_allow_html=True)
 
@@ -339,21 +339,34 @@ def main_app():
                     resultados_usd = {}
 
                     for label, key_name in rubros:
-                        c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+                        c1, c2, c_s1, c3, c_s2, c4 = st.columns([3, 1, 0.3, 1, 0.5, 1.5])
                         c1.write(label)
                         
-                        val_usd = c2.number_input("USD", min_value=0, value=int(g.get(f"{key_name}_usd", 0)), step=10, label_visibility="collapsed", key=f"u_{key_name}_{lead['url']}")
-                        val_pen = c3.number_input("PEN", min_value=0, value=0, step=10, label_visibility="collapsed", key=f"p_{key_name}_{lead['url']}")
+                        k_usd = f"u_{key_name}_{lead['url']}"
+                        k_pen = f"p_{key_name}_{lead['url']}"
+                        
+                        saved_val_usd = float(g.get(f"{key_name}_usd", 0) or 0)
+                        
+                        # Mutua exclusividad
+                        current_usd = st.session_state.get(k_usd, saved_val_usd)
+                        current_pen = st.session_state.get(k_pen, 0)
+                        
+                        disable_usd = (current_pen > 0)
+                        disable_pen = (current_usd > 0)
+                        
+                        val_usd = c2.number_input("USD", min_value=0, value=int(saved_val_usd), step=10, label_visibility="collapsed", disabled=disable_usd, key=k_usd)
+                        val_pen = c3.number_input("PEN", min_value=0, value=0, step=10, label_visibility="collapsed", disabled=disable_pen, key=k_pen)
                         
                         if val_usd > 0:
                             total_usd = val_usd
                         else:
                             total_usd = round(val_pen / tc, 2) if val_pen > 0 else 0
                             
+                        # Resalte estetico y centrado de la columna Total
                         if key_name == "precio_venta":
-                            c4.markdown(f"<span style='color:green;font-weight:bold'>${total_usd:,.0f}</span>", unsafe_allow_html=True)
+                            c4.markdown(f"<div style='text-align:center; background-color:#e8f5e9; color:#1b5e20; padding:4px; border-radius:4px; font-weight:bold; border: 1px solid #c8e6c9;'>${total_usd:,.0f}</div>", unsafe_allow_html=True)
                         else:
-                            c4.markdown(f"<span style='color:#d32f2f;'>-${total_usd:,.0f}</span>", unsafe_allow_html=True)
+                            c4.markdown(f"<div style='text-align:center; background-color:#ffebee; color:#b71c1c; padding:4px; border-radius:4px; border: 1px solid #ffcdd2;'>-${total_usd:,.0f}</div>", unsafe_allow_html=True)
 
                         resultados_usd[key_name] = total_usd
 
