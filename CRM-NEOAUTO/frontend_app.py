@@ -512,11 +512,12 @@ def main_app():
                     "&ctz=America%2FLima&mode=WEEK&hl=es"
                 )
                 
-                import streamlit.components.v1 as components
-                html_str = f"""
-                <iframe src="{calendar_url}" style="border: 0; width: 100%; height: 600px;" frameborder="0" scrolling="yes"></iframe>
-                """
-                components.html(html_str, height=600)
+                # Embed iframe nativo sin wrapper (evita crasheo React de pantalla blanca)
+                st.markdown(f'''
+                <div style="display:flex; justify-content:center;">
+                    <iframe src="{calendar_url}" style="border: 0; width: 100%; height: 600px;" frameborder="0" scrolling="yes"></iframe>
+                </div>
+                ''', unsafe_allow_html=True)
 
     with tabs[-1]:
         st.write("Analizador de Precio de Leads")
