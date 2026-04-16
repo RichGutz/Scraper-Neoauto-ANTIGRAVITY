@@ -61,8 +61,8 @@ SECRET_PASS = "VivaLaVida2026$"
 
 def login_ui():
     st.markdown("""<style>[data-testid="stSidebar"]{display:none;}</style>""", unsafe_allow_html=True)
-    _, col, _ = st.columns([1, 1, 1])
-    with col:
+    col1, col2, col3 = st.columns([1.5, 1, 1.5])
+    with col2:
         st.markdown("<h2 style='text-align:center;margin-top:20px'>CRM NeoAuto - Acceso Seguro</h2>", unsafe_allow_html=True)
         st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Introduce tus credenciales de acceso</h5><br>", unsafe_allow_html=True)
         
@@ -93,9 +93,9 @@ ESTADOS = [
     "Estado 1: 1er Contacto WhatsApp",
     "Estado 2: Cita Concertada",
     "Estado 3: Visita Ejecutada",
-    "Estado 4: Cerrado",
     "Estado 5: Comprado (Stock)",
-    "Estado 6: Vendido"
+    "Estado 6: Vendido",
+    "Estado 4: Cerrado"
 ]
 
 # --- FUNCIONES DE BASE DE DATOS ---
