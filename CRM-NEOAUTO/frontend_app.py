@@ -61,7 +61,7 @@ SECRET_PASS = "VivaLaVida2026$"
 
 def login_ui():
     st.markdown("""<style>[data-testid="stSidebar"]{display:none;}</style>""", unsafe_allow_html=True)
-    _, col, _ = st.columns([1,2,1])
+    _, col, _ = st.columns([1, 1, 1])
     with col:
         st.markdown("<h2 style='text-align:center;margin-top:20px'>CRM NeoAuto - Acceso Seguro</h2>", unsafe_allow_html=True)
         st.markdown("<h5 style='text-align:center;color:#888;font-weight:normal'>Introduce tus credenciales de acceso</h5><br>", unsafe_allow_html=True)
