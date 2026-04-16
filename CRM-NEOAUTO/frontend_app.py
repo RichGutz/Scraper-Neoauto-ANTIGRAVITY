@@ -513,7 +513,10 @@ def main_app():
                 )
                 
                 import streamlit.components.v1 as components
-                components.iframe(calendar_url, height=600, scrolling=True)
+                html_str = f"""
+                <iframe src="{calendar_url}" style="border: 0; width: 100%; height: 600px;" frameborder="0" scrolling="yes"></iframe>
+                """
+                components.html(html_str, height=600)
 
     with tabs[-1]:
         st.write("Analizador de Precio de Leads")
