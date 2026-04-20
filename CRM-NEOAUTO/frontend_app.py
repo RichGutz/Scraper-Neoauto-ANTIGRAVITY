@@ -406,7 +406,7 @@ def main_app():
                         def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
                         fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
                     with nv3:
-                        anio = st.text_input("AÑO:", value=g.get("anio", ""), key=f"an_{lead['url']}")
+                        st.empty() 
 
                     st.divider()
                     
@@ -445,9 +445,9 @@ def main_app():
                                 "notaria_venta": notaria_venta,
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
-                                "placa": placa.upper(),
-                                "anio": anio
+                                "placa": placa.upper()
                             }
+
 
 
                             
