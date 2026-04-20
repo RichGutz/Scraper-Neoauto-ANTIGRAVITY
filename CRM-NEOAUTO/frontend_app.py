@@ -336,10 +336,22 @@ def main_app():
                         ("Intereses", "intereses")
                     ]
 
-                    # Inicializar resultados en session_state si no existen
+                    # Inicializar resultados en session_state si no existen (Cargar de DB)
                     if f"calc_{lead['url']}" not in st.session_state:
-                         st.session_state[f"calc_{lead['url']}"] = {r[1]: float(g.get(f"{r[1]}_usd", 0) or 0) for r in rubros}
-                         st.session_state[f"calc_{lead['url']}"]["utilidad"] = float(g.get("utilidad_neta_usd", 0) or 0)
+                         # El Total GyP (Columna 4) debe ser la suma de lo que hay en DB: USD + (PEN/TC)
+                         db_calcs = {}
+                         total_inc_db = 0.0
+                         total_exp_db = 0.0
+                         for _, kn in rubros:
+                             val_u_db = float(g.get(f"{kn}_usd", 0) or 0)
+                             val_p_db = float(g.get(f"{kn}_pen", 0) or 0)
+                             subtotal_db = val_u_db + (val_p_db / tc if tc > 0 else 0)
+                             db_calcs[kn] = round(subtotal_db, 2)
+                             if kn == "precio_venta": total_inc_db = subtotal_db
+                             else: total_exp_db += subtotal_db
+                         
+                         db_calcs["utilidad"] = round(total_inc_db - total_exp_db, 2)
+                         st.session_state[f"calc_{lead['url']}"] = db_calcs
 
                     resultados_finales = {}
 
@@ -350,11 +362,11 @@ def main_app():
                         k_usd = f"u_{key_name}_{lead['url']}"
                         k_pen = f"p_{key_name}_{lead['url']}"
                         
-                        # Insumos (USD y PEN)
+                        # Insumos (USD y PEN) - Cargan directamente de sus respectivas columnas en DB
                         v_usd = c2.number_input("USD", min_value=0.0, value=float(g.get(f"{key_name}_usd", 0) or 0), step=1.0, label_visibility="collapsed", key=k_usd)
                         v_pen = c3.number_input("PEN", min_value=0.0, value=float(g.get(f"{key_name}_pen", 0) or 0), step=1.0, label_visibility="collapsed", key=k_pen)
                         
-                        # El total se muestra desde el session_state (actualizado por el botón Calcular)
+                        # El total se muestra desde el session_state (actualizado por el botón Calcular o cargado de DB)
                         total_item = st.session_state[f"calc_{lead['url']}"].get(key_name, 0.0)
                         
                         if key_name == "precio_venta":
@@ -395,7 +407,7 @@ def main_app():
                         comentarios_txt = st.text_area("Notas Adicionales:", value=com_text, height=130, label_visibility="collapsed", placeholder="Notas de GyP...", key=f"g_com_{lead['url']}")
                         
                     with col_btns:
-                        # BOTÓN CALCULAR
+                        # BOTÓN CALCULAR (Actualiza la visualización temporal)
                         if st.button("Calcular GyP", use_container_width=True, key=f"btn_calc_{lead['url']}"):
                             new_calcs = {}
                             total_inc = 0.0
@@ -412,26 +424,40 @@ def main_app():
                             st.session_state[f"calc_{lead['url']}"] = new_calcs
                             st.rerun()
 
-                        # BOTÓN GUARDAR
+                        # BOTÓN GUARDAR (Recalcula antes de enviar a DB para asegurar consistencia)
                         if st.button("Guardar GyP", type="primary", use_container_width=True, key=f"btn_save_{lead['url']}"):
-                            current_calcs = st.session_state[f"calc_{lead['url']}"]
+                            final_inc = 0.0
+                            final_exp = 0.0
                             gyp_payload = {
                                 "tipo_cambio": tc,
-                                "utilidad_neta_usd": current_calcs["utilidad"],
                                 "comentarios": {"texto": comentarios_txt} if comentarios_txt else {},
                                 "notaria_compra": notaria_compra,
                                 "notaria_venta": notaria_venta,
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat()
                             }
-                            # Mapear USD y PEN para cada rubro
+                            
+                            # Recalcular y Mapear para DB
                             for _, kn in rubros:
-                                gyp_payload[f"{kn}_usd"] = st.session_state.get(f"u_{kn}_{lead['url']}", 0.0)
-                                gyp_payload[f"{kn}_pen"] = st.session_state.get(f"p_{kn}_{lead['url']}", 0.0)
+                                val_u = st.session_state.get(f"u_{kn}_{lead['url']}", 0.0)
+                                val_p = st.session_state.get(f"p_{kn}_{lead['url']}", 0.0)
+                                subtotal = val_u + (val_p / tc if tc > 0 else 0)
+                                
+                                gyp_payload[f"{kn}_usd"] = val_u
+                                gyp_payload[f"{kn}_pen"] = val_p
+                                
+                                if kn == "precio_venta": final_inc = subtotal
+                                else: final_exp += subtotal
+                            
+                            gyp_payload["utilidad_neta_usd"] = round(final_inc - final_exp, 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
-                                st.success("¡GyP y Datos de Notaría guardados!")
+                                # Limpiar estado de calculo para forzar recarga de DB en el proximo render
+                                if f"calc_{lead['url']}" in st.session_state:
+                                    del st.session_state[f"calc_{lead['url']}"]
+                                st.success("¡GyP guardado exitosamente!")
                                 st.rerun()
+
 
                         vendido_habilitado = total_ingresos > 0
                         if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
