@@ -45,18 +45,18 @@ def test_create_contact():
     print("1. Autenticando con Google...")
     creds = autenticar_google()
     if not creds:
-        print("   ❌ FALLO: No se pudo autenticar")
+        print("   [FALLO]: No se pudo autenticar")
         return
-    print("   ✓ Autenticación exitosa\n")
+    print("   [OK] Autenticacion exitosa\n")
     
     # 2. Verificar que People API esté habilitada
     print("2. Verificando acceso a People API...")
     try:
         service_people = build('people', 'v1', credentials=creds)
-        print("   ✓ Servicio People API inicializado\n")
+        print("   [OK] Servicio People API inicializado\n")
     except Exception as e:
-        print(f"   ❌ FALLO: {e}")
-        print("   SOLUCIÓN: Habilita la API de People en Google Cloud Console")
+        print(f"   [FALLO]: {e}")
+        print("   SOLUCION: Habilita la API de People en Google Cloud Console")
         return
     
     # 3. Intentar crear un contacto de prueba
@@ -76,13 +76,13 @@ def test_create_contact():
             "memberships": [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/myContacts"}}]
         }).execute()
         
-        print(f"   ✓ Contacto creado exitosamente!")
+        print(f"   [OK] Contacto creado exitosamente!")
         print(f"   Nombre: {full_display_name}")
-        print(f"   Teléfono: +51{test_contact_data['telefono_real']}")
+        print(f"   Telefono: +51{test_contact_data['telefono_real']}")
         print(f"   Resource Name: {result.get('resourceName', 'N/A')}\n")
         
         # 4. Verificar que el contacto existe
-        print("4. Verificando que el contacto se creó...")
+        print("4. Verificando que el contacto se creo...")
         try:
             connections = service_people.people().connections().list(
                 resourceName='people/me',
@@ -91,7 +91,7 @@ def test_create_contact():
             ).execute()
             
             contacts = connections.get('connections', [])
-            print(f"   ✓ Total de contactos visibles: {len(contacts)}")
+            print(f"   [OK] Total de contactos visibles: {len(contacts)}")
             
             # Buscar nuestro contacto de prueba
             found = False
@@ -99,34 +99,34 @@ def test_create_contact():
                 names = contact.get('names', [])
                 if names and full_display_name in names[0].get('displayName', ''):
                     found = True
-                    print(f"   ✓ Contacto de prueba encontrado en la lista!")
+                    print(f"   [OK] Contacto de prueba encontrado en la lista!")
                     break
             
             if not found:
-                print(f"   ⚠ Contacto creado pero no aparece en la lista inmediatamente (puede tomar unos segundos)")
+                print(f"   [INFO] Contacto creado pero no aparece en la lista inmediatamente (puede tomar unos segundos)")
                 
         except Exception as e:
-            print(f"   ⚠ No se pudo verificar: {e}")
+            print(f"   [INFO] No se pudo verificar: {e}")
         
-        print("\n=== DIAGNÓSTICO COMPLETO ===")
-        print("✓ La sincronización con Google Contacts ESTÁ FUNCIONANDO")
-        print("\nNOTA: Si el contacto no aparece en tu teléfono:")
-        print("  1. Verifica que la cuenta de Google esté sincronizada en tu dispositivo")
-        print("  2. Ve a Configuración > Cuentas > Google > Sincronización de cuenta")
-        print("  3. Asegúrate de que 'Contactos' esté activado")
-        print("  4. Fuerza una sincronización manual")
+        print("\n=== DIAGNOSTICO COMPLETO ===")
+        print("[OK] La sincronizacion con Google Contacts ESTA FUNCIONANDO")
+        print("\nNOTA: Si el contacto no aparece en tu telefono:")
+        print("  1. Verifica que la cuenta de Google este sincronizada en tu dispositivo")
+        print("  2. Ve a Configuracion > Cuentas > Google > Sincronizacion de cuenta")
+        print("  3. Asegurate de que 'Contactos' este activado")
+        print("  4. Fuerza una sincronizacion manual")
         
     except Exception as e:
-        print(f"   ❌ FALLO al crear contacto: {e}")
+        print(f"   [FALLO] al crear contacto: {e}")
         print(f"\n   Detalles del error: {type(e).__name__}")
         
         if "403" in str(e):
-            print("\n   SOLUCIÓN: La API de People no está habilitada o no tienes permisos.")
+            print("\n   SOLUCION: La API de People no esta habilitada o no tienes permisos.")
             print("   1. Ve a https://console.cloud.google.com/apis/library/people.googleapis.com")
             print("   2. Habilita la API")
             print("   3. Borra el archivo token.json y vuelve a autenticar")
         elif "401" in str(e):
-            print("\n   SOLUCIÓN: Token expirado o inválido.")
+            print("\n   SOLUCION: Token expirado o invalido.")
             print("   1. Borra el archivo token.json")
             print("   2. Vuelve a ejecutar este script")
 

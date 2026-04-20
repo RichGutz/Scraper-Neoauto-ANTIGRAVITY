@@ -55,5 +55,15 @@ SESIÓN TARDE/NOCHE - MÓDULO GyP
    - El botón de transición "Mover a Vendido" nace deshabilitado hasta que el Vehículo posea un registro real mayor a $0 en `precio_venta_usd`.
    - Modificación siempre permitida: El botón de "Guardar GyP" funciona como un `UPSERT`, permitiendo corregir o añadir rubros sobre la misma marcha sin corromper el pipeline.
 
-4. [DESPLIEGUE FINAL]
-   - Todo desplegado en caliente en Hostinger `crm-neoauto.geeksoft.tech` usando el script F3.
+4. [DESPLIEGUE & UI FINAL]
+   - Todo desplegado en caliente en Hostinger `crm-neoauto.geeksoft.tech` usando el script F3_FAST_DEPLOY.
+   - Iframe de Calendar: Se eliminó el "pop-up" forzando un renderizado HTML nativo dentro de la pestaña "Citas".
+   - Login: Redimensionado a 1/5 de pantalla (20% de ancho) para estética minimalista.
+   - Tabs: Reordenados para que "Cerrado" sea el último estado del embudo.
+
+5. [DIAGNÓSTICO BOT & CONTACTOS]
+   - Verificado el diagnóstico de Google People API: La conexión es exitosa y permite crear contactos.
+   - Caso Ariana López: Se confirmó que el contacto no existe en la nube de Google vinculada, explicando por qué no aparecía el nombre en WhatsApp Web.
+
+SESIÓN FINALIZADA CON ÉXITO.
+============================
