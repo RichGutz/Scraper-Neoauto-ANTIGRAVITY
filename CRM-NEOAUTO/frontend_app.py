@@ -309,13 +309,13 @@ def main_app():
                     with bcol1:
                         st.markdown("##### Ganancia y Perdida (GyP)")
                     with bcol2:
-                        tc = st.number_input("T. Cambio (USD/PEN)", min_value=1.0, value=float(g.get("tipo_cambio", 3.4)), step=0.01, format="%.2f", key=f"tc_{lead['url']}")
+                        tc = st.number_input("T. Cambio", min_value=1.0, value=float(g.get("tipo_cambio", 3.4)), step=0.01, format="%.2f", key=f"tc_{lead['url']}")
 
-                    # Encabezados (ajustados a 6 columnas con espaciadores para cajas angostas)
-                    h1, h2, h_s1, h3, h_s2, h4 = st.columns([3, 1, 0.3, 1, 0.5, 1.5])
+                    # --- ENCABEZADOS DE 4 COLUMNAS ---
+                    h1, h2, h3, h4 = st.columns([3, 1, 1, 1.5])
                     h1.markdown("**RUBRO**")
                     h2.markdown("**USD ($)**")
-                    h3.markdown("**SOLES (S/)**")
+                    h3.markdown("**PEN (S/)**")
                     h4.markdown("<div style='text-align:center;'>**TOTAL USD ($)**</div>", unsafe_allow_html=True)
 
                     st.markdown("<hr style='margin:0px'>", unsafe_allow_html=True)
@@ -336,84 +336,109 @@ def main_app():
                         ("Intereses", "intereses")
                     ]
 
-                    resultados_usd = {}
+                    # Inicializar resultados en session_state si no existen
+                    if f"calc_{lead['url']}" not in st.session_state:
+                         st.session_state[f"calc_{lead['url']}"] = {r[1]: float(g.get(f"{r[1]}_usd", 0) or 0) for r in rubros}
+                         st.session_state[f"calc_{lead['url']}"]["utilidad"] = float(g.get("utilidad_neta_usd", 0) or 0)
+
+                    resultados_finales = {}
 
                     for label, key_name in rubros:
-                        c1, c2, c_s1, c3, c_s2, c4 = st.columns([3, 1, 0.3, 1, 0.5, 1.5])
+                        c1, c2, c3, c4 = st.columns([3, 1, 1, 1.5])
                         c1.write(label)
                         
                         k_usd = f"u_{key_name}_{lead['url']}"
                         k_pen = f"p_{key_name}_{lead['url']}"
                         
-                        saved_val_usd = float(g.get(f"{key_name}_usd", 0) or 0)
+                        # Insumos (USD y PEN)
+                        v_usd = c2.number_input("USD", min_value=0.0, value=float(g.get(f"{key_name}_usd", 0) or 0), step=1.0, label_visibility="collapsed", key=k_usd)
+                        v_pen = c3.number_input("PEN", min_value=0.0, value=float(g.get(f"{key_name}_pen", 0) or 0), step=1.0, label_visibility="collapsed", key=k_pen)
                         
-                        # Mutua exclusividad
-                        current_usd = st.session_state.get(k_usd, saved_val_usd)
-                        current_pen = st.session_state.get(k_pen, 0)
+                        # El total se muestra desde el session_state (actualizado por el botón Calcular)
+                        total_item = st.session_state[f"calc_{lead['url']}"].get(key_name, 0.0)
                         
-                        disable_usd = (current_pen > 0)
-                        disable_pen = (current_usd > 0)
-                        
-                        val_usd = c2.number_input("USD", min_value=0, value=int(saved_val_usd), step=10, label_visibility="collapsed", disabled=disable_usd, key=k_usd)
-                        val_pen = c3.number_input("PEN", min_value=0, value=0, step=10, label_visibility="collapsed", disabled=disable_pen, key=k_pen)
-                        
-                        if val_usd > 0:
-                            total_usd = val_usd
-                        else:
-                            total_usd = round(val_pen / tc, 2) if val_pen > 0 else 0
-                            
-                        # Resalte estetico y centrado de la columna Total
                         if key_name == "precio_venta":
-                            c4.markdown(f"<div style='text-align:center; background-color:#e8f5e9; color:#1b5e20; padding:4px; border-radius:4px; font-weight:bold; border: 1px solid #c8e6c9;'>${total_usd:,.0f}</div>", unsafe_allow_html=True)
+                            c4.markdown(f"<div style='text-align:center; background-color:#e8f5e9; color:#1b5e20; padding:4px; border-radius:4px; font-weight:bold; border: 1px solid #c8e6c9;'>${total_item:,.2f}</div>", unsafe_allow_html=True)
                         else:
-                            c4.markdown(f"<div style='text-align:center; background-color:#ffebee; color:#b71c1c; padding:4px; border-radius:4px; border: 1px solid #ffcdd2;'>-${total_usd:,.0f}</div>", unsafe_allow_html=True)
-
-                        resultados_usd[key_name] = total_usd
+                            c4.markdown(f"<div style='text-align:center; background-color:#ffebee; color:#b71c1c; padding:4px; border-radius:4px; border: 1px solid #ffcdd2;'>-${total_item:,.2f}</div>", unsafe_allow_html=True)
 
                     st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
                     
-                    # Totales
-                    total_ingresos = resultados_usd["precio_venta"]
-                    total_costos = sum(resultados_usd[k] for k in resultados_usd if k != "precio_venta")
-                    utilidad = total_ingresos - total_costos
+                    # Totales (desde session_state)
+                    utilidad = st.session_state[f"calc_{lead['url']}"]["utilidad"]
+                    total_ingresos = st.session_state[f"calc_{lead['url']}"]["precio_venta"]
                     margen_pct = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0.0
 
                     color = "green" if utilidad > 0 else "red"
-                    st.markdown(f"<h5 style='text-align:right'>UTILIDAD NETA: <span style='color:{color}'>${utilidad:,.0f} ({margen_pct:.1f}%)</span></h5>", unsafe_allow_html=True)
+                    st.markdown(f"<h5 style='text-align:right'>UTILIDAD NETA ESTIMADA: <span style='color:{color}'>${utilidad:,.2f} ({margen_pct:.1f}%)</span></h5>", unsafe_allow_html=True)
 
                     st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
                     
+                    # --- CAMPOS DE NOTARÍA Y FECHAS ---
+                    st.markdown("##### Datos de Notaría")
+                    nc1, nc2 = st.columns(2)
+                    with nc1:
+                        notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
+                        def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
+                        fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
+                    with nc2:
+                        notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
+                        def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
+                        fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
+
+                    st.divider()
+                    
                     col_com, col_btns = st.columns([3, 2])
                     with col_com:
-                        # Extraer texto de comentarios, en BD es un JSONB
                         com_val = g.get("comentarios", {})
-                        if isinstance(com_val, dict):
-                            com_text = com_val.get("texto", "")
-                        else:
-                            com_text = str(com_val)
-                        comentarios_txt = st.text_area("Comentarios:", value=com_text, height=85, label_visibility="collapsed", placeholder="Notas de GyP...", key=f"g_com_{lead['url']}")
+                        com_text = com_val.get("texto", "") if isinstance(com_val, dict) else str(com_val)
+                        comentarios_txt = st.text_area("Notas Adicionales:", value=com_text, height=130, label_visibility="collapsed", placeholder="Notas de GyP...", key=f"g_com_{lead['url']}")
                         
                     with col_btns:
-                        if st.button("Guardar GyP", type="primary", use_container_width=True, key=f"btn_gyp_{lead['url']}"):
+                        # BOTÓN CALCULAR
+                        if st.button("Calcular GyP", use_container_width=True, key=f"btn_calc_{lead['url']}"):
+                            new_calcs = {}
+                            total_inc = 0.0
+                            total_exp = 0.0
+                            for _, kn in rubros:
+                                val_u = st.session_state.get(f"u_{kn}_{lead['url']}", 0.0)
+                                val_p = st.session_state.get(f"p_{kn}_{lead['url']}", 0.0)
+                                subtotal = val_u + (val_p / tc if tc > 0 else 0)
+                                new_calcs[kn] = round(subtotal, 2)
+                                if kn == "precio_venta": total_inc = subtotal
+                                else: total_exp += subtotal
+                            
+                            new_calcs["utilidad"] = round(total_inc - total_exp, 2)
+                            st.session_state[f"calc_{lead['url']}"] = new_calcs
+                            st.rerun()
+
+                        # BOTÓN GUARDAR
+                        if st.button("Guardar GyP", type="primary", use_container_width=True, key=f"btn_save_{lead['url']}"):
+                            current_calcs = st.session_state[f"calc_{lead['url']}"]
                             gyp_payload = {
                                 "tipo_cambio": tc,
-                                "utilidad_neta_usd": round(utilidad, 2),
-                                "comentarios": {"texto": comentarios_txt} if comentarios_txt else {}
+                                "utilidad_neta_usd": current_calcs["utilidad"],
+                                "comentarios": {"texto": comentarios_txt} if comentarios_txt else {},
+                                "notaria_compra": notaria_compra,
+                                "notaria_venta": notaria_venta,
+                                "fecha_notaria_compra": fecha_compra.isoformat(),
+                                "fecha_notaria_venta": fecha_venta.isoformat()
                             }
-                            for _, key_name in rubros:
-                                gyp_payload[f"{key_name}_usd"] = resultados_usd[key_name]
+                            # Mapear USD y PEN para cada rubro
+                            for _, kn in rubros:
+                                gyp_payload[f"{kn}_usd"] = st.session_state.get(f"u_{kn}_{lead['url']}", 0.0)
+                                gyp_payload[f"{kn}_pen"] = st.session_state.get(f"p_{kn}_{lead['url']}", 0.0)
                                 
                             if save_gyp(lead['url'], gyp_payload):
-                                st.success("GyP guardado!")
+                                st.success("¡GyP y Datos de Notaría guardados!")
                                 st.rerun()
 
                         vendido_habilitado = total_ingresos > 0
-                        if not vendido_habilitado:
-                            st.caption("Ingresa Precio Venta para Vender.")
                         if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
                             if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
                                 st.success("Lead movido a Vendido.")
                                 st.rerun()
+
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
