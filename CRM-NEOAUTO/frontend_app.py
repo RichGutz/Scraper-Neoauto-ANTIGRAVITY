@@ -389,7 +389,7 @@ def main_app():
                     # --- CAMPOS DE NOTARÍA Y VEHÍCULO ---
                     st.markdown("##### Datos de Notaría y Vehículo")
                     # Fila Compra + Placa
-                    nc1, nc2, nc3 = st.columns([3, 1, 1])
+                    nc1, nc2, nc3 = st.columns(3)
                     with nc1:
                         notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
                     with nc2:
@@ -398,15 +398,15 @@ def main_app():
                     with nc3:
                         placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
 
-                    # Fila Venta
-                    nv1, nv2, nv3 = st.columns([3, 1, 1])
+                    # Fila Venta + Año
+                    nv1, nv2, nv3 = st.columns(3)
                     with nv1:
                         notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
                     with nv2:
                         def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
                         fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
                     with nv3:
-                        st.empty() 
+                        anio = st.text_input("AÑO:", value=g.get("anio", ""), key=f"an_{lead['url']}")
 
                     st.divider()
                     
@@ -445,8 +445,10 @@ def main_app():
                                 "notaria_venta": notaria_venta,
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
-                                "placa": placa.upper()
+                                "placa": placa.upper(),
+                                "anio": anio
                             }
+
 
                             
                             # Recalcular y Mapear para DB
