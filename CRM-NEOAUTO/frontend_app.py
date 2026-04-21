@@ -99,10 +99,13 @@ ESTADOS = [
 ]
 
 # --- FUNCIONES DE BASE DE DATOS ---
+
+@st.cache_data(ttl=300) # Caché de 5 minutos
 def fetch_leads():
     try:
-        # 1. Obtener Leads base
-        resp = supabase.table("crm_contactos").select("*").order("fecha_actualizacion", desc=True).execute()
+        # 1. Obtener Leads base - Solo columnas necesarias
+        cols = "url, estado_embudo, nombre_vendedor, telefono_whatsapp, notas_actividad, fecha_actualizacion"
+        resp = supabase.table("crm_contactos").select(cols).order("fecha_actualizacion", desc=True).execute()
         contacts = resp.data
         if not contacts: return []
         
@@ -129,6 +132,7 @@ def fetch_leads():
 
 # --- FUNCIONES GYP ---
 
+@st.cache_data(ttl=60) # Caché de 1 minuto para GyP
 def fetch_gyp(lead_url):
     """Trae el registro de crm_gyp para un lead. Retorna dict o None."""
     try:
@@ -137,6 +141,7 @@ def fetch_gyp(lead_url):
     except Exception as e:
         st.error(f"Error al leer GyP: {e}")
         return None
+
 
 def save_gyp(lead_url, payload):
     """Upsert del registro GyP. Retorna True/False."""
@@ -182,8 +187,17 @@ def add_note_to_lead(url, notes_history, state, new_note_text):
 
 
 def main_app():
+    # --- SIDEBAR: RECARGA ---
+    with st.sidebar:
+        st.markdown("### Control de Datos")
+        if st.button("🔄 Recargar Datos", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+        st.divider()
+
     # --- HEADER ---
     st.title(f"CRM NeoAuto - Bienvenido {st.session_state.user_info.get('name', '')}")
+
     st.markdown(f"Usuario autenticado: `{st.session_state.user_info.get('email', '')}`")
     st.divider()
 
@@ -468,6 +482,8 @@ def main_app():
                             gyp_payload["utilidad_neta_usd"] = round(final_inc - final_exp, 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
+                                # Limpiar caché para reflejar cambios
+                                st.cache_data.clear()
                                 # Limpiar estado de calculo para forzar recarga de DB en el proximo render
                                 if f"calc_{lead['url']}" in st.session_state:
                                     del st.session_state[f"calc_{lead['url']}"]
@@ -539,11 +555,13 @@ def main_app():
                                     else:
                                         st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
                             if move_lead_state(lead['url'], estado, n_state, n_history):
+                                st.cache_data.clear()
                                 st.success("Estado actualizado")
                                 st.rerun()
                     with b2:
                         if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
                             if add_note_to_lead(lead['url'], n_history, estado, n_text):
+                                st.cache_data.clear()
                                 st.success("Nota guardada")
                                 st.rerun()
                     with b3:
