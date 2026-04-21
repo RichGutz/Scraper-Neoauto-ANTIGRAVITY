@@ -187,25 +187,29 @@ def add_note_to_lead(url, notes_history, state, new_note_text):
 
 
 def main_app():
-    # --- SIDEBAR: RECARGA ---
-    with st.sidebar:
-        st.markdown("### Control de Datos")
-        if st.button("🔄 Recargar Datos", use_container_width=True):
+    # --- HEADER COMPACTO ---
+    col_t, col_r, col_l = st.columns([5, 1, 1])
+    
+    with col_t:
+        st.title(f"CRM NeoAuto - Bienvenido {st.session_state.user_info.get('name', '')}")
+        st.markdown(f"Usuario: `{st.session_state.user_info.get('email', '')}`")
+    
+    with col_r:
+        st.markdown("<br>", unsafe_allow_html=True) # Alineación vertical
+        if st.button("🔄 Recargar", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-        st.divider()
+            
+    with col_l:
+        st.markdown("<br>", unsafe_allow_html=True) # Alineación vertical
+        if st.button("🚪 Salir", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
 
-    # --- HEADER ---
-    st.title(f"CRM NeoAuto - Bienvenido {st.session_state.user_info.get('name', '')}")
-
-    st.markdown(f"Usuario autenticado: `{st.session_state.user_info.get('email', '')}`")
     st.divider()
 
-    if st.button("Cerrar Sesión"):
-        st.session_state.clear()
-        st.rerun()
-
     # --- CARGA DE DATOS ---
+
     with st.spinner("Sincronizando con Supabase..."):
         all_leads_data = fetch_leads()
 
