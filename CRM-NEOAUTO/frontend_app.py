@@ -445,8 +445,10 @@ def main_app():
                                 "notaria_venta": notaria_venta,
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
-                                "placa": placa.upper()
+                                "placa": placa.upper(),
+                                "anio": str(lead.get("Year", "N/A"))
                             }
+
 
 
 
