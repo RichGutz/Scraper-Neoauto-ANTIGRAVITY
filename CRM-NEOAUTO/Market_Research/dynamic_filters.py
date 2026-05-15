@@ -9,13 +9,42 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.units import cm
 
 
+def clean_brand_name(brand: str) -> str:
+    if not brand: return ""
+    b = str(brand).upper().strip()
+    # Mapeo de normalización para marcas comunes
+    if b.startswith("MERCEDES"): return "MERCEDES-BENZ"
+    if b.startswith("BMW"): return "BMW"
+    if b.startswith("VW") or b.startswith("VOLKS"): return "VOLKSWAGEN"
+    if b.startswith("TOYOTA"): return "TOYOTA"
+    if b.startswith("NISSAN"): return "NISSAN"
+    if b.startswith("HYUNDAI"): return "HYUNDAI"
+    if b.startswith("KIA"): return "KIA"
+    if b.startswith("MAZDA"): return "MAZDA"
+    if b.startswith("SUBARU"): return "SUBARU"
+    if b.startswith("SUZUKI"): return "SUZUKI"
+    if b.startswith("HONDA"): return "HONDA"
+    if b.startswith("AUDI"): return "AUDI"
+    if b.startswith("CHEVRO"): return "CHEVROLET"
+    if b.startswith("MITSUBI"): return "MITSUBISHI"
+    if b.startswith("FORD"): return "FORD"
+    if b.startswith("JEEP"): return "JEEP"
+    if b.startswith("VOLVO"): return "VOLVO"
+    if b.startswith("LAND"): return "LAND ROVER"
+    if b.startswith("PORSCHE"): return "PORSCHE"
+    if b.startswith("LEXUS"): return "LEXUS"
+    return b
+
 def get_unique_brands(supabase: Client):
     try:
         resp = supabase.table("autos_detalles").select("Make").execute()
-        if not resp.data:
-            return []
+        if not resp.data: return []
         df = pd.DataFrame(resp.data)
-        return sorted([str(m) for m in df['Make'].dropna().unique().tolist()])
+        # Limpiar y normalizar cada marca
+        df['CleanMake'] = df['Make'].apply(clean_brand_name)
+        # Filtrar ruidos cortos o marcas vacías
+        valid_brands = df[df['CleanMake'].str.len() > 1]['CleanMake'].unique().tolist()
+        return sorted([str(m) for m in valid_brands])
     except Exception as e:
         print(f"Error marcas: {e}")
         return []
@@ -23,11 +52,14 @@ def get_unique_brands(supabase: Client):
 
 def get_models_by_brand(supabase: Client, brand: str):
     try:
-        resp = supabase.table("autos_detalles").select("Model").eq("Make", brand).execute()
-        if not resp.data:
-            return []
+        # Consultar usando la marca original y posibles variaciones
+        # Para simplificar, buscamos por ILIKE si es una marca normalizada
+        resp = supabase.table("autos_detalles").select("Model").ilike("Make", f"{brand}%").execute()
+        if not resp.data: return []
         df = pd.DataFrame(resp.data)
-        return sorted([str(m) for m in df['Model'].dropna().unique().tolist()])
+        # Limpiar modelos: todo a MAYÚSCULAS para agrupar XV y Xv
+        df['CleanModel'] = df['Model'].str.upper().str.strip()
+        return sorted([str(m) for m in df['CleanModel'].dropna().unique().tolist()])
     except Exception as e:
         print(f"Error modelos: {e}")
         return []
@@ -35,9 +67,11 @@ def get_models_by_brand(supabase: Client, brand: str):
 
 def get_years_by_model(supabase: Client, brand: str, model: str):
     try:
-        resp = supabase.table("autos_detalles").select("Year").eq("Make", brand).eq("Model", model).execute()
-        if not resp.data:
-            return []
+        resp = supabase.table("autos_detalles").select("Year") \
+            .ilike("Make", f"{brand}%") \
+            .ilike("Model", model) \
+            .execute()
+        if not resp.data: return []
         df = pd.DataFrame(resp.data)
         years = pd.to_numeric(df['Year'], errors='coerce').dropna().astype(int).unique().tolist()
         return sorted(years, reverse=True)
@@ -50,8 +84,8 @@ def fetch_market_data(supabase: Client, brand: str, model: str, year: int):
     try:
         resp = supabase.table("autos_detalles") \
             .select("*") \
-            .eq("Make", brand) \
-            .eq("Model", model) \
+            .ilike("Make", f"{brand}%") \
+            .ilike("Model", model) \
             .eq("Year", year) \
             .execute()
         return resp.data
