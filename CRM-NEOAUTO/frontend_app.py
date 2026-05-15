@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import datetime
 from google_auth import get_google_creds
 from calendar_utils import create_calendar_event
-from Market.Research.dynamic_filters import get_unique_brands, get_models_by_brand, get_years_by_model, fetch_market_data, create_pdf_report
+from Market_Research.dynamic_filters import get_unique_brands, get_models_by_brand, get_years_by_model, fetch_market_data, create_pdf_report
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
