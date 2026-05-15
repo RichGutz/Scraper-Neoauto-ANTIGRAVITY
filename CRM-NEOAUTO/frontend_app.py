@@ -253,6 +253,24 @@ def main_app():
                                 m1.metric("Precio Mediano", f"${df_mkt['Price'].median():,.0f}")
                                 m2.metric("KM Mediano", f"{df_mkt['Kilometers'].median():,.0f}")
                                 m3.metric("Muestra", len(df_mkt))
+                                
+                                # --- GRÁFICO INTERACTIVO PLOTLY ---
+                                import plotly.express as px
+                                fig = px.scatter(
+                                    df_mkt, 
+                                    x="Kilometers", 
+                                    y="Price",
+                                    hover_data=["URL", "District"],
+                                    title=f"Distribución de Mercado: {s_brand} {s_model} ({s_year})",
+                                    labels={"Kilometers": "Kilometraje (KM)", "Price": "Precio ($)"},
+                                    template="plotly_white",
+                                    color="Price",
+                                    color_continuous_scale="Viridis"
+                                )
+                                # Añadir línea de mediana de precio
+                                fig.add_hline(y=df_mkt['Price'].median(), line_dash="dash", line_color="red", annotation_text="Mediana Mercado")
+                                st.plotly_chart(fig, use_container_width=True)
+
                                 pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
                                 if pdf:
                                     st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf")
