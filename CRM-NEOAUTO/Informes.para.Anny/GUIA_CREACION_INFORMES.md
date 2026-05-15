@@ -82,9 +82,10 @@ Si el agente detecta un error de conexión, debe recordarle a Anny que asegure q
 
 ### 2. Flujo de Trabajo del Agente (Paso a Paso)
 
-Una vez que Anny entregue los datos, el agente debe seguir este flujo interno sin necesidad de más instrucciones:
+Para asegurar que Anny siempre use las últimas herramientas y mejoras ("gadgets") desarrolladas, el agente debe seguir este flujo interno estrictamente:
 
-1.  **Búsqueda en Supabase:** Realizar la consulta a la tabla `autos_detalles_diarios` (usando `ILike` para mayor flexibilidad).
+1.  **Sincronización Inicial (CRÍTICO):** El primer comando que el agente debe ejecutar es `git pull` en la raíz del proyecto para descargar cualquier actualización reciente.
+2.  **Búsqueda en Supabase:** Realizar la consulta a la tabla `autos_detalles_diarios` (usando `ILike` para mayor flexibilidad).
 2.  **Generación de Reporte MD:** Crear un archivo Markdown con la tabla comparativa y las conclusiones.
 3.  **Ejecución del Generador PDF:** Utilizar el script `C:\Users\rguti\Scraper.Neoauto\documentation\generate_mercedes_pdf.py` (o similar) para crear el archivo final.
 4.  **Entrega:** Proporcionar el link del PDF final a Anny y un resumen ejecutivo del veredicto en el chat.
