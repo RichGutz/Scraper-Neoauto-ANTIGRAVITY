@@ -35,14 +35,26 @@ def clean_brand_name(brand: str) -> str:
     if b.startswith("LEXUS"): return "LEXUS"
     return b
 
+import re
+
+def extract_year_from_url(url: str) -> int:
+    if not url: return 0
+    # El año en Neoauto suele estar entre guiones antes del ID final: ...marca-modelo-2024-ID
+    matches = re.findall(r'-(\d{4})-', url)
+    if matches:
+        # Buscamos un año coherente (1990-2026)
+        for m in reversed(matches):
+            y = int(m)
+            if 1990 <= y <= 2026:
+                return y
+    return 0
+
 def get_unique_brands(supabase: Client):
     try:
         resp = supabase.table("autos_detalles").select("Make").execute()
         if not resp.data: return []
         df = pd.DataFrame(resp.data)
-        # Limpiar y normalizar cada marca
         df['CleanMake'] = df['Make'].apply(clean_brand_name)
-        # Filtrar ruidos cortos o marcas vacías
         valid_brands = df[df['CleanMake'].str.len() > 1]['CleanMake'].unique().tolist()
         return sorted([str(m) for m in valid_brands])
     except Exception as e:
@@ -52,12 +64,9 @@ def get_unique_brands(supabase: Client):
 
 def get_models_by_brand(supabase: Client, brand: str):
     try:
-        # Consultar usando la marca original y posibles variaciones
-        # Para simplificar, buscamos por ILIKE si es una marca normalizada
         resp = supabase.table("autos_detalles").select("Model").ilike("Make", f"{brand}%").execute()
         if not resp.data: return []
         df = pd.DataFrame(resp.data)
-        # Limpiar modelos: todo a MAYÚSCULAS para agrupar XV y Xv
         df['CleanModel'] = df['Model'].str.upper().str.strip()
         return sorted([str(m) for m in df['CleanModel'].dropna().unique().tolist()])
     except Exception as e:
@@ -67,14 +76,20 @@ def get_models_by_brand(supabase: Client, brand: str):
 
 def get_years_by_model(supabase: Client, brand: str, model: str):
     try:
-        resp = supabase.table("autos_detalles").select("Year") \
+        # Traemos URL para extraer el año real
+        resp = supabase.table("autos_detalles").select("URL") \
             .ilike("Make", f"{brand}%") \
             .ilike("Model", model) \
             .execute()
         if not resp.data: return []
-        df = pd.DataFrame(resp.data)
-        years = pd.to_numeric(df['Year'], errors='coerce').dropna().astype(int).unique().tolist()
-        return sorted(years, reverse=True)
+        
+        years = []
+        for item in resp.data:
+            y = extract_year_from_url(item.get('URL', ''))
+            if y > 0:
+                years.append(y)
+        
+        return sorted(list(set(years)), reverse=True)
     except Exception as e:
         print(f"Error anios: {e}")
         return []
@@ -82,13 +97,22 @@ def get_years_by_model(supabase: Client, brand: str, model: str):
 
 def fetch_market_data(supabase: Client, brand: str, model: str, year: int):
     try:
+        # Traemos todos los datos para este modelo y filtramos por el año extraído de la URL
         resp = supabase.table("autos_detalles") \
             .select("*") \
             .ilike("Make", f"{brand}%") \
             .ilike("Model", model) \
-            .eq("Year", year) \
             .execute()
-        return resp.data
+        
+        if not resp.data: return []
+        
+        # Filtrado manual por año extraído de URL
+        filtered_data = []
+        for item in resp.data:
+            if extract_year_from_url(item.get('URL', '')) == year:
+                filtered_data.append(item)
+                
+        return filtered_data
     except Exception as e:
         print(f"Error data mercado: {e}")
         return []

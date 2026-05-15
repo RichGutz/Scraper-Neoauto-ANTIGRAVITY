@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import datetime
 from google_auth import get_google_creds
 from calendar_utils import create_calendar_event
-from Market_Research.dynamic_filters import get_unique_brands, get_models_by_brand, get_years_by_model, fetch_market_data, create_pdf_report
+from Market_Research.dynamic_filters import get_unique_brands, get_models_by_brand, get_years_by_model, fetch_market_data, create_pdf_report, extract_year_from_url
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -294,23 +294,31 @@ def main_app():
                         
                         if resp.data:
                             data = resp.data[0]
+                            real_year = extract_year_from_url(url_input)
+                            
                             t_data = {
                                 "Make": data.get("Make"),
                                 "Model": data.get("Model"),
-                                "Year": int(data.get("Year")) if data.get("Year") else 0,
+                                "Year": real_year if real_year > 0 else (int(data.get("Year")) if data.get("Year") else 0),
                                 "Price": float(data.get("Price")) if data.get("Price") else 0.0,
                                 "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0
                             }
                             
-                            # 2. Consultar Mercado en la tabla maestra
+                            # 2. Consultar Mercado en la tabla maestra (filtrando luego por año de URL)
                             query = supabase.table("autos_detalles") \
-                                        .select("Price, Kilometers") \
+                                        .select("*") \
                                         .eq("Make", t_data['Make']) \
-                                        .eq("Model", t_data['Model']) \
-                                        .eq("Year", t_data['Year'])
+                                        .eq("Model", t_data['Model'])
                             
                             mkt_resp = query.execute()
-                            df_m = pd.DataFrame(mkt_resp.data)
+                            
+                            # Filtrar mercado por año real de URL
+                            filtered_mkt = []
+                            for m in mkt_resp.data:
+                                if extract_year_from_url(m.get('URL', '')) == t_data['Year']:
+                                    filtered_mkt.append(m)
+                                    
+                            df_m = pd.DataFrame(filtered_mkt)
                             
                             if not df_m.empty:
                                 df_m['Price'] = pd.to_numeric(df_m['Price'], errors='coerce')
