@@ -271,8 +271,8 @@ def main_app():
                     st.error("Por favor ingresa una URL válida.")
                 else:
                     with st.spinner("Analizando vehículo..."):
-                        # 1. Intentar buscar en la base de datos de detalles diarios (Scraper)
-                        resp = supabase.table("autos_detalles_diarios").select("*").eq("URL", url_input).execute()
+                        # 1. Intentar buscar en la base de datos maestra (autos_detalles)
+                        resp = supabase.table("autos_detalles").select("*").eq("URL", url_input).execute()
                         
                         if resp.data:
                             data = resp.data[0]
@@ -284,11 +284,11 @@ def main_app():
                                 "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0
                             }
                             
-                            # 2. Consultar Mercado para este auto específico
-                            query = supabase.table("autos_detalles_diarios") \
+                            # 2. Consultar Mercado en la tabla maestra
+                            query = supabase.table("autos_detalles") \
                                         .select("Price, Kilometers") \
                                         .eq("Make", t_data['Make']) \
-                                        .ilike("Model", f"%{t_data['Model']}%") \
+                                        .eq("Model", t_data['Model']) \
                                         .eq("Year", t_data['Year'])
                             
                             mkt_resp = query.execute()

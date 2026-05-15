@@ -11,11 +11,11 @@ from reportlab.lib.units import cm
 
 def get_unique_brands(supabase: Client):
     try:
-        resp = supabase.table("autos_detalles_diarios").select("Make").execute()
+        resp = supabase.table("autos_detalles").select("Make").execute()
         if not resp.data:
             return []
         df = pd.DataFrame(resp.data)
-        return sorted(df['Make'].unique().tolist())
+        return sorted([str(m) for m in df['Make'].dropna().unique().tolist()])
     except Exception as e:
         print(f"Error marcas: {e}")
         return []
@@ -23,11 +23,11 @@ def get_unique_brands(supabase: Client):
 
 def get_models_by_brand(supabase: Client, brand: str):
     try:
-        resp = supabase.table("autos_detalles_diarios").select("Model").eq("Make", brand).execute()
+        resp = supabase.table("autos_detalles").select("Model").eq("Make", brand).execute()
         if not resp.data:
             return []
         df = pd.DataFrame(resp.data)
-        return sorted(df['Model'].unique().tolist())
+        return sorted([str(m) for m in df['Model'].dropna().unique().tolist()])
     except Exception as e:
         print(f"Error modelos: {e}")
         return []
@@ -35,7 +35,7 @@ def get_models_by_brand(supabase: Client, brand: str):
 
 def get_years_by_model(supabase: Client, brand: str, model: str):
     try:
-        resp = supabase.table("autos_detalles_diarios").select("Year").eq("Make", brand).eq("Model", model).execute()
+        resp = supabase.table("autos_detalles").select("Year").eq("Make", brand).eq("Model", model).execute()
         if not resp.data:
             return []
         df = pd.DataFrame(resp.data)
@@ -48,7 +48,7 @@ def get_years_by_model(supabase: Client, brand: str, model: str):
 
 def fetch_market_data(supabase: Client, brand: str, model: str, year: int):
     try:
-        resp = supabase.table("autos_detalles_diarios") \
+        resp = supabase.table("autos_detalles") \
             .select("*") \
             .eq("Make", brand) \
             .eq("Model", model) \
