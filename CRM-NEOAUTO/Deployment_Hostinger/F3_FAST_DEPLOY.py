@@ -22,15 +22,15 @@ BRANCH      = "master"
 APP_DIR     = "/opt/crm_neoauto"
 SERVICE     = "crm_neoauto"
 
-def ssh_run(client, cmd, desc=""):
+def ssh_run(client, cmd, desc="", timeout=90):
     print(f"\n[{desc}]")
-    stdin, stdout, stderr = client.exec_command(cmd, timeout=60)
+    stdin, stdout, stderr = client.exec_command(cmd, timeout=timeout)
     out = stdout.read().decode("utf-8", errors="ignore").strip()
     err = stderr.read().decode("utf-8", errors="ignore").strip()
     if out:
-        print(f" >> {out[:200]}")
+        print(f" >> {out[:300]}")
     if err and "warning" not in err.lower():
-        print(f" !! {err[:200]}")
+        print(f" !! {err[:300]}")
     return out, err
 
 def deploy_fast():
@@ -50,8 +50,14 @@ def deploy_fast():
             "2/3 Descargando actualizaciones de Git")
 
         ssh_run(client,
+            f"{APP_DIR}/venv/bin/pip install -r {APP_DIR}/requirements.txt -q || true",
+            "2.5/3 Instalando dependencias en venv",
+            timeout=300)
+
+        ssh_run(client,
             f"systemctl daemon-reload && systemctl restart {SERVICE}",
             "3/3 Reiniciando Streamlit")
+
 
         print(f"\n{'='*55}")
         print(f"  [OK] DESPLIEGUE COMPLETADO")

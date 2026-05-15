@@ -14,3 +14,4 @@ webdriver-manager
 pandas
 weasyprint
 streamlit-oauth
+markdown2
