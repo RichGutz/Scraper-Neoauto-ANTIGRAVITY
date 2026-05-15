@@ -231,7 +231,7 @@ def main_app():
 
     # === SECCIÓN INVESTIGACIÓN (early return antes de crear tabs) ===
     if seccion == "Investigación":
-        inv_tab, reg_tab = st.tabs(["Mercado", "Registro de Lead"])
+        inv_tab, lead_tab = st.tabs(["Mercado", "LEAD NEOAUTO"])
 
         with inv_tab:
             st.subheader("Investigación de Mercado Dinámica")
@@ -260,37 +260,91 @@ def main_app():
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
 
-        with reg_tab:
-            st.subheader("Registro Manual de Lead")
-            st.write("Registra un prospecto de Facebook Marketplace u otra fuente.")
-            with st.form("manual_lead"):
-                cc1, cc2 = st.columns(2)
-                l_url = cc1.text_input("URL del anuncio")
-                l_nom = cc1.text_input("Nombre contacto")
-                l_tel = cc1.text_input("Teléfono (9 dígitos)")
-                l_mar = cc2.text_input("Marca")
-                l_mod = cc2.text_input("Modelo")
-                l_ani = cc2.number_input("Año", min_value=1990, value=2022)
-                if st.form_submit_button("Guardar en CRM", type="primary", use_container_width=True):
-                    if not l_url or not l_nom or not l_tel:
-                        st.error("URL, Nombre y Teléfono son obligatorios.")
-                    else:
-                        try:
-                            now = datetime.datetime.now().isoformat()
-                            supabase.table("autos_detalles_diarios").upsert({
-                                "URL": l_url, "Make": l_mar, "Model": l_mod,
-                                "Year": l_ani, "DateTime": now
-                            }).execute()
-                            supabase.table("crm_contactos").upsert({
-                                "url": l_url, "nombre_vendedor": l_nom,
-                                "telefono_whatsapp": f"+51{l_tel}",
-                                "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
-                                "fecha_actualizacion": now
-                            }).execute()
-                            st.success(f"Lead '{l_nom}' registrado correctamente.")
-                            st.cache_data.clear()
-                        except Exception as e:
-                            st.error(f"Error: {e}")
+        with lead_tab:
+            st.subheader("Análisis de Lead Neoauto")
+            st.write("Ingresa el link de Neoauto para analizar el precio contra el mercado actual.")
+            
+            url_input = st.text_input("URL de Neoauto", placeholder="https://neoauto.com/auto/usado/...")
+            
+            if st.button("Analizar Lead", type="primary", use_container_width=True):
+                if not url_input:
+                    st.error("Por favor ingresa una URL válida.")
+                else:
+                    with st.spinner("Analizando vehículo..."):
+                        # 1. Intentar buscar en la base de datos de detalles diarios (Scraper)
+                        resp = supabase.table("autos_detalles_diarios").select("*").eq("URL", url_input).execute()
+                        
+                        if resp.data:
+                            data = resp.data[0]
+                            t_data = {
+                                "Make": data.get("Make"),
+                                "Model": data.get("Model"),
+                                "Year": int(data.get("Year")) if data.get("Year") else 0,
+                                "Price": float(data.get("Price")) if data.get("Price") else 0.0,
+                                "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0
+                            }
+                            
+                            # 2. Consultar Mercado para este auto específico
+                            query = supabase.table("autos_detalles_diarios") \
+                                        .select("Price, Kilometers") \
+                                        .eq("Make", t_data['Make']) \
+                                        .ilike("Model", f"%{t_data['Model']}%") \
+                                        .eq("Year", t_data['Year'])
+                            
+                            mkt_resp = query.execute()
+                            df_m = pd.DataFrame(mkt_resp.data)
+                            
+                            if not df_m.empty:
+                                df_m['Price'] = pd.to_numeric(df_m['Price'], errors='coerce')
+                                df_m['Kilometers'] = pd.to_numeric(df_m['Kilometers'], errors='coerce')
+                                df_m = df_m.dropna(subset=['Price'])
+                                
+                                med_price = df_m['Price'].median()
+                                med_km = df_m['Kilometers'].median()
+                                count = len(df_m)
+                                
+                                pct_diff = ((t_data['Price'] - med_price) / med_price) * 100 if med_price > 0 else 0
+                                color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
+                                verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
+                                dif_text = f"Ahorro: ${(med_price - t_data['Price']):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_data['Price'] - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
+                                
+                                st.success(f"Análisis completado para {t_data['Make']} {t_data['Model']} {t_data['Year']}")
+                                
+                                # UI de Resultado Estilo Richard
+                                res_col1, res_col2, res_col3 = st.columns(3)
+                                res_col1.metric("Precio Lead", f"${t_data['Price']:,.0f}")
+                                res_col2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
+                                res_col3.metric("Diferencia (%)", f"{pct_diff:.1f}%", delta=f"{pct_diff:.1f}%", delta_color="inverse")
+                                
+                                html_res = f"""
+                                <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                                    <h3 style="margin-top:0; color:{color};">{verdict}</h3>
+                                    <p style="font-size:1.2em;">Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano de mercado.</p>
+                                    <p style="font-size:1.1em; font-weight:bold;">{dif_text}</p>
+                                    <p style="color:#666;">Basado en una muestra de {count} vehículos similares encontrados.</p>
+                                </div>
+                                """
+                                st.markdown(html_res, unsafe_allow_html=True)
+                                
+                                # Botón para registrar en CRM si es Buen Trato
+                                if st.button("🚀 Registrar este Lead en CRM", type="primary"):
+                                    try:
+                                        now = datetime.datetime.now().isoformat()
+                                        supabase.table("crm_contactos").upsert({
+                                            "url": url_input,
+                                            "nombre_vendedor": "Lead Web Analizador",
+                                            "telefono_whatsapp": "N/A",
+                                            "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
+                                            "fecha_actualizacion": now
+                                        }).execute()
+                                        st.success("¡Lead enviado al CRM correctamente!")
+                                        st.cache_data.clear()
+                                    except Exception as e:
+                                        st.error(f"Error al registrar: {e}")
+                            else:
+                                st.warning("No hay suficientes datos de mercado para comparar este modelo/año.")
+                        else:
+                            st.error("No se encontró información de este link en nuestra base de datos diaria. Asegúrate de que el link sea correcto o que el scraper lo haya procesado.")
         return  # <- early return: no ejecutar el bloque CRM
 
     # === SECCIÓN CRM ===
