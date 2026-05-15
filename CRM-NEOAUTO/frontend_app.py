@@ -229,9 +229,72 @@ def main_app():
 
     df = pd.DataFrame(all_leads_data)
 
-    if seccion == "CRM":
-        # Pestañas del CRM (solo las 7 originales)
-        tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Comprados", "Vendidos", "Cerrado", "Analizador"])
+    # === SECCIÓN INVESTIGACIÓN (early return antes de crear tabs) ===
+    if seccion == "Investigación":
+        inv_tab, reg_tab = st.tabs(["Mercado", "Registro de Lead"])
+
+        with inv_tab:
+            st.subheader("Investigación de Mercado Dinámica")
+            c1, c2, c3 = st.columns(3)
+            brands = get_unique_brands(supabase)
+            s_brand = c1.selectbox("1. Marca", [""] + brands, key="m_brand")
+            if s_brand:
+                models = get_models_by_brand(supabase, s_brand)
+                s_model = c2.selectbox("2. Modelo", [""] + models, key="m_model")
+                if s_model:
+                    years = get_years_by_model(supabase, s_brand, s_model)
+                    s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m_year")
+                    if s_year:
+                        if st.button("Analizar Mercado", type="primary"):
+                            data = fetch_market_data(supabase, s_brand, s_model, int(s_year))
+                            if data:
+                                df_mkt = pd.DataFrame(data)
+                                m1, m2, m3 = st.columns(3)
+                                m1.metric("Precio Mediano", f"${df_mkt['Price'].median():,.0f}")
+                                m2.metric("KM Mediano", f"{df_mkt['Kilometers'].median():,.0f}")
+                                m3.metric("Muestra", len(df_mkt))
+                                pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
+                                if pdf:
+                                    st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf")
+                                st.dataframe(df_mkt[['URL', 'Price', 'Kilometers', 'District']], use_container_width=True)
+                            else:
+                                st.warning("No se encontraron datos para esta combinación.")
+
+        with reg_tab:
+            st.subheader("Registro Manual de Lead")
+            st.write("Registra un prospecto de Facebook Marketplace u otra fuente.")
+            with st.form("manual_lead"):
+                cc1, cc2 = st.columns(2)
+                l_url = cc1.text_input("URL del anuncio")
+                l_nom = cc1.text_input("Nombre contacto")
+                l_tel = cc1.text_input("Teléfono (9 dígitos)")
+                l_mar = cc2.text_input("Marca")
+                l_mod = cc2.text_input("Modelo")
+                l_ani = cc2.number_input("Año", min_value=1990, value=2022)
+                if st.form_submit_button("Guardar en CRM", type="primary", use_container_width=True):
+                    if not l_url or not l_nom or not l_tel:
+                        st.error("URL, Nombre y Teléfono son obligatorios.")
+                    else:
+                        try:
+                            now = datetime.datetime.now().isoformat()
+                            supabase.table("autos_detalles_diarios").upsert({
+                                "URL": l_url, "Make": l_mar, "Model": l_mod,
+                                "Year": l_ani, "DateTime": now
+                            }).execute()
+                            supabase.table("crm_contactos").upsert({
+                                "url": l_url, "nombre_vendedor": l_nom,
+                                "telefono_whatsapp": f"+51{l_tel}",
+                                "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
+                                "fecha_actualizacion": now
+                            }).execute()
+                            st.success(f"Lead '{l_nom}' registrado correctamente.")
+                            st.cache_data.clear()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+        return  # <- early return: no ejecutar el bloque CRM
+
+    # === SECCIÓN CRM ===
+    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Comprados", "Vendidos", "Cerrado", "Analizador"])
 
     for tab, estado in zip(tabs[:-1], ESTADOS):
         with tab:
@@ -716,69 +779,6 @@ def main_app():
                     </div>
                     """
                     st.markdown(html_compact, unsafe_allow_html=True)
-
-    # === SECCIÓN INVESTIGACIÓN (independiente del CRM) ===
-    if seccion == "Investigación":
-        inv_tab, reg_tab = st.tabs(["Mercado", "Registro de Lead"])
-
-        with inv_tab:
-            st.subheader("Investigación de Mercado Dinámica")
-            c1, c2, c3 = st.columns(3)
-            brands = get_unique_brands(supabase)
-            s_brand = c1.selectbox("1. Marca", [""] + brands, key="m_brand")
-            if s_brand:
-                models = get_models_by_brand(supabase, s_brand)
-                s_model = c2.selectbox("2. Modelo", [""] + models, key="m_model")
-                if s_model:
-                    years = get_years_by_model(supabase, s_brand, s_model)
-                    s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m_year")
-                    if s_year:
-                        if st.button("Analizar Mercado", type="primary"):
-                            data = fetch_market_data(supabase, s_brand, s_model, int(s_year))
-                            if data:
-                                df_mkt = pd.DataFrame(data)
-                                m1, m2, m3 = st.columns(3)
-                                m1.metric("Precio Mediano", f"${df_mkt['Price'].median():,.0f}")
-                                m2.metric("KM Mediano", f"{df_mkt['Kilometers'].median():,.0f}")
-                                m3.metric("Muestra", len(df_mkt))
-                                pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
-                                if pdf:
-                                    st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf")
-                                st.dataframe(df_mkt[['URL', 'Price', 'Kilometers', 'District']], use_container_width=True)
-                            else:
-                                st.warning("No se encontraron datos para esta combinación.")
-
-        with reg_tab:
-            st.subheader("Registro Manual de Lead")
-            st.write("Registra un prospecto de Facebook Marketplace u otra fuente.")
-            with st.form("manual_lead"):
-                cc1, cc2 = st.columns(2)
-                l_url = cc1.text_input("URL del anuncio")
-                l_nom = cc1.text_input("Nombre contacto")
-                l_tel = cc1.text_input("Teléfono (9 dígitos)")
-                l_mar = cc2.text_input("Marca")
-                l_mod = cc2.text_input("Modelo")
-                l_ani = cc2.number_input("Año", min_value=1990, value=2022)
-                if st.form_submit_button("Guardar en CRM", type="primary", use_container_width=True):
-                    if not l_url or not l_nom or not l_tel:
-                        st.error("URL, Nombre y Teléfono son obligatorios.")
-                    else:
-                        try:
-                            now = datetime.datetime.now().isoformat()
-                            supabase.table("autos_detalles_diarios").upsert({
-                                "URL": l_url, "Make": l_mar, "Model": l_mod,
-                                "Year": l_ani, "DateTime": now
-                            }).execute()
-                            supabase.table("crm_contactos").upsert({
-                                "url": l_url, "nombre_vendedor": l_nom,
-                                "telefono_whatsapp": f"+51{l_tel}",
-                                "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
-                                "fecha_actualizacion": now
-                            }).execute()
-                            st.success(f"Lead '{l_nom}' registrado correctamente.")
-                            st.cache_data.clear()
-                        except Exception as e:
-                            st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     if "user_info" not in st.session_state:
