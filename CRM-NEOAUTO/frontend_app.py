@@ -718,7 +718,7 @@ def main_app():
                     st.markdown(html_compact, unsafe_allow_html=True)
 
     # === SECCIÓN INVESTIGACIÓN (independiente del CRM) ===
-    elif seccion == "Investigación":
+    if seccion == "Investigación":
         inv_tab, reg_tab = st.tabs(["Mercado", "Registro de Lead"])
 
         with inv_tab:
