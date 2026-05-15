@@ -33,6 +33,7 @@ echo  8. Kill Zombies (Limpiar Procesos)
 echo.
 echo  9. Resetear Token Google (Solucion Error 403)
 echo 10. Responder a Acreedores
+echo 11. Analizar Deal Manual (Marca, Modelo, Año, Precio opcional)
 echo.
 echo  0. Salir
 echo.
@@ -51,6 +52,7 @@ if "%opcion%"=="7" goto SECUENCIA_DIARIA
 if "%opcion%"=="8" goto OP8
 if "%opcion%"=="9" goto OP9
 if "%opcion%"=="10" goto RESPONDER_ACREEDORES
+if "%opcion%"=="11" goto ANALIZAR_MANUAL
 if "%opcion%"=="0" goto SALIR
 
 echo.
@@ -242,3 +244,18 @@ echo Hasta luego!
 echo.
 timeout /t 2 >nul
 exit
+
+:ANALIZAR_MANUAL
+cls
+echo ==================================================
+echo  ANALIZADOR MANUAL DE PRECIOS
+echo ==================================================
+echo.
+cd /d "%~dp0"
+python "..\Autos.Richard.Gutierrez\analyze_manual_deal.py"
+echo.
+echo ==================================================
+echo  Proceso finalizado
+echo ==================================================
+pause
+goto MENU

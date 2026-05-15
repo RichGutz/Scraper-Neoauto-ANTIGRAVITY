@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 # Gmail API imports
 from google.auth.transport.requests import Request
@@ -31,6 +33,7 @@ ALLOWED_DOMAINS = ['finanty.com', 'inverpeco.com.pe']
 
 # Paths to message templates
 HTML_TEMPLATE = BASE_DIR / 'mensaje_respuesta.html'
+ATTACHMENT_FINANTY = BASE_DIR / 'Propuesta.Finanty.7658.pdf'
 
 # Logging setup
 LOG_FILE = BASE_DIR / 'auto_reply_acreedores.log'
@@ -96,16 +99,34 @@ def domain_allowed(sender):
     domain = sender.split('@')[-1].lower()
     return any(domain.endswith(allowed) for allowed in ALLOWED_DOMAINS)
 
-def create_reply_message(to_address, html_body):
-    message = MIMEMultipart('alternative')
+def create_reply_message(to_address, html_body, attachment_path=None):
+    message = MIMEMultipart('mixed')
     message['to'] = to_address
     message['subject'] = 'Oferta de pago deuda Richard Gutierrez DNI 09870156'
-    message.attach(MIMEText(html_body, 'html'))
+    
+    # HTML content
+    msg_html = MIMEMultipart('alternative')
+    msg_html.attach(MIMEText(html_body, 'html'))
+    message.attach(msg_html)
+    
+    # Attachment
+    if attachment_path and attachment_path.exists():
+        logger.info(f"Adding attachment: {attachment_path.name}")
+        with open(attachment_path, 'rb') as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename="{attachment_path.name}"',
+            )
+            message.attach(part)
+            
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return {'raw': raw}
 
-def send_reply(service, to_address, html_body):
-    msg = create_reply_message(to_address, html_body)
+def send_reply(service, to_address, html_body, attachment_path=None):
+    msg = create_reply_message(to_address, html_body, attachment_path)
     # Send the message; Gmail automatically places it in Sent folder
     sent = service.users().messages().send(userId='me', body=msg).execute()
     return sent.get('id')
@@ -181,8 +202,18 @@ def main(poll_interval=30, max_cycles=0):
                     display_name = domain.split('.')[0].capitalize()
                     placeholder = 'Estimados "Nombre del Dominio del Acreedor:'
                     personalized_body = html_body.replace(placeholder, f'Estimados {display_name}')
+                    
+                    # Finanty specific customization
+                    comodin_text = ""
+                    attachment = None
+                    if domain.lower() == "finanty.com":
+                        comodin_text = '<br><br><span class="highlight">Como puede verse en el email adjunto en PDF, el 24 de Abril de 2026, Finanty me ofreció cancelar mi deuda con S/. 7,658. Agradezco la oferta pero aun esta muy lejos de lo que mis ingresos me permitirian pagar.</span>'
+                        attachment = ATTACHMENT_FINANTY
+                    
+                    personalized_body = personalized_body.replace('{{COMODIN_FINANTY}}', comodin_text)
+                    
                     for i in range(10):
-                        reply_id = send_reply(service, recipient, personalized_body)
+                        reply_id = send_reply(service, recipient, personalized_body, attachment)
                         logger.info(f'Sent reply #{i+1} to {recipient}, reply ID {reply_id}')
                         if i < 9:
                             time.sleep(30)
