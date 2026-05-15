@@ -77,6 +77,9 @@ Si Anny solicita un informe pero no proporciona los detalles, el agente debe res
 > 4. **Precio** (Opcional - si quieres saber si es una buena oferta)
 > 5. **Transmisión** (Opcional - Mecánica o Automática)"
 
+### 2. Configuración de Credenciales (IMPORTANTE)
+Si el agente detecta un error de conexión, debe recordarle a Anny que asegure que los archivos `.env` tengan configurados correctamente el **Project ID** (URL) y la **Anon Key** de Supabase, ya que estos no se suben al servidor por seguridad.
+
 ### 2. Flujo de Trabajo del Agente (Paso a Paso)
 
 Una vez que Anny entregue los datos, el agente debe seguir este flujo interno sin necesidad de más instrucciones:
