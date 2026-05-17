@@ -569,37 +569,29 @@ Ambos scripts terminan con `sudo /sbin/shutdown -h now` al completarse exitosame
 
 ---
 
-### ⏰ 5. Cron Jobs del Router UniFi — PENDIENTE DE CONFIGURAR
+### ⏰ 5. Cron Jobs del Router UniFi [✔ COMPLETADO Y VERIFICADO — 2026-05-17]
 
-Este paso se realiza desde la **computadora de desarrollo** (Windows) via SSH al router.
-Conéctate: `ssh root@192.168.0.1`
+Este paso se realizó exitosamente desde la sesión SSH directa del router UniFi (`ssh root@192.168.0.1`), aplicando la inyección del script en `/data/bridge_wol.sh` y programando el crontab activo.
 
-Edita el crontab del router:
+#### 📝 Verificación del Crontab Activo en el Router UniFi:
+Al ejecutar el comando `crontab -l` en la terminal del router `root@Anti-Chickton:~#`, se obtuvo y confirmó el siguiente resultado exacto en producción:
+
 ```bash
-crontab -e
-```
-
-Agrega estas líneas (2 minutos antes de que la ThinkPad las necesite):
-```cron
-# Despertar ThinkPad para scraping DIARIO (envia WOL 2 min antes del cron de la ThinkPad)
+root@Anti-Chickton:~# crontab -l
 30 18 * * * /data/bridge_wol.sh
-
-# Despertar ThinkPad para scraping SEMANAL del lunes
 0 0 * * 1 /data/bridge_wol.sh
 ```
 
-> [!IMPORTANT]
-> Asegúrate de que el script `/data/bridge_wol.sh` ya esté creado en el router (ver sección Plan B §3).
-> Si no existe, crearlo con el contenido de la sección anterior antes de configurar el crontab.
+Esto garantiza que el router UniFi mandará de forma 100% automática y local los paquetes de encendido por hardware en los momentos precisos.
 
 ### 📊 Ciclo Completo de Automatización
 
 | Evento | Hora | Quién | Estado |
 |--------|------|-------|--------|
-| UniFi envía Magic Packet (diario) | `18:30` | Router UniFi | ⏳ Pendiente |
-| ThinkPad enciende y ejecuta scraping diario | `18:32` | ThinkPad cron | ✅ Listo |
-| ThinkPad se apaga al terminar | ~19:30 | `shutdown` en script | ✅ Listo |
-| UniFi envía Magic Packet (semanal lunes) | `00:00` | Router UniFi | ⏳ Pendiente |
-| ThinkPad enciende y ejecuta scraping semanal | `00:02` | ThinkPad cron | ✅ Listo |
-| ThinkPad se apaga al terminar | ~madrugada | `shutdown` en script | ✅ Listo |
+| UniFi envía Magic Packet (diario) | `18:30` | Router UniFi | ✅ Listo y Activo |
+| ThinkPad enciende y ejecuta scraping diario | `18:32` | ThinkPad cron | ✅ Listo y Activo |
+| ThinkPad se apaga al terminar | ~19:30 | `shutdown` en script | ✅ Listo y Activo |
+| UniFi envía Magic Packet (semanal lunes) | `00:00` | Router UniFi | ✅ Listo y Activo |
+| ThinkPad enciende y ejecuta scraping semanal | `00:02` | ThinkPad cron | ✅ Listo y Activo |
+| ThinkPad se apaga al terminar | ~madrugada | `shutdown` en script | ✅ Listo y Activo |
 
