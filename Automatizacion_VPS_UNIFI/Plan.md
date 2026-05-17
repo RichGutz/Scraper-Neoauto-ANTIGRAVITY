@@ -20,44 +20,42 @@ Para que visualices cómo se van a mover los datos sin necesidad de abrir puerto
 
 ## 📋 Hoja de Ruta Paso a Paso
 
-### 🔌 Fase 1: Configurar el Hardware Local (La ThinkPad)
+### 🔌 Fase 1: Configurar el Hardware Local (La ThinkPad) [✔ COMPLETADO]
 La laptop tiene que quedar en modo "escucha activa" cuando se apague.
 
-#### 1. Configuración de BIOS
-1. Reiniciar la ThinkPad, presionar **`F1`** al arrancar.
-2. Ir a **`Config` > `Network`**.
-3. Activar **`Wake on LAN`** configurándolo en `Wired Only` (o `Enabled`).
-4. Guardar cambios y salir con **`F10`**.
+#### 1. Configuración de BIOS [✔ Realizado]
+1. Se reinició la ThinkPad y se presionó **`F1`** al arrancar.
+2. En **`Config` > `Network`**.
+3. Se revisó y activó **`Wake on LAN`**, ajustándolo a `AC Only` para que despierte asegurando que está conectada a la corriente.
 
-#### 2. Configuración en Linux Mint
-Abre una terminal (`Ctrl + Alt + T`) y ejecuta:
+#### 2. Configuración en Linux Mint [✔ Realizado y Verificado]
+Se ejecutaron los siguientes pasos en la terminal:
 
-1. **Instalar `ethtool`:**
+1. **Instalación de `ethtool`:**
    ```bash
    sudo apt update && sudo apt install ethtool -y
    ```
-2. **Identificar la interfaz de red:**
-   ```bash
-   ip link
-   ```
-   *(Busca el nombre de tu puerto ethernet, por ejemplo: `enp0s25`).*
-3. **Verificar soporte Wake-on-LAN:**
-   ```bash
-   sudo ethtool <interfaz>
-   ```
-   *(Debe aparecer `Supports Wake-on: g` y `Wake-on: d` o `g`).*
-4. **Hacerlo persistente con NetworkManager (Recomendado en Mint):**
-   ```bash
-   nmcli connection show
-   ```
-   *(Identifica el nombre de tu conexión cableada, ej. "Wired connection 1").*
-   ```bash
-   sudo nmcli connection modify "Wired connection 1" 802-3-ethernet.wake-on-lan magic
-   ```
+2. **Identificación de la interfaz y Verificación de soporte WOL:**
+   - Interfaz de red cableada identificada.
+   - Ejecutando `sudo ethtool <interfaz>` se validó que retorna:
+     - `Supports Wake-on: pumbg`
+     - `Wake-on: g` (Confirmando que reacciona al Magic Packet).
+3. **Persistencia con NetworkManager:**
+   - Se configuró la conexión cableada ("Wired connection 1" o similar) para que la propiedad WOL quede guardada en el sistema mediante:
+     ```bash
+      sudo nmcli connection modify <nombre_conexion> 802-3-ethernet.wake-on-lan magic
+     ```
 
-#### 3. Condición Física
-* Dejar la ThinkPad conectada permanentemente a la corriente (con su cargador).
-* Dejarla conectada al cable de red Ethernet que viene directamente del router UniFi.
+#### 3. Condición Física [✔ Validado]
+* La ThinkPad queda conectada permanentemente a la corriente (AC) y al cable de red Ethernet del router.
+
+---
+
+### 🧪 Pruebas Pendientes de Wake-on-LAN (Desde otro equipo)
+Para que el **Gemini de la laptop de desarrollo** valide esto, el siguiente paso práctico (antes de programar la API de la nube) es hacer una prueba de envío local del Magic Packet:
+1. Instalar un cliente WOL en la laptop de desarrollo (ej. `wakeonlan` en Linux o un cliente WOL en Windows).
+2. Mandar el paquete usando la MAC Address de la ThinkPad (ej. `3c:97:0e:7a:97:78`).
+3. Comprobar que la ThinkPad enciende desde apagado total.
 
 ---
 
