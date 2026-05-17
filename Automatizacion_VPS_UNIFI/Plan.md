@@ -71,6 +71,10 @@ Se ejecutaron los siguientes pasos en la terminal:
      ```
      *(Esta es la dirección exacta a la que se debe apuntar al enviar el paquete).*
 
+> [!TIP]
+> **CONCLUSIÓN DE FASE 1:**
+> Todo está **100% CERRADO Y LISTO** en la ThinkPad. El hardware, el kernel (ethtool) y el sistema operativo (NetworkManager) están en sincronía para mantener la red "escuchando". El próximo paso es apagar por completo esta laptop (dejándola conectada a la corriente y red) y mandar el Magic Packet desde otra computadora para probar el encendido.
+
 #### 3. Condición Física [✔ Validado]
 * La ThinkPad queda conectada permanentemente a la corriente (AC) y al cable de red Ethernet del router.
 
