@@ -80,11 +80,86 @@ Se ejecutaron los siguientes pasos en la terminal:
 
 ---
 
-### 🧪 Pruebas Pendientes de Wake-on-LAN (Desde otro equipo)
-Para que el **Gemini de la laptop de desarrollo** valide esto, el siguiente paso práctico (antes de programar la API de la nube) es hacer una prueba de envío local del Magic Packet:
-1. Instalar un cliente WOL en la laptop de desarrollo (ej. `wakeonlan` en Linux o un cliente WOL en Windows).
-2. Mandar el paquete usando la MAC Address de la ThinkPad (ej. `3c:97:0e:7a:97:78`).
-3. Comprobar que la ThinkPad enciende desde apagado total.
+### 🧪 Prueba del Magic Packet desde Windows (Laptop de Desarrollo)
+Esta sección es para ejecutar desde la laptop de desarrollo (Windows) después de apagar la ThinkPad.
+
+**Datos necesarios:**
+- **MAC Address de la ThinkPad:** `3c:97:0e:7a:97:78`
+- **Interfaz objetivo:** `enp0s25` (cable Ethernet conectado al router UniFi)
+
+#### Opción A: PowerShell (Sin instalar nada) ✅ Recomendado
+Abre **PowerShell** en tu laptop Windows y pega este script directamente:
+
+```powershell
+$mac = "3c:97:0e:7a:97:78"
+$target = [System.Net.IPAddress]::Broadcast
+$mac_bytes = $mac -split ':' | ForEach-Object { [byte]("0x$_") }
+$payload = [byte[]](,0xFF * 6) + ($mac_bytes * 16)
+$udp = New-Object System.Net.Sockets.UdpClient
+$udp.EnableBroadcast = $true
+$udp.Connect($target, 9)
+$udp.Send($payload, $payload.Length)
+$udp.Close()
+Write-Host "Magic Packet enviado a 3c:97:0e:7a:97:78"
+```
+
+> [!IMPORTANT]
+> Asegúrate de que tu laptop de desarrollo esté **en la misma red local (mismo WiFi o Ethernet del router UniFi)** que la ThinkPad. El Magic Packet no cruza routers por defecto.
+
+#### Opción B: Herramienta gráfica (WakeMeOnLan de NirSoft)
+1. Descargar desde: [https://www.nirsoft.net/utils/wake_on_lan.html](https://www.nirsoft.net/utils/wake_on_lan.html)
+2. Abrir la app y hacer clic en **File > Wake On LAN**.
+3. Ingresar la MAC Address: `3c:97:0e:7a:97:78`
+4. Hacer clic en **OK**.
+
+#### ¿Cómo saber si funcionó?
+- La ThinkPad se encenderá físicamente en segundos.
+- Luego puedes confirmar con un `ping` desde tu laptop Windows:
+  ```powershell
+  ping 192.168.1.X  # Reemplaza con la IP local de la ThinkPad
+  ```
+
+---
+
+### 🔌 Pre-Prueba: Apagado Remoto vía SSH desde Windows (Antes del WOL)
+
+> [!TIP]
+> **¿Por qué hacer esto primero?** Si el apagado remoto por SSH funciona, confirmamos que:
+> 1. La ThinkPad está recibiendo paquetes de red correctamente.
+> 2. La red local está bien configurada entre ambas laptops.
+> 3. Si SSH funciona pero WOL no, el problema está aislado en la BIOS/hardware, no en la red.
+>
+> Es la prueba de conectividad perfecta ANTES de testear el WOL.
+
+**A diferencia de WOL, el apagado remoto requiere que la ThinkPad esté ENCENDIDA y el OS corriendo.**
+
+#### Paso 1: Instalar SSH en Windows (si no lo tienes)
+Abre PowerShell como Administrador y ejecuta:
+```powershell
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
+#### Paso 2: Conectarse por SSH a la ThinkPad
+```powershell
+ssh richgutz@<IP-de-la-ThinkPad>
+```
+*(La IP local de la ThinkPad la puedes ver en el router UniFi, o ejecutando `hostname -I` en su terminal.)*
+
+#### Paso 3: Enviar el comando de apagado
+Una vez conectado, ejecutar:
+```bash
+sudo shutdown -h now
+```
+O desde Windows directamente en una sola línea:
+```powershell
+ssh richgutz@<IP-de-la-ThinkPad> "sudo shutdown -h now"
+```
+
+#### ¿Qué confirma esta prueba?
+- ✅ La red local funciona entre ambos equipos.
+- ✅ SSH está operativo en la ThinkPad.
+- ✅ El flujo de **apagado automático al terminar el scraping** (Fase 4 del plan) estará validado.
+- ✅ Si la ThinkPad se apaga y luego el WOL la despierta → **¡El ciclo completo está funcionando!**
 
 ---
 
