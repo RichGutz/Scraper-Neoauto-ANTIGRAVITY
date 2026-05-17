@@ -252,35 +252,114 @@ Los siguientes pasos fueron ejecutados exitosamente en la ThinkPad T430s:
 
 ---
 
-### 🌐 Fase 2: El Puente en la Nube (Ubiquiti API)
-Conectar el VPS de Hostinger con tu casa de forma segura.
+### 🛰️ Arquitectura de Comunicación: VPS ⇄ API UniFi (¿Cómo se conectan?)
 
-1. Entrar a [unifi.ui.com](https://unifi.ui.com).
-2. Ir a **`Settings` > `API Keys`** y generar tu clave de acceso.
-3. Copiar la **`X-API-Key`** única y el **ID de tu consola** (los usaremos en el código de Hostinger).
+Para evitar abrir puertos vulnerables en tu casa o configurar VPNs complejas, el sistema utiliza el **túnel seguro inverso de Ubiquiti**:
+
+```text
+[VPS Hostinger] --------(HTTPS + API Key)--------> [Nube de Ubiquiti (api.ui.com)]
+                                                            │
+                                                     (Proxy Seguro)
+                                                            ▼
+[ThinkPad T430s] <---(Magic Packet en red local)--- [Cloud Gateway Ultra]
+```
+
+1. **El Disparador (VPS Hostinger):** Un script de Python se ejecuta de forma automática (a través de un cronjob programado). Este script realiza una petición segura HTTPS POST a la API de Ubiquiti (`api.ui.com`).
+2. **La Autenticación (API Key & Console ID):** Para identificarse, el script envía tu `X-API-Key` y el `Console ID` (el identificador único de tu Cloud Gateway Ultra). Esto le indica a Ubiquiti quién tiene el control y a qué casa enviar la orden.
+3. **El Proxy Inverso de Ubiquiti:** Dado que tu Cloud Gateway Ultra está constantemente conectado a los servidores de `unifi.ui.com` mediante un websocket seguro desde *dentro* de tu red local, Ubiquiti aprovecha este túnel preexistente. No necesitas abrir puertos ni redireccionar tráfico en el router.
+4. **El Despertar Local (WOL):** El Cloud Gateway Ultra recibe la instrucción desde la nube, genera el Magic Packet localmente en tu subred (`192.168.0.255` puerto UDP 9) y lo envía a la dirección MAC de la ThinkPad (`3c:97:0e:7a:97:78`). La tarjeta de red detecta el paquete y enciende el equipo de inmediato.
+
+---
+
+### 🌐 Fase 2: El Puente en la Nube (Ubiquiti API) [✔ Credenciales Generadas — 2026-05-17]
+Conectar el VPS de Hostinger con tu casa de forma segura utilizando la API oficial de Ubiquiti.
+
+*   **Nombre de la API Key:** `WOL-THINK-PAD`
+*   **X-API-Key:** `SyNvmj1-iYC4l48a6zOfAGVwcC5XHm7_`
+*   **Console ID:** `6C63F85E22E1000000000909B05C0000000009855AA500000000680F894B:1965643967`
 
 ---
 
 ### 🧠 Fase 3: El Script "Disparador" en Hostinger (El Cerebro)
-Programar el temporizador en la nube.
+Programar el temporizador en la nube para despertar la ThinkPad.
 
-#### 1. El Código (Python)
-Escribir un script en Python dentro de tu VPS de Hostinger usando la librería `requests` que apunte al endpoint oficial de Ubiquiti para enviar el comando de encendido al Cloud Gateway Ultra:
+#### 1. Configuración de Port Forwarding en UniFi (Requerido para el puente de red)
+Como la nube de Ubiquiti (`api.ui.com`) se usa para obtener de forma dinámica y segura la IP pública (WAN) actual de tu casa, el script en Hostinger disparará el Magic Packet hacia tu IP WAN en el puerto UDP 9. Debes configurar una regla de Port Forwarding en tu consola UniFi:
+
+1. Entra a **`unifi.ui.com`** > abre tu Consola > **`Settings` > `Routing` > `Port Forwarding`**.
+2. Añade una nueva regla con la siguiente configuración:
+   * **Name:** `WAN-to-LAN-WOL`
+   * **From:** `Any` (o restríngelo opcionalmente al IP pública de tu VPS de Hostinger por seguridad)
+   * **Port:** `9`
+   * **Forward IP:** `192.168.0.255` (Broadcast de tu subred) o `192.168.0.150` (IP de la ThinkPad)
+   * **Forward Port:** `9`
+   * **Protocol:** `UDP`
+
+#### 2. El Código Disparador (Python)
+Crea un archivo llamado `despertador.py` en tu VPS de Hostinger y pega este código:
 
 ```python
 import requests
+import socket
+import json
 
-API_KEY = "TU_X_API_KEY"
-CONSOLE_ID = "TU_CONSOLE_ID"
+# Credenciales de producción de Richard
+API_KEY = "SyNvmj1-iYC4l48a6zOfAGVwcC5XHm7_"
+CONSOLE_ID = "6C63F85E22E1000000000909B05C0000000009855AA500000000680F894B"
 MAC_ADDRESS = "3c:97:0e:7a:97:78" # MAC de la ThinkPad
 
-# Implementación de la petición HTTPS a la API de Ubiquiti
+print("--- Iniciando ciclo de encendido remoto ---")
+
+# 1. Obtener la IP pública (WAN) del Gateway desde la API oficial de Ubiquiti
+headers = {
+    "X-API-KEY": API_KEY,
+    "Accept": "application/json"
+}
+
+try:
+    print("Consultando la API oficial de Ubiquiti (api.ui.com)...")
+    response = requests.get("https://api.ui.com/v1/hosts", headers=headers, timeout=10)
+    
+    if response.status_code == 200:
+        hosts = response.json().get("data", [])
+        wan_ip = None
+        
+        for host in hosts:
+            # Buscamos la consola por su identificador único
+            if host.get("id") == CONSOLE_ID or CONSOLE_ID.startswith(host.get("id", "")):
+                wan_ip = host.get("ip")
+                break
+        
+        # Fallback en caso de que solo haya una consola en tu cuenta
+        if not wan_ip and hosts:
+            wan_ip = hosts[0].get("ip")
+            
+        if wan_ip:
+            print(f"✅ IP pública de tu casa detectada dinámicamente: {wan_ip}")
+            
+            # 2. Construir el Magic Packet para la MAC de la ThinkPad
+            mac_clean = MAC_ADDRESS.replace(":", "")
+            payload = bytes.fromhex("ff" * 6 + mac_clean * 16)
+            
+            # 3. Enviar el paquete a la IP pública en el puerto UDP 9
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.sendto(payload, (wan_ip, 9))
+            sock.close()
+            print("🚀 ¡Magic Packet enviado exitosamente al Cloud Gateway Ultra!")
+        else:
+            print("❌ No se pudo encontrar tu consola o su dirección IP en la API.")
+    else:
+        print(f"❌ Error al consultar la API de Ubiquiti. HTTP Status: {response.status_code}")
+        print(f"Detalle: {response.text}")
+except Exception as e:
+    print(f"❌ Excepción durante la consulta o envío de red: {str(e)}")
 ```
 
-#### 2. La Automatización (Cronjob)
-Configurar el programador de tareas de Linux (cron) en Hostinger para que ejecute el script automáticamente:
+#### 3. La Automatización (Cronjob en Hostinger)
+Configura el programador de tareas `cron` en tu VPS ejecutando `crontab -e` y añadiendo esta línea al final del archivo:
 ```bash
-# Ejemplo: Todos los días a las 06:00 AM
+# Ejecutar todos los días a las 06:00 AM (Ajusta la hora según tu zona horaria)
 0 6 * * * /usr/bin/python3 /ruta/al/script/despertador.py >> /ruta/al/script/despertador.log 2>&1
 ```
 
