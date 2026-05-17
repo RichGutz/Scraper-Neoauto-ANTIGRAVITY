@@ -163,6 +163,30 @@ ssh richgutz@<IP-de-la-ThinkPad> "sudo shutdown -h now"
 - ✅ El flujo de **apagado automático al terminar el scraping** (Fase 4 del plan) estará validado.
 - ✅ Si la ThinkPad se apaga y luego el WOL la despierta → **¡El ciclo completo está funcionando!**
 
+#### 🛠️ Acciones Extra para Conectividad y Apagado (Troubleshooting)
+
+Si al intentar conectarte por SSH desde Windows obtienes un error como `Connection timed out` a pesar de que la ThinkPad responde a los pings, sigue estos pasos para configurar el entorno de red en Linux Mint:
+
+1. **Instalar y habilitar el servidor SSH en la ThinkPad:**
+   Linux Mint incluye el cliente SSH, pero no el servidor por defecto. Abre su terminal física (`Ctrl + Alt + T`) y ejecuta:
+   ```bash
+   sudo apt update && sudo apt install openssh-server -y
+   sudo systemctl enable --now ssh
+   ```
+
+2. **Permitir tráfico SSH en el Firewall (UFW):**
+   El firewall de Linux Mint suele bloquear conexiones entrantes por defecto. Debes permitir el puerto 22:
+   ```bash
+   sudo ufw allow ssh
+   ```
+
+3. **Ejecutar comandos de apagado SSH con TTY asignado (Interactivos):**
+   Si intentas apagar la máquina directamente en una sola línea y se queda colgada debido a la solicitud de contraseña de `sudo`, fuerza la asignación de terminal interactiva (TTY) con el parámetro `-t` en Windows PowerShell:
+   ```powershell
+   ssh -t richgutz@192.168.0.150 "sudo shutdown -h now"
+   ```
+   *(Esto te solicitará la contraseña de `richgutz` de forma segura en la terminal antes de ordenar el apagado).*
+
 ---
 
 ### 🌐 Fase 2: El Puente en la Nube (Ubiquiti API)
