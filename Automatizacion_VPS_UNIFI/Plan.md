@@ -89,7 +89,7 @@ Esta sección es para ejecutar desde la laptop de desarrollo (Windows) después 
 - **Usuario SSH:** `richgutz`
 - **Interfaz objetivo:** `enp0s25` (cable Ethernet conectado al router UniFi)
 
-#### Opción A: PowerShell (Sin instalar nada) ✅ Recomendado
+#### Opción A: PowerShell (Sin instalar nada) [✔ Testeado y Exitoso — 2026-05-17]
 Abre **PowerShell** en tu laptop Windows y pega este script directamente:
 
 ```powershell
@@ -105,6 +105,23 @@ $udp.Close()
 Write-Host "Magic Packet enviado a 3c:97:0e:7a:97:78"
 ```
 
+**Resultado del test real (Éxito absoluto):**
+```text
+PS C:\Users\rguti> $mac = "3c:97:0e:7a:97:78"
+PS C:\Users\rguti> $target = [System.Net.IPAddress]::Broadcast
+PS C:\Users\rguti> $mac_bytes = $mac -split ':' | ForEach-Object { [byte]("0x$_") }
+PS C:\Users\rguti> $payload = [byte[]](,0xFF * 6) + ($mac_bytes * 16)
+PS C:\Users\rguti> $udp = New-Object System.Net.Sockets.UdpClient
+PS C:\Users\rguti> $udp.EnableBroadcast = $true
+PS C:\Users\rguti> $udp.Connect($target, 9)
+PS C:\Users\rguti> $udp.Send($payload, $payload.Length)
+102
+PS C:\Users\rguti> $udp.Close()
+PS C:\Users\rguti> Write-Host "Magic Packet enviado a 3c:97:0e:7a:97:78"
+Magic Packet enviado a 3c:97:0e:7a:97:78
+```
+*(La ThinkPad T430s reaccionó de manera instantánea, encendió su pantalla y cargó Linux Mint exitosamente).*
+
 > [!IMPORTANT]
 > Asegúrate de que tu laptop de desarrollo esté **en la misma red local (mismo WiFi o Ethernet del router UniFi)** que la ThinkPad. El Magic Packet no cruza routers por defecto.
 
@@ -118,7 +135,7 @@ Write-Host "Magic Packet enviado a 3c:97:0e:7a:97:78"
 - La ThinkPad se encenderá físicamente en segundos.
 - Luego puedes confirmar con un `ping` desde tu laptop Windows:
   ```powershell
-  ping 192.168.1.X  # Reemplaza con la IP local de la ThinkPad
+  ping 192.168.0.150  # IP local confirmada de la ThinkPad
   ```
 
 ---
