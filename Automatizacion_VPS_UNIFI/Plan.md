@@ -83,8 +83,10 @@ Se ejecutaron los siguientes pasos en la terminal:
 ### 🧪 Prueba del Magic Packet desde Windows (Laptop de Desarrollo)
 Esta sección es para ejecutar desde la laptop de desarrollo (Windows) después de apagar la ThinkPad.
 
-**Datos necesarios:**
+**Datos necesarios (Confirmados con pruebas):**
 - **MAC Address de la ThinkPad:** `3c:97:0e:7a:97:78`
+- **IP Local de la ThinkPad:** `192.168.0.150`
+- **Usuario SSH:** `richgutz`
 - **Interfaz objetivo:** `enp0s25` (cable Ethernet conectado al router UniFi)
 
 #### Opción A: PowerShell (Sin instalar nada) ✅ Recomendado
