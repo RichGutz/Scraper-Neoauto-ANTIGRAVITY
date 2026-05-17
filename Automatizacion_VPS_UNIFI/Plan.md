@@ -36,15 +36,40 @@ Se ejecutaron los siguientes pasos en la terminal:
    sudo apt update && sudo apt install ethtool -y
    ```
 2. **Identificación de la interfaz y Verificación de soporte WOL:**
-   - Interfaz de red cableada identificada.
-   - Ejecutando `sudo ethtool <interfaz>` se validó que retorna:
-     - `Supports Wake-on: pumbg`
-     - `Wake-on: g` (Confirmando que reacciona al Magic Packet).
-3. **Persistencia con NetworkManager:**
-   - Se configuró la conexión cableada ("Wired connection 1" o similar) para que la propiedad WOL quede guardada en el sistema mediante:
+   - Interfaz de red cableada identificada como `enp0s25`.
+   - Como evidencia y prueba de que quedó operando, se ejecutó este comando:
      ```bash
-      sudo nmcli connection modify <nombre_conexion> 802-3-ethernet.wake-on-lan magic
+     sudo ethtool enp0s25 | grep Wake-on
      ```
+     **Resultado (Prueba):**
+     ```text
+        Supports Wake-on: pumbg
+        Wake-on: g
+     ```
+     *(La letra `g` confirma que reacciona correctamente al Magic Packet).*
+
+3. **Persistencia con NetworkManager:**
+   - Se configuró la conexión cableada ("Ethernet connection 1") para que la propiedad WOL quede guardada en el sistema de manera definitiva mediante:
+     ```bash
+      sudo nmcli connection modify "Ethernet connection 1" 802-3-ethernet.wake-on-lan magic
+     ```
+   - Como evidencia de que la configuración persiste, se verificó con el comando:
+     ```bash
+     nmcli c show "Ethernet connection 1" | grep 802-3-ethernet.wake-on-lan
+     ```
+     **Resultado (Prueba):**
+     ```text
+     802-3-ethernet.wake-on-lan:             magic
+     802-3-ethernet.wake-on-lan-password:    --
+     ```
+   
+4. **Validación de la Dirección MAC para el Magic Packet:**
+   - La MAC Address requerida para despertar el equipo fue validada con `ip link show enp0s25`:
+     **Resultado (Prueba):**
+     ```text
+         link/ether 3c:97:0e:7a:97:78 brd ff:ff:ff:ff:ff:ff
+     ```
+     *(Esta es la dirección exacta a la que se debe apuntar al enviar el paquete).*
 
 #### 3. Condición Física [✔ Validado]
 * La ThinkPad queda conectada permanentemente a la corriente (AC) y al cable de red Ethernet del router.
