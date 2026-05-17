@@ -431,18 +431,49 @@ Dado que los routers corporativos y proveedores de internet bloquean por diseño
 
 ### 🚀 Plan B: El Script Puente Seguro Local (The Local Bridge Script)
 
-En lugar de intentar que el Magic Packet cruce los routers e internet (donde los firewalls lo bloquean), **haremos que el paquete se genere de forma 100% local en tu casa**, pero disparado desde Hostinger.
+En lugar de intentar que el Magic Packet cruce los routers e internet (donde los firewalls lo bloquean), **haremos que el paquete se genere de forma 100% local en tu casa**, pero disparado desde Hostinger a través de Supabase.
 
-1. **La Laptop de Desarrollo (o un dispositivo siempre encendido) actúa como puente:**
-   Crearemos un script ultraligero en Python que se ejecuta en segundo plano en tu computadora de desarrollo local (o cualquier equipo que esté encendido) y escuche peticiones mediante un WebSocket o un Webhook seguro de una base de datos compartida (como Supabase).
-2. **El flujo es el siguiente:**
-   - **Hostinger VPS** escribe una orden en Supabase (ej: `wake_thinkpad = True`).
-   - El script puente local (que está en tu casa) detecta la orden en milisegundos de forma segura.
-   - El script local genera el Magic Packet localmente (que ya sabemos que funciona al 100% y enciende la ThinkPad al instante).
-   - El script local actualiza Supabase para marcar el trabajo como hecho.
-3. **Ventajas:**
-   - **Cero puertos abiertos:** No necesitas DMZ, ni Port Forwarding, ni tocar el módem de Movistar ni el de UniFi. Tu red de casa queda 100% cerrada y segura.
-   - **100% de fiabilidad:** Los Magic Packets locales siempre llegan a la tarjeta de red de la ThinkPad.
-   - **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
-   - **Desactivación de PDF:** Por orden directa del usuario, se elimina la generación automatizada de archivos PDF, operando al 100% sobre el archivo Markdown (`Plan.md`) para optimizar el tiempo de desarrollo.
+#### 📊 1. Esquema SQL para Supabase
+
+Ejecuta este código SQL en el editor de consultas (SQL Editor) de tu dashboard de Supabase para crear la tabla de control:
+
+```sql
+-- Crear la tabla de control de dispositivos y comandos Wake-on-LAN
+CREATE TABLE public.control_wol (
+    id SERIAL PRIMARY KEY,
+    dispositivo VARCHAR(50) UNIQUE NOT NULL,
+    mac_address VARCHAR(17) NOT NULL,
+    solicitar_encendido BOOLEAN DEFAULT FALSE,
+    estado VARCHAR(20) DEFAULT 'offline',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Insertar el registro inicial de control para la ThinkPad T430s
+INSERT INTO public.control_wol (dispositivo, mac_address, solicitar_encendido, estado)
+VALUES ('thinkpad_t430s', '3c:97:0e:7a:97:78', FALSE, 'offline')
+ON CONFLICT (dispositivo) DO NOTHING;
+```
+
+#### 🔄 2. Flujo de Control Seguro
+
+1. **VPS de Hostinger:**
+   Cuando llegue la hora de iniciar el scraping (06:00 AM), el Cronjob de Hostinger actualizará Supabase:
+   ```sql
+   UPDATE public.control_wol 
+   SET solicitar_encendido = TRUE 
+   WHERE dispositivo = 'thinkpad_t430s';
+   ```
+2. **Laptop Puente (Tu equipo local encendido):**
+   * Corre un script en segundo plano escuchando cambios en la tabla.
+   * En cuanto `solicitar_encendido` pasa a `TRUE`, el script envía el Magic Packet local UDP 9 (que ya verificamos que enciende la ThinkPad al instante).
+   * Inmediatamente después, actualiza Supabase a `solicitar_encendido = FALSE` y `estado = 'booting'` para confirmar el disparo de red.
+3. **La ThinkPad:**
+   * Se enciende localmente, corre el scraping, y al finalizar se apaga sola ejecutando `sudo shutdown -h now`.
+
+#### 💎 3. Ventajas del Plan B
+* **Cero puertos abiertos:** No necesitas DMZ, ni Port Forwarding, ni tocar el módem de Movistar ni el de UniFi. Tu red de casa queda 100% cerrada y segura de ataques externos.
+* **100% de fiabilidad:** Los Magic Packets locales siempre llegan a la tarjeta de red de la ThinkPad.
+* **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
+* **Desactivación de PDF:** Por orden directa del usuario, se elimina la generación automatizada de archivos PDF, operando al 100% sobre el archivo Markdown (`Plan.md`) para optimizar el tiempo de desarrollo.
+
 
