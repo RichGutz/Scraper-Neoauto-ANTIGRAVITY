@@ -1,0 +1,52 @@
+🚀 Plan Maestro: Proyecto Antigravity (Versión Solo Richard + Gemini)
+Objetivo: Despertar la ThinkPad T430s desde tu VPS de Hostinger usando la API oficial de Ubiquiti, ejecutar el scraping diario en Linux Mint y apagar la laptop automáticamente al terminar para ahorrar energía.
+
+🛠️ El Mapa de la Arquitectura
+Para que visualices cómo se van a mover los datos sin necesidad de abrir puertos en tu casa ni usar VPNs:
+
+[VPS Hostinger] --------(HTTPS + API Key)--------> [Nube de Ubiquiti (api.ui.com)]
+                                                            │
+                                                     (Proxy Seguro)
+                                                            ▼
+[ThinkPad T430s] <---(Magic Packet en red local)--- [Cloud Gateway Ultra]
+📋 Hoja de Ruta Paso a Paso
+Fase 1: Configurar el Hardware Local (La ThinkPad)
+La laptop tiene que quedar en modo "escucha activa" cuando se apague.
+
+Configuración de BIOS: Reiniciar la ThinkPad, presionar F1, ir a Config > Network y activar Wake on LAN.
+
+Configuración en Linux Mint: Instalar ethtool y configurar tu tarjeta de red cableada para que acepte el "Magic Packet" (wol g).
+
+Condición Física: Dejar la ThinkPad conectada permanentemente a la corriente (con su cargador) y al cable de red que viene del UniFi.
+
+Fase 2: El Puente en la Nube (Ubiquiti API)
+Conectar el VPS de Hostinger con tu casa de forma segura.
+
+Entrar a unifi.ui.com.
+
+Ir a Settings > API Keys y generar tu clave de acceso.
+
+Copiar esa X-API-Key única (la usaremos en el código de Hostinger) junto con el ID de tu consola.
+
+Fase 3: El Script "Disparador" en Hostinger (El Cerebro)
+Programar el temporizador en la nube.
+
+El Código: Escribir un script en Python dentro de tu VPS usando la librería requests que apunte al endpoint oficial de Ubiquiti (https://api.ui.com/v1/...).
+
+La Automatización (Cronjob): Configurar el programador de tareas de Linux en Hostinger para que ejecute ese script en Python automáticamente todos los días a la hora que tú decidas (por ejemplo, 06:00 AM).
+
+Fase 4: El Ciclo de Scraping y Auto-Apagado
+El cierre perfecto para que la laptop no se quede prendida por gusto.
+
+El script de Hostinger despierta la ThinkPad a través de la API.
+
+Linux Mint arranca solo, inicia sesión e inicia tu proceso de scraping.
+
+Al finalizar la extracción de datos, el mismo script de scraping de la ThinkPad ejecuta la orden de salida en su terminal:
+
+Bash
+sudo shutdown -h now
+🔥 Primer Paso: Activación de la ThinkPad
+Para no abrumarnos con código de APIs todavía, empecemos por asegurar que el hardware responda. El primer obstáculo es dejar Linux Mint configurado.
+
+Cuando estés frente a la ThinkPad, avísame para darte los comandos exactos de la terminal (ethtool) y dejar la Fase 1 liquidada hoy mismo. ¿Le metemos mano?
