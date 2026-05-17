@@ -520,62 +520,86 @@ Este esquema es 100% autónomo y se reinicia por reloj físico infinito, sin nec
 
 ---
 
-## 🖥️ Fase 4: Configuración Final en la ThinkPad T430s
+## 🖥️ Fase 4: Configuración Final en la ThinkPad T430s [✔ COMPLETADO — 2026-05-17]
 
-Para completar el ciclo de automatización, debemos configurar el programador de tareas interno de la ThinkPad (Linux Mint) para que ejecute los scrapings y luego se apague de forma 100% autónoma.
+El ciclo de automatización completo está configurado: el router UniFi despierta la ThinkPad 2 minutos antes, `cron` ejecuta el scraping automáticamente (sin necesidad de login visual) y los scripts se apagan solos al terminar.
 
 ### 🔑 1. ¿Es necesario eliminar la contraseña de la ThinkPad?
 **NO, no es necesario eliminar la contraseña de tu usuario (`richgutz`).**
 
-El servicio de tareas programadas de Linux (`cron`) es un servicio del sistema que se ejecuta en segundo plano. Esto significa que:
-* Cuando el UniFi encienda la ThinkPad, esta arrancará y se quedará en la pantalla de bloqueo (pidiendo contraseña).
-* **`cron` ejecutará tus scripts en segundo plano de todos modos** a la hora indicada, bajo tu usuario `richgutz`, sin necesidad de que inicies sesión visualmente ni escribas la contraseña.
-* Esto mantiene la laptop **100% segura** ante accesos físicos no autorizados en casa.
+El servicio `cron` corre en segundo plano bajo tu usuario, sin importar si la pantalla está bloqueada. La laptop es 100% segura ante accesos físicos.
 
 > [!NOTE]
-> *Si tus scripts de scraping requirieran abrir un navegador visible en pantalla (no headless), Linux Mint necesitaría iniciar sesión automáticamente. Pero como tus scripts corren de forma invisible en la terminal (Headless Mode), el bloqueo de pantalla no interfiere para nada.*
+> Los scripts de scraping corren en modo **headless** (sin interfaz gráfica), por lo que el bloqueo de pantalla no interfiere en absoluto.
 
-### ⏰ 2. Configuración del Cronjob en la ThinkPad
-Debemos programar dos tareas en el crontab de la ThinkPad para que se ejecuten 2 minutos después de que la máquina se encienda (dando tiempo a que cargue el sistema operativo):
+### 🛡️ 2. Permiso sudo sin contraseña para shutdown
 
-1. **Scraping Diario (Todos los días a las 08:02 AM):**
-   ```micro
-   2 8 * * * cd /home/richgutz/Scraper.Neoauto && python3 main.py >> /home/richgutz/cron_diario.log 2>&1
-   ```
-2. **Scraping Semanal (Lunes a las 00:02 AM):**
-   ```micro
-   2 0 * * 1 cd /home/richgutz/Scraper.Neoauto && python3 generador_reporte_mejorado.py >> /home/richgutz/cron_semanal.log 2>&1
-   ```
+Para que el comando `sudo /sbin/shutdown` funcione desde `cron` sin pedir contraseña:
 
-#### Paso a paso para configurarlo en la ThinkPad:
-1. Conéctate por SSH a la ThinkPad o abre una terminal en ella.
-2. Escribe el comando para editar las tareas programadas:
-   ```bash
-   crontab -e
-   ```
-   *(Si te pide elegir un editor, selecciona `1` para nano).*
-3. Ve al final del archivo y pega las dos líneas anteriores de Cronjob (ajustando la ruta de tus scripts si es necesario).
-4. Guarda y cierra (en nano es `Ctrl + O` para guardar, `Enter` para confirmar, y `Ctrl + X` para salir).
+```bash
+echo "richgutz ALL=(ALL) NOPASSWD: /sbin/shutdown" | sudo tee /etc/sudoers.d/shutdown
+```
 
-### 🛑 3. Apagado Automático al finalizar el Scraping
-Para que la laptop se apague sola al terminar y no se quede encendida consumiendo energía o expuesta, podemos añadir la orden de apagado al final del cron o dentro de tus propios scripts.
+### ⏰ 3. Cron Jobs Instalados en la ThinkPad [✔ Verificado — 2026-05-17]
 
-#### Opción Recomendada (Añadir apagado al final de la tarea de Cron):
-Podemos encadenar los comandos con `&&` (ejecutar si tiene éxito) o `;` (ejecutar siempre al terminar) para apagar la máquina al finalizar:
+Configurado con `crontab -e`. El crontab activo es el siguiente:
 
-* **Cron Diario con auto-apagado:**
-  ```micro
-  2 8 * * * cd /home/richgutz/Scraper.Neoauto && python3 main.py ; sudo shutdown -h now
-  ```
-* **Cron Semanal con auto-apagado:**
-  ```micro
-  2 0 * * 1 cd /home/richgutz/Scraper.Neoauto && python3 generador_reporte_mejorado.py ; sudo shutdown -h now
-  ```
+```cron
+# === WOL Automation: UniFi despierta la ThinkPad ===
+# Diario 18:32 PM - Con auto-apagado (UniFi manda WOL a las 18:30)
+32 18 * * * /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh >> /home/richgutz/cron_diario.log 2>&1
+
+# Semanal Lunes 00:02 AM - Con auto-apagado (UniFi manda WOL a las 00:00)
+2 0 * * 1 /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_semanal.sh >> /home/richgutz/cron_semanal.log 2>&1
+```
+
+**Notas importantes:**
+- Los logs quedan en `/home/richgutz/cron_diario.log` y `/home/richgutz/cron_semanal.log`
+- El auto-apagado (`sudo /sbin/shutdown -h now`) está activo al final de **ambos** scripts
+- El script `run_scraper_semanal.sh` fue actualizado en esta sesión para activar el apagado
+
+### 🛑 4. Auto-Apagado al Finalizar
+
+Ambos scripts terminan con `sudo /sbin/shutdown -h now` al completarse exitosamente:
+
+| Script | Auto-apagado |
+|--------|--------------|
+| `run_scraper_sequence_diario.sh` | ✅ Activo (línea 89) |
+| `run_scraper_semanal.sh` | ✅ Activo (activado 2026-05-17) |
+
+---
+
+### ⏰ 5. Cron Jobs del Router UniFi — PENDIENTE DE CONFIGURAR
+
+Este paso se realiza desde la **computadora de desarrollo** (Windows) via SSH al router.
+Conéctate: `ssh root@192.168.0.1`
+
+Edita el crontab del router:
+```bash
+crontab -e
+```
+
+Agrega estas líneas (2 minutos antes de que la ThinkPad las necesite):
+```cron
+# Despertar ThinkPad para scraping DIARIO (envia WOL 2 min antes del cron de la ThinkPad)
+30 18 * * * /data/bridge_wol.sh
+
+# Despertar ThinkPad para scraping SEMANAL del lunes
+0 0 * * 1 /data/bridge_wol.sh
+```
 
 > [!IMPORTANT]
-> Para que el comando `sudo shutdown -h now` funcione en el cronjob sin pedir contraseña de administrador, tu usuario `richgutz` debe tener permisos de `sudo` sin contraseña para el comando `shutdown`.
-> Esto se configura ejecutando en la ThinkPad:
-> `echo "richgutz ALL=(ALL) NOPASSWD: /sbin/shutdown" | sudo tee /etc/sudoers.d/shutdown`
+> Asegúrate de que el script `/data/bridge_wol.sh` ya esté creado en el router (ver sección Plan B §3).
+> Si no existe, crearlo con el contenido de la sección anterior antes de configurar el crontab.
 
+### 📊 Ciclo Completo de Automatización
 
+| Evento | Hora | Quién | Estado |
+|--------|------|-------|--------|
+| UniFi envía Magic Packet (diario) | `18:30` | Router UniFi | ⏳ Pendiente |
+| ThinkPad enciende y ejecuta scraping diario | `18:32` | ThinkPad cron | ✅ Listo |
+| ThinkPad se apaga al terminar | ~19:30 | `shutdown` en script | ✅ Listo |
+| UniFi envía Magic Packet (semanal lunes) | `00:00` | Router UniFi | ⏳ Pendiente |
+| ThinkPad enciende y ejecuta scraping semanal | `00:02` | ThinkPad cron | ✅ Listo |
+| ThinkPad se apaga al terminar | ~madrugada | `shutdown` en script | ✅ Listo |
 

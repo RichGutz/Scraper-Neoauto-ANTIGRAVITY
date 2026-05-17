@@ -4,7 +4,7 @@
 set -e
 
 # --- Configuración ---
-PROJECT_DIR="/home/richgutz/Scraper.Neoauto"
+PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
 LOG_FILE="$PROJECT_DIR/scraper_sequence_semanal.log"
 # Asegúrate de que la ruta a tu entorno virtual (venv) es correcta.
 PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
@@ -64,7 +64,7 @@ fi
 echo ""
 echo "--> Enviando correo con adjuntos vía Python..."
 SUBJECT="Reporte Semanal - $(date +'%Y-%m-%d')"
-$PYTHON_EXEC "/home/richgutz/Scraper.Neoauto/sendgrid_sender.py" --subject "$SUBJECT"
+$PYTHON_EXEC "$PROJECT_DIR/sendgrid_sender.py" --subject "$SUBJECT"
 echo "Proceso de envío finalizado."
 
 
@@ -76,6 +76,6 @@ echo "=================================================="
 
 echo ""
 echo "--> APAGANDO EL EQUIPO..."
-# sudo /sbin/shutdown -h now
+sudo /sbin/shutdown -h now
 
 exit 0
