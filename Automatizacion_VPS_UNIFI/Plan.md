@@ -516,10 +516,66 @@ Este esquema es 100% autónomo y se reinicia por reloj físico infinito, sin nec
 * **Cero consultas a Internet:** El router no consume ancho de banda ni procesos inútiles.
 * **Cero puertos abiertos:** La seguridad es del 100% ya que no hay exposición hacia la WAN.
 * **Autonomía total:** Si no hay conexión de internet pública, la laptop se enciende de todos modos por la red local del hogar.
+* **100% de Fiabilidad:** El Magic Packet se origina en la misma subred física de tu casa (LAN), saltándose todo tipo de filtros del ISP.
 
-* **100% de Fiabilidad:** El Magic Packet se origina en la misma subred física de tu casa (LAN), saltándose todo tipo de filtros e interferencias del proveedor de internet.
-les siempre llegan a la tarjeta de red de la ThinkPad.
-* **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
-* **Desactivación de PDF:** Por orden directa del usuario, se elimina la generación automatizada de archivos PDF, operando al 100% sobre el archivo Markdown (`Plan.md`) para optimizar el tiempo de desarrollo.
+---
+
+## 🖥️ Fase 4: Configuración Final en la ThinkPad T430s
+
+Para completar el ciclo de automatización, debemos configurar el programador de tareas interno de la ThinkPad (Linux Mint) para que ejecute los scrapings y luego se apague de forma 100% autónoma.
+
+### 🔑 1. ¿Es necesario eliminar la contraseña de la ThinkPad?
+**NO, no es necesario eliminar la contraseña de tu usuario (`richgutz`).**
+
+El servicio de tareas programadas de Linux (`cron`) es un servicio del sistema que se ejecuta en segundo plano. Esto significa que:
+* Cuando el UniFi encienda la ThinkPad, esta arrancará y se quedará en la pantalla de bloqueo (pidiendo contraseña).
+* **`cron` ejecutará tus scripts en segundo plano de todos modos** a la hora indicada, bajo tu usuario `richgutz`, sin necesidad de que inicies sesión visualmente ni escribas la contraseña.
+* Esto mantiene la laptop **100% segura** ante accesos físicos no autorizados en casa.
+
+> [!NOTE]
+> *Si tus scripts de scraping requirieran abrir un navegador visible en pantalla (no headless), Linux Mint necesitaría iniciar sesión automáticamente. Pero como tus scripts corren de forma invisible en la terminal (Headless Mode), el bloqueo de pantalla no interfiere para nada.*
+
+### ⏰ 2. Configuración del Cronjob en la ThinkPad
+Debemos programar dos tareas en el crontab de la ThinkPad para que se ejecuten 2 minutos después de que la máquina se encienda (dando tiempo a que cargue el sistema operativo):
+
+1. **Scraping Diario (Todos los días a las 08:02 AM):**
+   ```micro
+   2 8 * * * cd /home/richgutz/Scraper.Neoauto && python3 main.py >> /home/richgutz/cron_diario.log 2>&1
+   ```
+2. **Scraping Semanal (Lunes a las 00:02 AM):**
+   ```micro
+   2 0 * * 1 cd /home/richgutz/Scraper.Neoauto && python3 generador_reporte_mejorado.py >> /home/richgutz/cron_semanal.log 2>&1
+   ```
+
+#### Paso a paso para configurarlo en la ThinkPad:
+1. Conéctate por SSH a la ThinkPad o abre una terminal en ella.
+2. Escribe el comando para editar las tareas programadas:
+   ```bash
+   crontab -e
+   ```
+   *(Si te pide elegir un editor, selecciona `1` para nano).*
+3. Ve al final del archivo y pega las dos líneas anteriores de Cronjob (ajustando la ruta de tus scripts si es necesario).
+4. Guarda y cierra (en nano es `Ctrl + O` para guardar, `Enter` para confirmar, y `Ctrl + X` para salir).
+
+### 🛑 3. Apagado Automático al finalizar el Scraping
+Para que la laptop se apague sola al terminar y no se quede encendida consumiendo energía o expuesta, podemos añadir la orden de apagado al final del cron o dentro de tus propios scripts.
+
+#### Opción Recomendada (Añadir apagado al final de la tarea de Cron):
+Podemos encadenar los comandos con `&&` (ejecutar si tiene éxito) o `;` (ejecutar siempre al terminar) para apagar la máquina al finalizar:
+
+* **Cron Diario con auto-apagado:**
+  ```micro
+  2 8 * * * cd /home/richgutz/Scraper.Neoauto && python3 main.py ; sudo shutdown -h now
+  ```
+* **Cron Semanal con auto-apagado:**
+  ```micro
+  2 0 * * 1 cd /home/richgutz/Scraper.Neoauto && python3 generador_reporte_mejorado.py ; sudo shutdown -h now
+  ```
+
+> [!IMPORTANT]
+> Para que el comando `sudo shutdown -h now` funcione en el cronjob sin pedir contraseña de administrador, tu usuario `richgutz` debe tener permisos de `sudo` sin contraseña para el comando `shutdown`.
+> Esto se configura ejecutando en la ThinkPad:
+> `echo "richgutz ALL=(ALL) NOPASSWD: /sbin/shutdown" | sudo tee /etc/sudoers.d/shutdown`
+
 
 
