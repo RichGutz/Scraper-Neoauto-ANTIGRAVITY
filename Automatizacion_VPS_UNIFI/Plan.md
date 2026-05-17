@@ -207,14 +207,31 @@ Los siguientes pasos fueron ejecutados exitosamente en la ThinkPad T430s:
    ```
    - **IP a usar desde Windows:** `192.168.0.150`
 
-5. **Comando de apagado remoto desde Windows (con TTY interactivo):**
+5. **Comando de apagado remoto desde Windows (con TTY interactivo) [✔ Testeado y Exitoso — 2026-05-17]:**
    ```powershell
    ssh -t richgutz@192.168.0.150 "sudo shutdown -h now"
    ```
    *(El parámetro `-t` fuerza terminal interactiva para ingresar la contraseña de `sudo` de forma segura).*
 
+   **Resultado del test real (Éxito absoluto):**
+   ```text
+   PS C:\Users\rguti> ssh -t richgutz@192.168.0.150 "sudo shutdown -h now"
+   The authenticity of host '192.168.0.150 (192.168.0.150)' can't be established.
+   ED25519 key fingerprint is SHA256:4u+lD17G+fLmXwwYnKYYR3dzVeTEnd/zhQw7lkITWXo.
+   Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+   Warning: Permanently added '192.168.0.150' (ED25519) to the list of known hosts.
+   richgutz@192.168.0.150's password:
+
+   Broadcast message from root@richgutz-ThinkPad-T430s on pts/4 (Sun 2026-05-17 14:25:32 -05):
+
+   The system will power off now!
+
+   Connection to 192.168.0.150 closed.
+   ```
+   *(La laptop se apagó físicamente de manera instantánea y limpia desde Windows).*
+
 > [!TIP]
-> **CONCLUSIÓN:** SSH está **100% operativo** en la ThinkPad. La laptop responde en `192.168.0.150`, el firewall permite el puerto 22 y el servicio inicia automáticamente con el sistema. La siguiente prueba es enviar el Magic Packet WOL desde Windows para validar el ciclo completo.
+> **CONCLUSIÓN:** SSH y apagado remoto están **100% OPERATIVOS Y VERIFICADOS** en producción. La laptop responde en `192.168.0.150`, el firewall permite el puerto 22, el par SSH-contraseña se autenticó correctamente, y la ThinkPad se apaga de forma segura. El ciclo de apagado está listo. La siguiente fase es enviar el Magic Packet WOL desde Windows para validar el encendido remoto.
 
 ---
 
