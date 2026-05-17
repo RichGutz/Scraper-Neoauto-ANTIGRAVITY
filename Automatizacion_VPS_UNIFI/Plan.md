@@ -163,29 +163,58 @@ ssh richgutz@<IP-de-la-ThinkPad> "sudo shutdown -h now"
 - ✅ El flujo de **apagado automático al terminar el scraping** (Fase 4 del plan) estará validado.
 - ✅ Si la ThinkPad se apaga y luego el WOL la despierta → **¡El ciclo completo está funcionando!**
 
-#### 🛠️ Acciones Extra para Conectividad y Apagado (Troubleshooting)
+#### 🛠️ Configuración SSH en la ThinkPad [✔ Realizado y Verificado — 2026-05-17]
 
-Si al intentar conectarte por SSH desde Windows obtienes un error como `Connection timed out` a pesar de que la ThinkPad responde a los pings, sigue estos pasos para configurar el entorno de red en Linux Mint:
+Los siguientes pasos fueron ejecutados exitosamente en la ThinkPad T430s:
 
-1. **Instalar y habilitar el servidor SSH en la ThinkPad:**
-   Linux Mint incluye el cliente SSH, pero no el servidor por defecto. Abre su terminal física (`Ctrl + Alt + T`) y ejecuta:
+1. **Instalación y habilitación del servidor SSH:**
    ```bash
    sudo apt update && sudo apt install openssh-server -y
    sudo systemctl enable --now ssh
    ```
+   **Resultado:** `openssh-server 1:9.6p1-3ubuntu13.16` instalado y actualizado correctamente.
 
 2. **Permitir tráfico SSH en el Firewall (UFW):**
-   El firewall de Linux Mint suele bloquear conexiones entrantes por defecto. Debes permitir el puerto 22:
    ```bash
    sudo ufw allow ssh
    ```
+   **Resultado:**
+   ```text
+   Rule added
+   Rule added (v6)
+   ```
 
-3. **Ejecutar comandos de apagado SSH con TTY asignado (Interactivos):**
-   Si intentas apagar la máquina directamente en una sola línea y se queda colgada debido a la solicitud de contraseña de `sudo`, fuerza la asignación de terminal interactiva (TTY) con el parámetro `-t` en Windows PowerShell:
+3. **Verificación del estado del servicio SSH:**
+   ```bash
+   sudo systemctl status ssh --no-pager
+   ```
+   **Resultado (Prueba):**
+   ```text
+   ● ssh.service - OpenBSD Secure Shell server
+        Loaded: loaded (/usr/lib/systemd/system/ssh.service; enabled; preset: enabled)
+        Active: active (running) since Sun 2026-05-17 14:20:28 -05; 24s ago
+      Main PID: 8442 (sshd)
+   ```
+   *(Estado: `active (running)` — servicio habilitado y escuchando en puerto 22).*
+
+4. **Validación de la IP local para conexión SSH:**
+   ```bash
+   hostname -I
+   ```
+   **Resultado (Prueba):**
+   ```text
+   10.0.0.2 192.168.0.150
+   ```
+   - **IP a usar desde Windows:** `192.168.0.150`
+
+5. **Comando de apagado remoto desde Windows (con TTY interactivo):**
    ```powershell
    ssh -t richgutz@192.168.0.150 "sudo shutdown -h now"
    ```
-   *(Esto te solicitará la contraseña de `richgutz` de forma segura en la terminal antes de ordenar el apagado).*
+   *(El parámetro `-t` fuerza terminal interactiva para ingresar la contraseña de `sudo` de forma segura).*
+
+> [!TIP]
+> **CONCLUSIÓN:** SSH está **100% operativo** en la ThinkPad. La laptop responde en `192.168.0.150`, el firewall permite el puerto 22 y el servicio inicia automáticamente con el sistema. La siguiente prueba es enviar el Magic Packet WOL desde Windows para validar el ciclo completo.
 
 ---
 
