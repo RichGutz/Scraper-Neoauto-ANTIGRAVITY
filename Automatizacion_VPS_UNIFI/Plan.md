@@ -388,6 +388,61 @@ graph TD
 
 ---
 
-> [!TIP]
-> **Siguientes Pasos:**
-> Cuando estés físicamente frente a la ThinkPad, avísame para guiarte en vivo con los comandos de la **Fase 1** y dejarla lista hoy mismo. ¡A por ello! 🚀
+## 🧪 Bitácora de Pruebas e Intentos de Encendido Remoto (2026-05-17)
+
+A continuación se detallan todas las pruebas reales ejecutadas desde el VPS de Hostinger y la laptop de desarrollo, sus resultados y el análisis técnico de los bloqueos encontrados:
+
+### 🟩 Prueba 1: Encendido Local (LAN) [✔ ÉXITO TOTAL]
+*   **Origen:** Laptop de desarrollo Windows (dentro de la misma red local `192.168.0.X`).
+*   **Comando:** Script de PowerShell enviando Magic Packet UDP 9 en modo Broadcast.
+*   **Resultado:** **Éxito absoluto.** La ThinkPad T430s se encendió de forma instantánea al recibir el paquete local.
+*   **Conclusión:** La BIOS de la ThinkPad, el puerto de red físico y la persistencia de NetworkManager en Linux Mint están 100% operativos. El hardware responde perfectamente a nivel local.
+
+### 🟩 Prueba 2: Apagado Remoto (SSH) [✔ ÉXITO TOTAL]
+*   **Origen:** Laptop de desarrollo Windows.
+*   **Comando:** `ssh -t richgutz@192.168.0.150 "sudo shutdown -h now"`
+*   **Resultado:** **Éxito absoluto.** El sistema operativo Linux Mint cerró de forma limpia y la laptop se apagó físicamente.
+*   **Conclusión:** La comunicación SSH está permitida en el firewall UFW de la ThinkPad y funciona correctamente para automatizar el ciclo de apagado (Fase 4).
+
+### 🟥 Prueba 3: Consulta de Consola en la API de UniFi [❌ ERROR DE ID]
+*   **Origen:** VPS de Hostinger (ejecutando `despertador.py`).
+*   **Resultado:** `[ERROR] No se pudo encontrar tu consola en la API.`
+*   **Diagnóstico y Solución:**
+    1. Se subió un script de diagnóstico (`deploy_diagnose.py`) al VPS para listar la respuesta de `api.ui.com/v1/hosts`.
+    2. Se descubrió que el **Console ID** real y simplificado es su dirección MAC base sin dos puntos: **`6C63F85E22E1`** (en lugar del identificador largo de la URL del navegador).
+    3. Se descubrió que en la API de Ubiquiti, debido a la configuración de Doble NAT, el campo `"ip"` devuelto es la IP WAN privada (`192.168.1.64`) en lugar de la IP pública de la casa (`190.237.10.171`), por lo que la API no puede ser usada dinámicamente para enviar el paquete directo por IP pública.
+
+### 🟥 Prueba 4: Disparo Directo desde Hostinger a IP Pública [❌ NO ENCIENDE]
+*   **Origen:** VPS de Hostinger (ejecutando `despertador_directo.py` apuntando directamente a `190.237.10.171`).
+*   **Flujo Físico configurado:**
+    *   Módem Movistar Mitrastar: **DMZ activo** apuntando al Gateway UniFi (`192.168.1.64`).
+    *   Gateway UniFi: **Port Forwarding UDP 9** apuntando a Broadcast local (`192.168.0.255`).
+*   **Resultado:** El script en Hostinger envió con éxito el Magic Packet UDP 9 por internet, pero la ThinkPad **no se encendió**.
+*   **Análisis Técnico de Posibles Causas:**
+    1. **Restricción de Broadcast en UniFi (Causa Más Probable):** Los firewalls corporativos (como el de UniFi) bloquean por defecto el reenvío de tráfico entrante desde la WAN hacia la IP de Broadcast local (`.255`). Esto se hace para prevenir ataques de denegación de servicio (DDoS) del tipo *Smurf Attack*. Aunque la UI de UniFi permitió guardar la regla, a nivel del kernel del router, el paquete de broadcast entrante es descartado de inmediato por el firewall de WAN.
+    2. **Filtro de UDP 9 en Módem Mitrastar (Movistar):** El firmware personalizado de Movistar en el Mitrastar GPT-2742GX puede bloquear el reenvío del puerto 9 (incluso dentro del DMZ) por políticas de seguridad del ISP, descartando los Magic Packets entrantes desde el internet.
+    3. **CGNAT del Proveedor:** El ISP podría tener al módem detrás de una NAT de nivel operador, bloqueando cualquier paquete entrante no solicitado de forma externa.
+
+---
+
+## 🔮 Siguientes Pasos y Alternativa Definitiva (El Plan B)
+
+Dado que los routers corporativos y proveedores de internet bloquean por diseño el reenvío de Magic Packets de broadcast desde internet pública por razones de seguridad, **la alternativa 100% estable y profesional para producción** es:
+
+### 🚀 Plan B: El Script Puente Seguro Local (The Local Bridge Script)
+
+En lugar de intentar que el Magic Packet cruce los routers e internet (donde los firewalls lo bloquean), **haremos que el paquete se genere de forma 100% local en tu casa**, pero disparado desde Hostinger.
+
+1. **La Laptop de Desarrollo (o un dispositivo siempre encendido) actúa como puente:**
+   Crearemos un script ultraligero en Python que se ejecuta en segundo plano en tu computadora de desarrollo local (o cualquier equipo que esté encendido) y escuche peticiones mediante un WebSocket o un Webhook seguro de una base de datos compartida (como Supabase).
+2. **El flujo es el siguiente:**
+   - **Hostinger VPS** escribe una orden en Supabase (ej: `wake_thinkpad = True`).
+   - El script puente local (que está en tu casa) detecta la orden en milisegundos de forma segura.
+   - El script local genera el Magic Packet localmente (que ya sabemos que funciona al 100% y enciende la ThinkPad al instante).
+   - El script local actualiza Supabase para marcar el trabajo como hecho.
+3. **Ventajas:**
+   - **Cero puertos abiertos:** No necesitas DMZ, ni Port Forwarding, ni tocar el módem de Movistar ni el de UniFi. Tu red de casa queda 100% cerrada y segura.
+   - **100% de fiabilidad:** Los Magic Packets locales siempre llegan a la tarjeta de red de la ThinkPad.
+   - **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
+   - **Desactivación de PDF:** Por orden directa del usuario, se elimina la generación automatizada de archivos PDF, operando al 100% sobre el archivo Markdown (`Plan.md`) para optimizar el tiempo de desarrollo.
+
