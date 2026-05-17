@@ -486,44 +486,37 @@ graph TD
 
 #### 🛠️ 3. El Script Ultraligero para el Router UniFi (`bridge_wol.sh`)
 
-Este script se aloja en el propio router UniFi. Utiliza herramientas nativas de Unix (`curl` y `python3` nativo de Ubiquiti) para inyectar el Magic Packet de forma 100% confiable y sin dependencias:
+Este script se aloja en el propio router UniFi. Utiliza herramientas nativas de Unix (`python3` nativo de Ubiquiti) para inyectar el Magic Packet de forma 100% confiable, autónoma y sin dependencias externas:
 
 ```bash
 #!/bin/bash
-# Script Puente WOL en UniFi Cloud Gateway Ultra
+# Script WOL en UniFi Cloud Gateway Ultra
 # Guarda este archivo en /data/bridge_wol.sh en el router UniFi
 
-SUPABASE_URL="https://llrhimiivjpmxelffxef.supabase.co/rest/v1/control_wol"
-SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmhpbWlpdmpwbXhlbGZmeGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NzM0NDEsImV4cCI6MjA2MjA0OTQ0MX0.zxWg5wSANpUfCK5OeWvwK5xQbLqgcuegKPT6gDdH5F0"
 DISPOSITIVO="thinkpad_t430s"
 
-# 1. Consultar a Supabase si hay una orden de encendido
-RESPONSE=$(curl -s -X GET "$SUPABASE_URL?dispositivo=eq.$DISPOSITIVO&select=solicitar_encendido" \
-  -H "apikey: $SUPABASE_KEY" \
-  -H "Authorization: Bearer $SUPABASE_KEY")
+echo "⏰ Secuencia de encendido activada para $DISPOSITIVO..."
 
-# 2. Si la respuesta contiene "solicitar_encendido":true, disparar el Magic Packet local en Python
-if [[ "$RESPONSE" == *'"solicitar_encendido":true'* ]]; then
-  echo "🚀 ¡Orden de encendido detectada para $DISPOSITIVO!"
-  
-  # Generar Magic Packet local usando el Python 3 nativo del router
-  python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1); s.sendto(bytes.fromhex('ff'*6 + '3c970e7a9778'*16), ('192.168.0.255', 9))"
-  
-  # 3. Actualizar la base de datos de vuelta a FALSE y estado a 'booting'
-  curl -s -X PATCH "$SUPABASE_URL?dispositivo=eq.$DISPOSITIVO" \
-    -H "apikey: $SUPABASE_KEY" \
-    -H "Authorization: Bearer $SUPABASE_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{"solicitar_encendido": false, "estado": "booting"}'
-  
-  echo "✅ Magic Packet local inyectado con Python y base de datos actualizada."
-fi
+# Generar Magic Packet local usando el Python 3 nativo del router
+python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1); s.sendto(bytes.fromhex('ff'*6 + '3c970e7a9778'*16), ('192.168.0.255', 9))"
+
+echo "✅ Magic Packet local inyectado con Python en la red física de casa."
 ```
 
+#### ⏰ 4. La Programación del Cronjob en el Router UniFi
 
-#### 💎 4. Ventajas del Nuevo Plan B
-* **Cero puertos abiertos:** Eliminamos el Port Forwarding y el DMZ por completo de tu red. Tu casa vuelve a ser **100% infranqueable e invisible** desde internet público.
-* **Consumo Eléctrico CERO adicional:** No necesitas dejar encendida ninguna computadora puente, ya que el router UniFi consume la misma energía esté corriendo el script o no.
+Para programar el encendido automático sin sobrecargar el CPU del router ni realizar consultas externas inútiles, programamos dos reglas de tiempo exactas en el programador de tareas del router:
+
+1. **Diario a las 8:00 AM:** `0 8 * * * /data/bridge_wol.sh`
+2. **Lunes a las 00:00 AM (Medianoche):** `0 0 * * 1 /data/bridge_wol.sh`
+
+Este esquema es 100% autónomo y se reinicia por reloj físico infinito, sin necesidad de limpiar variables de base de datos para el día siguiente.
+
+#### 💎 5. Ventajas del Nuevo Plan B
+* **Cero consultas a Internet:** El router no consume ancho de banda ni procesos inútiles.
+* **Cero puertos abiertos:** La seguridad es del 100% ya que no hay exposición hacia la WAN.
+* **Autonomía total:** Si no hay conexión de internet pública, la laptop se enciende de todos modos por la red local del hogar.
+
 * **100% de Fiabilidad:** El Magic Packet se origina en la misma subred física de tu casa (LAN), saltándose todo tipo de filtros e interferencias del proveedor de internet.
 les siempre llegan a la tarjeta de red de la ThinkPad.
 * **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
