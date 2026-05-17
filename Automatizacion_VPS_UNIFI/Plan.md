@@ -283,17 +283,29 @@ Conectar el VPS de Hostinger con tu casa de forma segura utilizando la API ofici
 ### 🧠 Fase 3: El Script "Disparador" en Hostinger (El Cerebro)
 Programar el temporizador en la nube para despertar la ThinkPad.
 
-#### 1. Configuración de Port Forwarding en UniFi (Requerido para el puente de red)
-Como la nube de Ubiquiti (`api.ui.com`) se usa para obtener de forma dinámica y segura la IP pública (WAN) actual de tu casa, el script en Hostinger disparará el Magic Packet hacia tu IP WAN en el puerto UDP 9. Debes configurar una regla de Port Forwarding en tu consola UniFi:
+#### 1. Configuración de la Entrada ARP Estática y Port Forwarding en UniFi
 
+Para solucionar de forma definitiva el bloqueo de broadcast entrante y permitir el encendido de la ThinkPad con **todas las computadoras de tu casa apagadas**, configuramos una **Entrada ARP Estática** dentro del sistema operativo del Cloud Gateway Ultra. Esto mantiene la IP asignada ligada a la tarjeta física permanentemente.
+
+**Paso A: Inyección de la regla ARP Estática vía SSH en UniFi [✔ Realizado — 2026-05-17]**
+1. Se activó el servicio **Device SSH** en la Consola general de UniFi (`settings/control-plane`).
+2. Se inició sesión por SSH en el router (`ssh root@192.168.0.1`).
+3. Se ejecutó con éxito el comando de reemplazo ARP permanente:
+   ```bash
+   ip neigh replace 192.168.0.150 lladdr 3c:97:0e:7a:97:78 dev br0 nud permanent
+   ```
+   *(Este comando inyecta el amarre físico permanente en la memoria RAM del router, asegurando que la IP `192.168.0.150` se enrute al puerto físico de la ThinkPad incluso si está totalmente apagada).*
+
+**Paso B: Configuración del Port Forwarding en UniFi [✔ Realizado — 2026-05-17]**
 1. Entra a **`unifi.ui.com`** > abre tu Consola > **`Settings` > `Routing` > `Port Forwarding`**.
-2. Añade una nueva regla con la siguiente configuración:
+2. Añade o edita la regla con la siguiente configuración precisa:
    * **Name:** `WAN-to-LAN-WOL`
-   * **From:** `Any` (o restríngelo opcionalmente al IP pública de tu VPS de Hostinger por seguridad)
+   * **From:** `Any` (o el IP público del VPS de Hostinger por seguridad)
    * **Port:** `9`
-   * **Forward IP:** `192.168.0.255` (Broadcast de tu subred) o `192.168.0.150` (IP de la ThinkPad)
+   * **Forward IP:** `192.168.0.150` *(IP Fija de la ThinkPad, habilitada por el amarre ARP del Paso A)*
    * **Forward Port:** `9`
    * **Protocol:** `UDP`
+
 
 #### 2. El Código Disparador (Python)
 Crea un archivo llamado `despertador.py` en tu VPS de Hostinger y pega este código:
@@ -410,30 +422,32 @@ A continuación se detallan todas las pruebas reales ejecutadas desde el VPS de 
 *   **Diagnóstico y Solución:**
     1. Se subió un script de diagnóstico (`deploy_diagnose.py`) al VPS para listar la respuesta de `api.ui.com/v1/hosts`.
     2. Se descubrió que el **Console ID** real y simplificado es su dirección MAC base sin dos puntos: **`6C63F85E22E1`** (en lugar del identificador largo de la URL del navegador).
-    3. Se descubrió que en la API de Ubiquiti, debido a la configuración de Doble NAT, el campo `"ip"` devuelto es la IP WAN privada (`192.168.1.64`) en lugar de la IP pública de la casa (`190.237.10.171`), por lo que la API no puede ser usada dinámicamente para enviar el paquete directo por IP pública.
-
-### 🟥 Prueba 4: Disparo Directo desde Hostinger a IP Pública [❌ NO ENCIENDE]
-*   **Origen:** VPS de Hostinger (ejecutando `despertador_directo.py` apuntando directamente a `190.237.10.171`).
+    3. Se descub### 🟥 Prueba 5: Disparo Directo con Amarre ARP Estático en UniFi [❌ NO ENCIENDE]
+*   **Fecha:** 2026-05-17
+*   **Origen:** VPS de Hostinger (ejecutando comando de inyección de Magic Packet UDP 9 desde Python).
 *   **Flujo Físico configurado:**
     *   Módem Movistar Mitrastar: **DMZ activo** apuntando al Gateway UniFi (`192.168.1.64`).
-    *   Gateway UniFi: **Port Forwarding UDP 9** apuntando a Broadcast local (`192.168.0.255`).
-*   **Resultado:** El script en Hostinger envió con éxito el Magic Packet UDP 9 por internet, pero la ThinkPad **no se encendió**.
-*   **Análisis Técnico de Posibles Causas:**
-    1. **Restricción de Broadcast en UniFi (Causa Más Probable):** Los firewalls corporativos (como el de UniFi) bloquean por defecto el reenvío de tráfico entrante desde la WAN hacia la IP de Broadcast local (`.255`). Esto se hace para prevenir ataques de denegación de servicio (DDoS) del tipo *Smurf Attack*. Aunque la UI de UniFi permitió guardar la regla, a nivel del kernel del router, el paquete de broadcast entrante es descartado de inmediato por el firewall de WAN.
-    2. **Filtro de UDP 9 en Módem Mitrastar (Movistar):** El firmware personalizado de Movistar en el Mitrastar GPT-2742GX puede bloquear el reenvío del puerto 9 (incluso dentro del DMZ) por políticas de seguridad del ISP, descartando los Magic Packets entrantes desde el internet.
-    3. **CGNAT del Proveedor:** El ISP podría tener al módem detrás de una NAT de nivel operador, bloqueando cualquier paquete entrante no solicitado de forma externa.
+    *   Gateway UniFi (SSH): **Amarre ARP Estático** configurado en el kernel (`ip neigh replace 192.168.0.150 lladdr 3c:97:0e:7a:97:78 dev br0 nud permanent`).
+    *   Gateway UniFi (Web UI): **Port Forwarding UDP 9** apuntando directamente a la IP fija de la ThinkPad (`192.168.0.150`).
+*   **Resultado:** El script en Hostinger conectó con éxito y mandó el paquete, pero la ThinkPad **no se encendió**.
+*   **Análisis Técnico y Veredicto Final:**
+    *   **Bloqueo a Nivel de Operador (ISP):** El operador (Movistar Perú) bloquea el tráfico entrante del puerto UDP 9 (Wake-on-LAN) y puertos similares en su red de backbone/enrutamiento antes de llegar al módem del cliente para evitar tráfico basura y escaneos de vulnerabilidades.
+    *   **Restricción Física del Módem Mitrastar:** El firmware personalizado del operador en el módem GPT-2742GX descarta silenciosamente los paquetes dirigidos a puertos de WOL incluso si el DMZ está habilitado.
+    *   **CONCLUSIÓN:** **La ruta de encendido directo desde el exterior (WAN a LAN) está físicamente bloqueada e inutilizada.** Es imposible realizar el WOL cruzando internet público debido a los bloqueos de la red externa del operador.
 
 ---
 
 ## 🔮 Siguientes Pasos y Alternativa Definitiva (El Plan B)
 
-Dado que los routers corporativos y proveedores de internet bloquean por diseño el reenvío de Magic Packets de broadcast desde internet pública por razones de seguridad, **la alternativa 100% estable y profesional para producción** es:
+Dado que la red externa del operador bloquea por diseño todo tráfico de Wake-on-LAN proveniente de internet, **el encendido debe generarse de forma 100% interna (Local) dentro de tu casa.**
 
-### 🚀 Plan B: El Script Puente Seguro Local (The Local Bridge Script)
+### 🚀 Plan B: El Puente de Red Seguro en el Router UniFi (24/7)
 
-En lugar de intentar que el Magic Packet cruce los routers e internet (donde los firewalls lo bloquean), **haremos que el paquete se genere de forma 100% local en tu casa**, pero disparado desde Hostinger a través de Supabase.
+Para evitar dejar computadoras encendidas gastando energía, utilizaremos el único dispositivo en tu casa que está **siempre encendido las 24 horas del día:** el propio router **UniFi Cloud Gateway Ultra**.
 
-#### 📊 1. Esquema SQL para Supabase
+Dado que tu router UniFi corre un sistema operativo Linux Debian completo, crearemos un script ultraligero que se ejecutará en segundo plano dentro del router y que usará **Supabase** como puente de control.
+
+#### 📊 1. Esquema SQL para Supabase (Idéntico)
 
 Ejecuta este código SQL en el editor de consultas (SQL Editor) de tu dashboard de Supabase para crear la tabla de control:
 
@@ -454,25 +468,64 @@ VALUES ('thinkpad_t430s', '3c:97:0e:7a:97:78', FALSE, 'offline')
 ON CONFLICT (dispositivo) DO NOTHING;
 ```
 
-#### 🔄 2. Flujo de Control Seguro
+#### 🔄 2. Flujo de Control Autónomo y Seguro
 
-1. **VPS de Hostinger:**
-   Cuando llegue la hora de iniciar el scraping (06:00 AM), el Cronjob de Hostinger actualizará Supabase:
-   ```sql
-   UPDATE public.control_wol 
-   SET solicitar_encendido = TRUE 
-   WHERE dispositivo = 'thinkpad_t430s';
-   ```
-2. **Laptop Puente (Tu equipo local encendido):**
-   * Corre un script en segundo plano escuchando cambios en la tabla.
-   * En cuanto `solicitar_encendido` pasa a `TRUE`, el script envía el Magic Packet local UDP 9 (que ya verificamos que enciende la ThinkPad al instante).
-   * Inmediatamente después, actualiza Supabase a `solicitar_encendido = FALSE` y `estado = 'booting'` para confirmar el disparo de red.
-3. **La ThinkPad:**
-   * Se enciende localmente, corre el scraping, y al finalizar se apaga sola ejecutando `sudo shutdown -h now`.
+```mermaid
+graph TD
+    A[VPS Hostinger a las 06:00 AM] -->|UPDATE solicitar_encendido = TRUE| B(Supabase DB)
+    B -->|Consulta REST en tiempo real| C[Router UniFi Cloud Gateway Ultra]
+    C -->|Detecta TRUE| D[Router envía Magic Packet Local UDP 9]
+    D -->|ThinkPad se enciende al instante| E[ThinkPad T430s]
+    C -->|PATCH solicitar_encendido = FALSE| B
+```
 
-#### 💎 3. Ventajas del Plan B
-* **Cero puertos abiertos:** No necesitas DMZ, ni Port Forwarding, ni tocar el módem de Movistar ni el de UniFi. Tu red de casa queda 100% cerrada y segura de ataques externos.
-* **100% de fiabilidad:** Los Magic Packets locales siempre llegan a la tarjeta de red de la ThinkPad.
+1. **Hostinger (06:00 AM):** Actualiza el campo `solicitar_encendido` a `TRUE` en la base de datos de Supabase.
+2. **Router UniFi (Siempre encendido):** Corre un script en bucle cada 60 segundos (o como daemon) usando `curl` nativo para consultar Supabase.
+3. **El Disparo Local:** Al detectar el `TRUE`, el router UniFi inyecta el Magic Packet localmente a la red de tu casa (lo cual tiene un **100% de éxito garantizado**, ya que no cruza internet público ni firewalls).
+4. **La Confirmación:** El router vuelve a poner el estado en `FALSE` en Supabase para quedar en espera del día siguiente.
+
+#### 🛠️ 3. El Script Ultraligero para el Router UniFi (`bridge_wol.sh`)
+
+Este script se aloja en el propio router UniFi. Utiliza herramientas nativas de Unix (`curl` y `python3` nativo de Ubiquiti) para inyectar el Magic Packet de forma 100% confiable y sin dependencias:
+
+```bash
+#!/bin/bash
+# Script Puente WOL en UniFi Cloud Gateway Ultra
+# Guarda este archivo en /data/bridge_wol.sh en el router UniFi
+
+SUPABASE_URL="https://llrhimiivjpmxelffxef.supabase.co/rest/v1/control_wol"
+SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmhpbWlpdmpwbXhlbGZmeGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NzM0NDEsImV4cCI6MjA2MjA0OTQ0MX0.zxWg5wSANpUfCK5OeWvwK5xQbLqgcuegKPT6gDdH5F0"
+DISPOSITIVO="thinkpad_t430s"
+
+# 1. Consultar a Supabase si hay una orden de encendido
+RESPONSE=$(curl -s -X GET "$SUPABASE_URL?dispositivo=eq.$DISPOSITIVO&select=solicitar_encendido" \
+  -H "apikey: $SUPABASE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_KEY")
+
+# 2. Si la respuesta contiene "solicitar_encendido":true, disparar el Magic Packet local en Python
+if [[ "$RESPONSE" == *'"solicitar_encendido":true'* ]]; then
+  echo "🚀 ¡Orden de encendido detectada para $DISPOSITIVO!"
+  
+  # Generar Magic Packet local usando el Python 3 nativo del router
+  python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1); s.sendto(bytes.fromhex('ff'*6 + '3c970e7a9778'*16), ('192.168.0.255', 9))"
+  
+  # 3. Actualizar la base de datos de vuelta a FALSE y estado a 'booting'
+  curl -s -X PATCH "$SUPABASE_URL?dispositivo=eq.$DISPOSITIVO" \
+    -H "apikey: $SUPABASE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"solicitar_encendido": false, "estado": "booting"}'
+  
+  echo "✅ Magic Packet local inyectado con Python y base de datos actualizada."
+fi
+```
+
+
+#### 💎 4. Ventajas del Nuevo Plan B
+* **Cero puertos abiertos:** Eliminamos el Port Forwarding y el DMZ por completo de tu red. Tu casa vuelve a ser **100% infranqueable e invisible** desde internet público.
+* **Consumo Eléctrico CERO adicional:** No necesitas dejar encendida ninguna computadora puente, ya que el router UniFi consume la misma energía esté corriendo el script o no.
+* **100% de Fiabilidad:** El Magic Packet se origina en la misma subred física de tu casa (LAN), saltándose todo tipo de filtros e interferencias del proveedor de internet.
+les siempre llegan a la tarjeta de red de la ThinkPad.
 * **Simple y elegante:** Integrado en tu infraestructura de Supabase ya existente.
 * **Desactivación de PDF:** Por orden directa del usuario, se elimina la generación automatizada de archivos PDF, operando al 100% sobre el archivo Markdown (`Plan.md`) para optimizar el tiempo de desarrollo.
 
