@@ -2,10 +2,10 @@
 
 # --- Configuración ---
 # Use absolute path (adjust if necessary for your Linux environment)
-PROJECT_DIR="/home/richgutz/Scraper.Neoauto"
+PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
 LOG_FILE="$PROJECT_DIR/scraper_sequence.log"
 # Assuming virtualenv structure or system python
-PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
+PYTHON_EXEC="$PROJECT_DIR/.venv/bin/python"
 
 # --- Logging Setup ---
 # Redirect all output (stdout and stderr) to log file and console (tee)
@@ -83,4 +83,9 @@ echo "=================================================="
 
 echo ""
 echo "PROCESO FINALIZADO."
+
+echo ""
+echo "---> APAGANDO EL EQUIPO..."
+sudo /sbin/shutdown -h now
+
 exit 0

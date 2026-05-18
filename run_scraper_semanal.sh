@@ -7,7 +7,7 @@ set -e
 PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
 LOG_FILE="$PROJECT_DIR/scraper_sequence_semanal.log"
 # Asegúrate de que la ruta a tu entorno virtual (venv) es correcta.
-PYTHON_EXEC="$PROJECT_DIR/venv/bin/python"
+PYTHON_EXEC="$PROJECT_DIR/.venv/bin/python"
 
 # --- Logging ---
 # Redirige toda la salida a un fichero de log y a la consola.
