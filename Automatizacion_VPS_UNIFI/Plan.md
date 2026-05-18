@@ -644,6 +644,7 @@ Esto garantiza que el router UniFi mandará de forma 100% automática y local lo
 - [x] **Carpeta del Entorno Virtual**: Comprobar si existe la carpeta `venv` o `.venv` en el directorio del proyecto de la ThinkPad. Si no existe ninguna, crearla e instalar las dependencias con `pip install -r requirements.txt`.
 - [x] **Ejecutable de Python**: Configurar la variable `PYTHON_EXEC` en ambos scripts `.sh` para que apunte al binario real de Python de ese entorno virtual (por ejemplo, `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/python`).
 - [x] **Permisos de Ejecución**: Aplicar `chmod +x` a ambos archivos `.sh` en la ThinkPad para garantizar que `Cron` los pueda disparar.
+- [ ] **Instalar Dependencias de Gráficos (scipy)**: Garantizar que la librería `scipy` esté instalada en el entorno virtual ejecutando `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/pip install scipy`.
 - [x] **Prueba de Fuego**: Monitorear que la secuencia automática corra sin errores en el siguiente ciclo programado y apague la laptop automáticamente. (Programado exitosamente en Cron para las 20:30 de hoy 17 de mayo).
 
 ### 🐛 Resolución de Bugs Críticos en la ThinkPad (Linux vs Windows) [✔ COMPLETADO — 2026-05-17]
@@ -656,6 +657,34 @@ Durante una prueba manual de la secuencia del scraper (`run_scraper_sequence_dia
 2. **Bug de Rutas de Windows con Backslash (`\`)**:
    - **El Problema**: El `parallel_launcher.py` no podía encender a los workers debido a que contenía quemada en su código la ruta con el salto de Windows: `r"extractores\4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"`. El kernel de Linux buscaba una carpeta llamada "extractores\\4.DIARIO...", y arrojaba `No such file o directory`.
    - **La Solución**: Se estandarizó la variable a formato cross-platform cambiando los `\` por `/`. Los sub-procesos ahora arrancan perfectamente y de forma escalada en el entorno de Linux.
+
+---
+
+## 🛠️ Parche 2 de Diagnóstico: ModuleNotFoundError: No module named 'scipy'
+
+> [!WARNING]
+> **ERROR DETECTADO EN PRODUCCIÓN (2026-05-18):**
+> Durante la ejecución de la secuencia semanal de scraping hoy lunes, el script falló en la línea 36 del archivo `main.py` al intentar importar `Core/charts_module.py` debido al siguiente error:
+> `ModuleNotFoundError: No module named 'scipy'`
+>
+> **CAUSA RAÍZ (¡DETECTADA Y SOLUCIONADA!):**
+> El módulo de generación de gráficos `Core/charts_module.py` utiliza la librería científica `scipy` (específicamente `from scipy.interpolate import make_interp_spline`) para suavizar las líneas de tendencia históricas de precios. Sin embargo, esta dependencia no estaba presente en el archivo `requirements.txt` ni se había instalado en el entorno virtual (`venv`) de la ThinkPad de producción.
+>
+> **CORRECCIÓN INTEGRADA EN EL REPOSITORIO:**
+> * Se ha añadido explícitamente `scipy` en el archivo [requirements.txt](file:///c:/Users/rguti/Scraper.Neoauto/requirements.txt) del repositorio.
+>
+> **INSTRUCCIONES CLARAS PARA EL AGENTE O EL USUARIO EN LA THINKPAD:**
+> 1. **Paso 1:** Conéctate a la ThinkPad por SSH:
+>    ```powershell
+>    ssh richgutz@192.168.0.150
+>    ```
+> 2. **Paso 2:** Instala la dependencia directamente en el entorno virtual de producción:
+>    ```bash
+>    /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/pip install scipy
+>    ```
+>    *(O si estás usando la carpeta `.venv`, ajusta la ruta correspondientemente: `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/pip install scipy`)*.
+> 3. **Paso 3:** Una vez instalado con éxito, ya puedes volver a disparar el script `run_scraper_semanal.sh` sin que ocurra este fallo.
+
 
 
 

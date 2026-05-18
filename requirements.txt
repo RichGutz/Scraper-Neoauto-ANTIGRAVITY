@@ -16,3 +16,4 @@ weasyprint
 streamlit-oauth
 markdown2
 plotly
+scipy
