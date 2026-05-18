@@ -571,7 +571,7 @@ Configurado con `crontab -e`. El crontab activo es el siguiente:
 32 18 * * * /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh >> /home/richgutz/cron_diario.log 2>&1
 
 # Semanal Lunes 00:02 AM - Con auto-apagado (UniFi manda WOL a las 00:00)
-2 0 * * 1 /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_semanal.sh >> /home/richgutz/cron_semanal.log 2>&1
+02 00 * * 1 /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_semanal.sh >> /home/richgutz/cron_semanal.log 2>&1
 ```
 
 **Notas importantes:**
@@ -640,11 +640,22 @@ Esto garantiza que el router UniFi mandará de forma 100% automática y local lo
 > 4. **Paso 4:** Verifica los permisos de ejecución de los scripts bash (`chmod +x`).
 
 ### 🧠 Lista de Verificación para el Genio Gemini de la ThinkPad:
-- [ ] **Directorio del Proyecto**: Confirmar si el repositorio en la ThinkPad está clonado en `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY` o `/home/richgutz/Scraper.Neoauto`. Ajustar `PROJECT_DIR` en consecuencia en ambos scripts `.sh`.
-- [ ] **Carpeta del Entorno Virtual**: Comprobar si existe la carpeta `venv` o `.venv` en el directorio del proyecto de la ThinkPad. Si no existe ninguna, crearla e instalar las dependencias con `pip install -r requirements.txt`.
-- [ ] **Ejecutable de Python**: Configurar la variable `PYTHON_EXEC` en ambos scripts `.sh` para que apunte al binario real de Python de ese entorno virtual (por ejemplo, `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/python`).
-- [ ] **Permisos de Ejecución**: Aplicar `chmod +x` a ambos archivos `.sh` en la ThinkPad para garantizar que `Cron` los pueda disparar.
-- [ ] **Prueba de Fuego**: Monitorear que la secuencia automática corra sin errores en el siguiente ciclo programado y apague la laptop automáticamente.
+- [x] **Directorio del Proyecto**: Confirmar si el repositorio en la ThinkPad está clonado en `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY` o `/home/richgutz/Scraper.Neoauto`. Ajustar `PROJECT_DIR` en consecuencia en ambos scripts `.sh`.
+- [x] **Carpeta del Entorno Virtual**: Comprobar si existe la carpeta `venv` o `.venv` en el directorio del proyecto de la ThinkPad. Si no existe ninguna, crearla e instalar las dependencias con `pip install -r requirements.txt`.
+- [x] **Ejecutable de Python**: Configurar la variable `PYTHON_EXEC` en ambos scripts `.sh` para que apunte al binario real de Python de ese entorno virtual (por ejemplo, `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/python`).
+- [x] **Permisos de Ejecución**: Aplicar `chmod +x` a ambos archivos `.sh` en la ThinkPad para garantizar que `Cron` los pueda disparar.
+- [x] **Prueba de Fuego**: Monitorear que la secuencia automática corra sin errores en el siguiente ciclo programado y apague la laptop automáticamente. (Programado exitosamente en Cron para las 20:30 de hoy 17 de mayo).
+
+### 🐛 Resolución de Bugs Críticos en la ThinkPad (Linux vs Windows) [✔ COMPLETADO — 2026-05-17]
+Durante una prueba manual de la secuencia del scraper (`run_scraper_sequence_diario.sh`), saltaron dos bugs críticos de portabilidad entre Windows y Linux que habrían impedido el funcionamiento autónomo. Ambos ya fueron corregidos en el repositorio local de la ThinkPad:
+
+1. **Bug Dependencias Perdidas (`ModuleNotFoundError`)**:
+   - **El Problema**: El entorno virtual local `.venv` no tenía instaladas las librerías necesarias del cliente de Google Drive, ni Playwright (requerido para los reportes interactivos).
+   - **La Solución**: Se forzó la instalación con `pip install -r requirements.txt google-api-python-client google-auth-httplib2 google-auth-oauthlib playwright` y `playwright install chromium`. 
+
+2. **Bug de Rutas de Windows con Backslash (`\`)**:
+   - **El Problema**: El `parallel_launcher.py` no podía encender a los workers debido a que contenía quemada en su código la ruta con el salto de Windows: `r"extractores\4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"`. El kernel de Linux buscaba una carpeta llamada "extractores\\4.DIARIO...", y arrojaba `No such file o directory`.
+   - **La Solución**: Se estandarizó la variable a formato cross-platform cambiando los `\` por `/`. Los sub-procesos ahora arrancan perfectamente y de forma escalada en el entorno de Linux.
 
 
 
