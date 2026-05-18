@@ -637,4 +637,12 @@ Esto garantiza que el router UniFi mandará de forma 100% automática y local lo
 >    * `PYTHON_EXEC`: Ruta real al binario de Python dentro del entorno virtual (ej. `$PROJECT_DIR/.venv/bin/python`).
 > 5. Confirma que los permisos de ejecución de los scripts bash estén activos (`chmod +x`).
 
+### 🧠 Lista de Verificación para el Genio Gemini de la ThinkPad:
+- [ ] **Directorio del Proyecto**: Confirmar si el repositorio en la ThinkPad está clonado en `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY` o `/home/richgutz/Scraper.Neoauto`. Ajustar `PROJECT_DIR` en consecuencia en ambos scripts `.sh`.
+- [ ] **Carpeta del Entorno Virtual**: Comprobar si existe la carpeta `venv` o `.venv` en el directorio del proyecto de la ThinkPad. Si no existe ninguna, crearla e instalar las dependencias con `pip install -r requirements.txt`.
+- [ ] **Ejecutable de Python**: Configurar la variable `PYTHON_EXEC` en ambos scripts `.sh` para que apunte al binario real de Python de ese entorno virtual (por ejemplo, `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/python`).
+- [ ] **Permisos de Ejecución**: Aplicar `chmod +x` a ambos archivos `.sh` en la ThinkPad para garantizar que `Cron` los pueda disparar.
+- [ ] **Prueba de Fuego**: Monitorear que la secuencia automática corra sin errores en el siguiente ciclo programado y apague la laptop automáticamente.
+
+
 
