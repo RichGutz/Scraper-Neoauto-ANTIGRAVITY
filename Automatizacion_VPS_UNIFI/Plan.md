@@ -540,6 +540,23 @@ Para que el comando `sudo /sbin/shutdown` funcione desde `cron` sin pedir contra
 echo "richgutz ALL=(ALL) NOPASSWD: /sbin/shutdown" | sudo tee /etc/sudoers.d/shutdown
 ```
 
+### 🔑 2.5 Permisos de Ejecución de los Scripts (¡CRÍTICO!)
+
+> [!IMPORTANT]
+> **El parche de los permisos (+x):**
+> Por seguridad en sistemas Linux, los scripts de terminal (`.sh`) no se pueden ejecutar hasta que reciban explícitamente el permiso de ejecución. De lo contrario, `Cron` fallará con el error `/bin/sh: 1: ...: Permission denied` en el archivo `cron_diario.log`.
+>
+> Ejecuta este comando en la terminal de tu ThinkPad para solucionar esto definitivamente:
+> ```bash
+> chmod +x /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_semanal.sh
+> ```
+>
+> **Prueba de arranque manual en segundo plano:**
+> ```bash
+> /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh > /home/richgutz/cron_diario.log 2>&1 &
+> ```
+> *(Este comando iniciará el scraping de inmediato, guardando el log detallado para que puedas monitorearlo en vivo con `tail -f ~/cron_diario.log`).*
+
 ### ⏰ 3. Cron Jobs Instalados en la ThinkPad [✔ Verificado — 2026-05-17]
 
 Configurado con `crontab -e`. El crontab activo es el siguiente:
