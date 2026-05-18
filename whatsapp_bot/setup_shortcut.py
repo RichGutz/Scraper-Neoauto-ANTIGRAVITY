@@ -6,13 +6,18 @@ import shutil
 
 # Path to the source image (will be passed or hardcoded based on artifact location)
 # The agent needs to copy the artifact to the project dir first or access it via absolute path.
-# Assuming the artifact is at the location provided in previous turn: C:/Users/rguti/.gemini/antigravity/brain/2bc0e339-a014-4e4c-885f-c68e22abc32e/neoauto_crm_robot_icon_1768264094495.png
 
-ARTIFACT_PATH = r"C:/Users/rguti/.gemini/antigravity/brain/2bc0e339-a014-4e4c-885f-c68e22abc32e/neoauto_crm_robot_icon_1768264094495.png"
-PROJECT_DIR = Path(r"c:\Users\rguti\Scraper.Neoauto\whatsapp_bot")
-ICON_PATH = PROJECT_DIR / "crm_neoauto.ico"
+# Define dynamic project directory path
+WHATSAPP_BOT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = WHATSAPP_BOT_DIR.parent
+
+# The original ARTIFACT_PATH was Windows specific. 
+# On Linux, we should look for it in the project root or local folder if available.
+# As a fallback, we use a relative path if it exists.
+ARTIFACT_PATH = PROJECT_DIR / "neoauto_crm_robot_icon.png"
+ICON_PATH = WHATSAPP_BOT_DIR / "crm_neoauto.ico"
 SHORTCUT_PATH = Path(os.path.expanduser("~/Desktop")) / "CRM Neoauto.lnk"
-TARGET_PATH = PROJECT_DIR / "MENU_CRM.bat"
+TARGET_PATH = WHATSAPP_BOT_DIR / "menu_crm.sh"
 
 def convert_to_ico(source, dest):
     print(f"Converting {source} to {dest}...")

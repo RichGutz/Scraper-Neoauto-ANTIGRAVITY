@@ -685,6 +685,30 @@ Durante una prueba manual de la secuencia del scraper (`run_scraper_sequence_dia
 >    *(O si estás usando la carpeta `.venv`, ajusta la ruta correspondientemente: `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/pip install scipy`)*.
 > 3. **Paso 3:** Una vez instalado con éxito, ya puedes volver a disparar el script `run_scraper_semanal.sh` sin que ocurra este fallo.
 
+### 🚀 Resolución de Parche 2 en la ThinkPad de Producción [✔ COMPLETADO — 2026-05-18]
+- [x] **Ejecutado `pip install scipy`**: Se instaló exitosamente la librería `scipy` versión 1.17.1 directamente en el entorno de la ThinkPad de producción (`/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/.venv/bin/pip install scipy`).
+- [x] **Secuencia Retomada con Éxito**: Se ejecutó un script de recuperación (`resume_semanal_temp.sh`) que continuó la secuencia exactamente donde se quedó. El paso `main.py` de gráficas corrió perfectamente sin el error `ModuleNotFoundError`, continuando luego con la subida a Google Drive y el envío de correos, sin apagar el equipo por precaución.
 
+---
+
+## 🛠️ Parche 3 de Diagnóstico: Falla en el envío de correos del proceso semanal
+
+> [!WARNING]
+> **ERROR DETECTADO EN PRODUCCIÓN (2026-05-18):**
+> Al retomar la secuencia o al finalizar la secuencia semanal, el proceso fallaba en el último paso (envío de correos). El script intentaba utilizar un script obsoleto (`sendgrid_sender.py`) que ya no existía en el repositorio, o bien al ejecutar `gmail_sender.py` se encontraba con un error de que no existía el archivo estático `gmail_reporte_beta.html`.
+>
+> **CAUSA RAÍZ (¡DETECTADA Y SOLUCIONADA!):**
+> 1. Los bash scripts `run_scraper_semanal.sh` y el de recuperación `resume_semanal_temp.sh` seguían apuntando por compatibilidad atrasada al módulo antiguo `sendgrid_sender.py`.
+> 2. Una vez modificado para usar `/gmail_sender/gmail_sender.py`, el correo original intentaba buscar el cuerpo HTML con el nombre hardcodeado `outputs/gmail_reporte_beta.html` en vez de usar la estructura dinámica actual de la V2 (`gmail_attractive_leads_YYYY-MM-DD.html`).
+>
+> **CORRECCIÓN INTEGRADA EN EL REPOSITORIO:**
+> * Se reemplazó de forma absoluta todo rastro de `sendgrid_sender.py` en los scripts *bash* conectándolos oficialmente con `$PYTHON_EXEC "$PROJECT_DIR/gmail_sender/gmail_sender.py" --enviar-correos`.
+> * Se modificó el core de `gmail_sender.py` (líneas 196-200) introduciendo el módulo genérico `datetime` para construir dinámicamente la ruta al HTML del día:
+>   `html_file_path = outputs_dir / f"gmail_attractive_leads_{today_str}.html"`
+
+### 🚀 Resolución de Parche 3 en la ThinkPad de Producción [✔ COMPLETADO — 2026-05-18]
+- [x] **Corrección de Bash Scripts**: Se parchearon `run_scraper_semanal.sh` y `resume_semanal_temp.sh`.
+- [x] **Ejecución y Test en Producción**: Se lanzó manualmente `gmail_sender.py` verificando en los *logs* la correcta autenticación en Gmail, recuperación dinámica del HTML de hoy, y la entrega exitosa de los correos a la lista de destinatarios configurada.
+- [x] **Respaldo de la Versión Funcional (Save Point)**: Tras confirmar el correcto funcionamiento de toda la secuencia sin errores, el código se subió y respaldó con Git bajo el branch `funcional.WOL.18.05.26`.
 
 

@@ -1,29 +1,32 @@
+#!/usr/bin/env python3
 import subprocess
 import sys
 import time
 from threading import Thread
 
-# Configuration
+# Configuration for Weekly Scraper
 sys.stdout.reconfigure(encoding='utf-8')
 SCRIPT_TO_RUN = "extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
-NUM_INSTANCES = 6
+NUM_INSTANCES = 8  # 8 workers in parallel
 
 def stream_output(process, prefix):
-    """Reads output from a subprocess and prints it to stdout with a prefix, stripping non-ascii."""
+    """Reads output from a subprocess and prints it to stdout with a prefix."""
     for line in iter(process.stdout.readline, ''):
-        # Remove non-ascii characters to satisfy Windows console
-        safe_line = line.encode('ascii', 'ignore').decode('ascii').strip()
-        print(f"[{prefix}] {safe_line}")
-        sys.stdout.flush()
+        # Strip and print with worker prefix
+        safe_line = line.strip()
+        if safe_line:  # Only print non-empty lines
+            print(f"[{prefix}] {safe_line}")
+            sys.stdout.flush()
     process.stdout.close()
 
 def main():
-    print(f"--- Iniciando {NUM_INSTANCES} instancias paralelas de scraping ---")
+    print(f"--- Iniciando {NUM_INSTANCES} instancias paralelas de scraping semanal ---")
+    print(f"--- Script: {SCRIPT_TO_RUN} ---")
     processes = []
     threads = []
 
     for i in range(1, NUM_INSTANCES + 1):
-        print(f"--- Intentando lanzar Worker-{i} ---")
+        print(f"--- Lanzando Worker-{i} ---")
         # Python -u forces unbuffered stdout, crucial for real-time logging
         cmd = [sys.executable, "-u", SCRIPT_TO_RUN]
         
@@ -32,9 +35,9 @@ def main():
             p = subprocess.Popen(
                 cmd, 
                 stdout=subprocess.PIPE, 
-                stderr=subprocess.STDOUT, # Merge stderr into stdout
+                stderr=subprocess.STDOUT,  # Merge stderr into stdout
                 text=True, 
-                bufsize=1, # Line buffered
+                bufsize=1,  # Line buffered
                 encoding='utf-8', 
                 errors='replace'
             )
@@ -46,16 +49,22 @@ def main():
             t.start()
             threads.append(t)
             
-            print(f"Instancia {i} iniciada (PID: {p.pid})")
+            print(f"✓ Worker-{i} iniciado (PID: {p.pid})")
+            
+            # Small delay between launches to avoid race conditions
+            time.sleep(0.5)
             
         except Exception as e:
-            print(f"Error iniciando instancia {i}: {e}")
+            print(f"✗ Error iniciando Worker-{i}: {e}")
+
+    print(f"\n--- {len(processes)} workers activos. Esperando finalización... ---\n")
 
     # Wait for all processes
-    for p in processes:
+    for i, p in enumerate(processes, 1):
         p.wait()
+        print(f"--- Worker-{i} finalizado (exit code: {p.returncode}) ---")
 
-    print("--- Todas las instancias han finalizado ---")
+    print("\n--- Todas las instancias han finalizado ---")
 
 if __name__ == "__main__":
     main()

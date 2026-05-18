@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=CRM Neoauto
+Comment=Gestor de Procesos y Scraper Neoauto
+Exec=/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/whatsapp_bot/menu_crm.sh
+Icon=utilities-terminal
+Terminal=true
+Categories=Development;Office;
+Path=/home/richgutz/Scraper-Neoauto-ANTIGRAVITY
+StartupNotify=true

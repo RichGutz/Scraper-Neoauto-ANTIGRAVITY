@@ -197,7 +197,8 @@ def main():
     try:
         script_dir = Path(__file__).parent
         outputs_dir = script_dir.parent / "outputs"
-        html_file_path = outputs_dir / "gmail_reporte_beta.html"
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        html_file_path = outputs_dir / f"gmail_attractive_leads_{today_str}.html"
         html_filename = html_file_path.name
         logger.info(f"Report file to send: {html_file_path}")
     except Exception as e:

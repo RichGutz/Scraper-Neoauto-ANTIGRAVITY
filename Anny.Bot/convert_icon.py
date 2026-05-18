@@ -19,8 +19,10 @@ def png_to_ico(png_path, ico_path):
     print(f"✓ Ícono creado: {ico_path}")
 
 if __name__ == "__main__":
-    png_path = r"C:\Users\rguti\Scraper.Neoauto\Anny.Bot\anny_bot_icon.png"
-    ico_path = r"C:\Users\rguti\Scraper.Neoauto\Anny.Bot\anny_bot_icon.ico"
+    from pathlib import Path
+    script_dir = Path(__file__).resolve().parent
+    png_path = script_dir / "anny_bot_icon.png"
+    ico_path = script_dir / "anny_bot_icon.ico"
     
     try:
         png_to_ico(png_path, ico_path)

@@ -39,7 +39,7 @@ def send_latest_report():
     service = build('gmail', 'v1', credentials=creds)
 
     # 3. Send Email
-    recipient = "rgutil@gmail.com"
+    recipients = ["rgutil@gmail.com", "annyred9@gmail.com"]
     subject = f"Reporte Autos Generado - {latest_pdf.name}"
     body = f"""
     <html>
@@ -51,15 +51,16 @@ def send_latest_report():
     </html>
     """
 
-    print(f"Sending email to {recipient}...")
-    msg = crear_mensaje_email(recipient, subject, body, pdf_path=str(latest_pdf))
-    
-    try:
-        sent = service.users().messages().send(userId='me', body=msg).execute()
-        print(f"Email sent successfully! ID: {sent['id']}")
-        # mover_correo_a_papelera(service, sent['id']) # Disabled per user request
-    except Exception as e:
-        print(f"Error sending email: {e}")
+    for recipient in recipients:
+        print(f"Sending email to {recipient}...")
+        msg = crear_mensaje_email(recipient, subject, body, pdf_path=str(latest_pdf))
+        
+        try:
+            sent = service.users().messages().send(userId='me', body=msg).execute()
+            print(f"Email sent successfully to {recipient}! ID: {sent['id']}")
+            # mover_correo_a_papelera(service, sent['id']) # Disabled per user request
+        except Exception as e:
+            print(f"Error sending email to {recipient}: {e}")
 
 if __name__ == "__main__":
     send_latest_report()

@@ -60,11 +60,11 @@ else
     echo "ADVERTENCIA: No se obtuvo enlace de Google Drive."
 fi
 
-# --- Envío de Correo con SendGrid y Adjuntos ---
+# --- Envío de Correo con Gmail ---
 echo ""
-echo "--> Enviando correo con adjuntos vía Python..."
+echo "--> Enviando correo con adjuntos vía Python (Gmail)..."
 SUBJECT="Reporte Semanal - $(date +'%Y-%m-%d')"
-$PYTHON_EXEC "$PROJECT_DIR/sendgrid_sender.py" --subject "$SUBJECT"
+$PYTHON_EXEC "$PROJECT_DIR/gmail_sender/gmail_sender.py" --enviar-correos --drive-link "$DRIVE_LINK"
 echo "Proceso de envío finalizado."
 
 
