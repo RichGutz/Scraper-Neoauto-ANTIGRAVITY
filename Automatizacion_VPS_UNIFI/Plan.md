@@ -616,3 +616,25 @@ Esto garantiza que el router UniFi mandará de forma 100% automática y local lo
 | ThinkPad enciende y ejecuta scraping semanal | `00:02` | ThinkPad cron | ✅ Listo y Activo |
 | ThinkPad se apaga al terminar | ~madrugada | `shutdown` en script | ✅ Listo y Activo |
 
+---
+
+## 🛠️ Parche de Diagnóstico: Ruta del Entorno Virtual de Python (Para el Agente del otro lado)
+
+> [!WARNING]
+> **ERROR DETECTADO EN PRODUCCIÓN (2026-05-17):**
+> Al ejecutarse la secuencia automática diaria de scraping en la ThinkPad, falló de inmediato en la línea 27 debido al siguiente error:
+> `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh: line 27: /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/python: No such file or directory`
+>
+> **CAUSA RAÍZ:**
+> La ruta configurada en la variable `PYTHON_EXEC` dentro de `run_scraper_sequence_diario.sh` y `run_scraper_semanal.sh` apunta a `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/python` o `/home/richgutz/Scraper.Neoauto/venv/bin/python`, pero la carpeta de Python del entorno virtual en la ThinkPad no existe en esa ruta exacta. O bien se llama `.venv` (con punto al inicio) o la ruta de la carpeta del proyecto difiere.
+>
+> **INSTRUCCIONES CLARAS PARA EL AGENTE DE LA THINKPAD:**
+> 1. Investiga el directorio del repositorio en la ThinkPad (`~/Scraper-Neoauto-ANTIGRAVITY` o `~/Scraper.Neoauto`).
+> 2. Identifica el nombre real de la carpeta del entorno virtual (comúnmente `.venv` o `venv`).
+> 3. Si no existe ningún entorno virtual de Python en la ThinkPad, créalo e instala las dependencias de `requirements.txt`.
+> 4. Actualiza los dos archivos bash (`run_scraper_sequence_diario.sh` y `run_scraper_semanal.sh`) ajustando las siguientes dos variables con las rutas físicas reales de la ThinkPad:
+>    * `PROJECT_DIR`: Ruta real del repositorio en la ThinkPad.
+>    * `PYTHON_EXEC`: Ruta real al binario de Python dentro del entorno virtual (ej. `$PROJECT_DIR/.venv/bin/python`).
+> 5. Confirma que los permisos de ejecución de los scripts bash estén activos (`chmod +x`).
+
+
