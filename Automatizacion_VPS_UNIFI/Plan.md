@@ -624,18 +624,20 @@ Esto garantiza que el router UniFi mandará de forma 100% automática y local lo
 > **ERROR DETECTADO EN PRODUCCIÓN (2026-05-17):**
 > Al ejecutarse la secuencia automática diaria de scraping en la ThinkPad, falló de inmediato en la línea 27 debido al siguiente error:
 > `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/run_scraper_sequence_diario.sh: line 27: /home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/python: No such file or directory`
+> **CAUSA RAÍZ (¡DETECTADA Y SOLUCIONADA!):**
+> Se encontraron dos problemas concurrentes que rompían los scripts en Linux Mint (ThinkPad):
+> 1. **Diferencia de Rutas:** La variable `PYTHON_EXEC` en los archivos `.sh` apuntaba a `venv/bin/python`, pero la carpeta del entorno virtual en la ThinkPad podría ser `.venv` (con punto al inicio).
+> 2. **Firma BOM y Saltos de Línea Windows (CRLF) [¡CRÍTICO!]:** Los scripts `.sh` habían sido guardados en formato de Windows (saltos de línea CRLF `\r\n` y con firma Byte Order Mark `BOM`). Esto añadía un retorno de carro invisible `\r` al final de la ruta de Python. Al intentar ejecutar, Linux buscaba literalmente `/home/.../venv/bin/python\r` (con la `\r` invisible), resultando en el error `No such file or directory` a pesar de que el archivo físicamente existiera.
 >
-> **CAUSA RAÍZ:**
-> La ruta configurada en la variable `PYTHON_EXEC` dentro de `run_scraper_sequence_diario.sh` y `run_scraper_semanal.sh` apunta a `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY/venv/bin/python` o `/home/richgutz/Scraper.Neoauto/venv/bin/python`, pero la carpeta de Python del entorno virtual en la ThinkPad no existe en esa ruta exacta. O bien se llama `.venv` (con punto al inicio) o la ruta de la carpeta del proyecto difiere.
+> **CORRECCIÓN INTEGRADA EN EL REPOSITORIO:**
+> * Hemos purgado quirúrgicamente a nivel de bytes el BOM y los CRLF de `run_scraper_sequence_diario.sh` y `run_scraper_semanal.sh`, convirtiéndolos a **UTF-8 nativo sin BOM con saltos de línea Linux LF (`\n`)**.
+> * Creamos el archivo [`.gitattributes`](file:///C:/Users/rguti/Scraper.Neoauto/.gitattributes) en la raíz para garantizar que Git **nunca** vuelva a convertir los archivos `.sh` a formato CRLF de Windows.
 >
 > **INSTRUCCIONES CLARAS PARA EL AGENTE DE LA THINKPAD:**
-> 1. Investiga el directorio del repositorio en la ThinkPad (`~/Scraper-Neoauto-ANTIGRAVITY` o `~/Scraper.Neoauto`).
-> 2. Identifica el nombre real de la carpeta del entorno virtual (comúnmente `.venv` o `venv`).
-> 3. Si no existe ningún entorno virtual de Python en la ThinkPad, créalo e instala las dependencias de `requirements.txt`.
-> 4. Actualiza los dos archivos bash (`run_scraper_sequence_diario.sh` y `run_scraper_semanal.sh`) ajustando las siguientes dos variables con las rutas físicas reales de la ThinkPad:
->    * `PROJECT_DIR`: Ruta real del repositorio en la ThinkPad.
->    * `PYTHON_EXEC`: Ruta real al binario de Python dentro del entorno virtual (ej. `$PROJECT_DIR/.venv/bin/python`).
-> 5. Confirma que los permisos de ejecución de los scripts bash estén activos (`chmod +x`).
+> 1. **Paso 1 (Crucial):** Ejecuta un `git pull` en la ThinkPad para descargar los scripts sanitizados en formato Linux LF nativo y el nuevo `.gitattributes`.
+> 2. **Paso 2:** Verifica si la carpeta del entorno virtual en la ThinkPad es `.venv` o `venv`.
+> 3. **Paso 3:** Si la carpeta es `.venv`, ajusta la variable `PYTHON_EXEC` en ambos scripts locales de la ThinkPad a `$PROJECT_DIR/.venv/bin/python`.
+> 4. **Paso 4:** Verifica los permisos de ejecución de los scripts bash (`chmod +x`).
 
 ### 🧠 Lista de Verificación para el Genio Gemini de la ThinkPad:
 - [ ] **Directorio del Proyecto**: Confirmar si el repositorio en la ThinkPad está clonado en `/home/richgutz/Scraper-Neoauto-ANTIGRAVITY` o `/home/richgutz/Scraper.Neoauto`. Ajustar `PROJECT_DIR` en consecuencia en ambos scripts `.sh`.
