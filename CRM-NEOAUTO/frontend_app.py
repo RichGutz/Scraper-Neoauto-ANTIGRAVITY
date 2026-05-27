@@ -387,6 +387,8 @@ def main_app():
                 
             # Preparar Grilla con datos enriquecidos
             grid_data = []
+            ganancia_total_acumulada = 0.0
+            
             for index, row in state_df.iterrows():
                 tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
                 marca = row.get('Make', 'N/A')
@@ -419,8 +421,40 @@ def main_app():
                 if estado == "Estado 6: Vendido":
                     gyp_data_row = fetch_gyp(row['url']) or {}
                     utilidad = float(gyp_data_row.get("utilidad_neta_usd", 0) or 0)
-                    row_data["Ganancia"] = f"${utilidad:,.2f}"
-                    row_data["Placa"] = str(gyp_data_row.get("placa", "N/A"))
+                    ganancia_total_acumulada += utilidad
+                    
+                    tc = float(gyp_data_row.get("tipo_cambio", 3.4) or 3.4)
+                    
+                    p_compra_usd = float(gyp_data_row.get("precio_compra_usd", 0) or 0)
+                    p_compra_pen = float(gyp_data_row.get("precio_compra_pen", 0) or 0)
+                    p_compra_total = p_compra_usd + (p_compra_pen / tc if tc > 0 else 0)
+                    
+                    p_venta_usd = float(gyp_data_row.get("precio_venta_usd", 0) or 0)
+                    p_venta_pen = float(gyp_data_row.get("precio_venta_pen", 0) or 0)
+                    p_venta_total = p_venta_usd + (p_venta_pen / tc if tc > 0 else 0)
+                    
+                    pct_ganancia = (utilidad / p_compra_total * 100) if p_compra_total > 0 else 0.0
+                    
+                    f_compra_str = gyp_data_row.get("fecha_notaria_compra")
+                    f_venta_str = gyp_data_row.get("fecha_notaria_venta")
+                    dias_stock = "N/A"
+                    if f_compra_str and f_venta_str:
+                        try:
+                            d_compra = pd.to_datetime(f_compra_str)
+                            d_venta = pd.to_datetime(f_venta_str)
+                            d_val = (d_venta - d_compra).days
+                            dias_stock = f"{d_val} días" if d_val >= 0 else "0 días"
+                        except: pass
+                        
+                    row_data["P. Compra"] = f"${p_compra_total:,.0f}" if p_compra_total > 0 else "N/A"
+                    row_data["P. Venta"] = f"${p_venta_total:,.0f}" if p_venta_total > 0 else "N/A"
+                    row_data["Placa"] = str(gyp_data_row.get("placa", "N/A")).strip()
+                    row_data["F. Compra"] = f_compra_str[:10] if f_compra_str else "N/A"
+                    row_data["F. Venta"] = f_venta_str[:10] if f_venta_str else "N/A"
+                    row_data["Días Stock"] = dias_stock
+                    row_data["Ganancia %"] = f"{pct_ganancia:.1f}%"
+                    row_data["Ganancia USD"] = f"${utilidad:,.2f}"
+                    row_data["_raw_f_venta"] = f_venta_str if f_venta_str else "1900-01-01"
 
                 row_data.update({
                     "Chat": f"https://wa.me/{tel}" if tel and tel != "None" else None,
@@ -433,6 +467,8 @@ def main_app():
                 grid_data.append(row_data)
                 
             grid_df = pd.DataFrame(grid_data)
+            if estado == "Estado 6: Vendido":
+                grid_df = grid_df.sort_values(by="_raw_f_venta", ascending=False)
             
             col_config = {
                 "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
@@ -441,18 +477,40 @@ def main_app():
                 "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
                 "_raw_url": None, "_raw_notas": None, "_raw_row": None
             }
+            
+            editor_kwargs = {
+                "data": grid_df,
+                "column_config": col_config,
+                "hide_index": True,
+                "use_container_width": True,
+                "key": f"grid_v45_{estado}"
+            }
+            
             if estado == "Estado 6: Vendido":
-                col_config["Ganancia"] = st.column_config.TextColumn("Ganancia USD")
+                editor_kwargs["column_order"] = [
+                    "Seleccionar", "Vendedor", "Vehiculo", "Anio", "Distrito", 
+                    "P. Compra", "P. Venta", "Placa", "F. Compra", "F. Venta", 
+                    "Días Stock", "Ganancia %", "Ganancia USD"
+                ]
+                col_config["P. Compra"] = st.column_config.TextColumn("P. Compra")
+                col_config["P. Venta"] = st.column_config.TextColumn("P. Venta")
                 col_config["Placa"] = st.column_config.TextColumn("Placa")
+                col_config["F. Compra"] = st.column_config.TextColumn("F. Compra")
+                col_config["F. Venta"] = st.column_config.TextColumn("F. Venta")
+                col_config["Días Stock"] = st.column_config.TextColumn("Días Stock")
+                col_config["Ganancia %"] = st.column_config.TextColumn("Ganancia %")
+                col_config["Ganancia USD"] = st.column_config.TextColumn("Ganancia USD")
 
             # Grid Maestro Estilo Inandes
-            edited_df = st.data_editor(
-                grid_df,
-                column_config=col_config,
-                hide_index=True,
-                use_container_width=True,
-                key=f"grid_v45_{estado}"
-            )
+            edited_df = st.data_editor(**editor_kwargs)
+            
+            if estado == "Estado 6: Vendido":
+                st.markdown(f'''
+                <br>
+                <div style="text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h2 style="color:#2e7d32; margin:0;">💰 GANANCIA TOTAL ACUMULADA: ${ganancia_total_acumulada:,.2f}</h2>
+                </div>
+                ''', unsafe_allow_html=True)
             
             seleccionados = edited_df[edited_df["Seleccionar"] == True]
             
