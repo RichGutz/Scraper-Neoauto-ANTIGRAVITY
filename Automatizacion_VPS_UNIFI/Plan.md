@@ -687,4 +687,46 @@ Durante una prueba manual de la secuencia del scraper (`run_scraper_sequence_dia
 
 
 
+---
+
+## 🛠️ Parche 4 de Diagnóstico: Pérdida del Crontab de WOL en el Gateway tras reinicios
+
+> [!WARNING]
+> **ERROR DETECTADO EN PRODUCCIÓN (2026-05-27):**
+> Al reiniciarse el Gateway UniFi (debido a actualizaciones, cortes de energía o mantenimiento ordinario), la programación de Wake-on-LAN (`crontab`) del root se eliminó por completo, impidiendo que la ThinkPad se encendiera de forma autónoma.
+> 
+> **CAUSA RAÍZ (¡DETECTADA Y SOLUCIONADA!):**
+> UniFi OS reconstruye la partición del sistema `/` en memoria RAM durante el arranque del dispositivo. Debido a esto, el archivo de tareas programadas de root (`/var/spool/cron/crontabs/root`) no es persistente y se limpia en cada inicio. La partición `/data` es la única que mantiene el almacenamiento persistente a nivel físico.
+> 
+> **CORRECCIÓN APLICADA E INTEGRADA EN EL GATEWAY:**
+> Para asegurar que las tareas cron se re-inscriban de forma automática sin instalar software de terceros que comprometa la red, se configuró un servicio de Systemd en el Gateway que corre en cada inicio del router y reconstruye las líneas de cron de WOL de forma limpia:
+> 
+> 1. Se creó el archivo del servicio `/etc/systemd/system/restore-wol-cron.service` con la siguiente lógica:
+>    ```ini
+>    [Unit]
+>    Description=Restaurar Cron de WOL en Inicio
+>    After=multi-user.target
+>    
+>    [Service]
+>    Type=oneshot
+>    ExecStart=/bin/sh -c '(crontab -l 2>/dev/null | grep -v "bridge_wol.sh"; echo "30 18 * * * /data/bridge_wol.sh >> /data/wol.log 2>&1"; echo "0 0 * * 1 /data/bridge_wol.sh >> /data/wol.log 2>&1") | crontab -'
+>    RemainAfterExit=yes
+>    
+>    [Install]
+>    WantedBy=multi-user.target
+>    ```
+> 2. Se recargó systemd, se habilitó el servicio para persistir tras reinicios y se ejecutó en la sesión SSH actual:
+>    ```bash
+>    systemctl daemon-reload
+>    systemctl enable restore-wol-cron.service
+>    systemctl start restore-wol-cron.service
+>    ```
+> 
+> ### 🚀 Resolución de Parche 4 en el Gateway de Producción [✔ COMPLETADO — 2026-05-27]
+> - [x] **Creación y Activación del Servicio**: El servicio se instaló en el router, creándose el symlink de Systemd. Al arrancar, inyectó las tareas correspondientes.
+> - [x] **Confirmación de Tareas Activas**: Se ejecutó `crontab -l` en la terminal del router, validando que el cron de WOL para las 18:30 (diario) y 00:00 (lunes) está activo.
+> - [x] **Actualización de Herramientas**: Se documentaron las instrucciones rápidas de mantenimiento del Gateway en [comandos_emergencia.md](file:///c:/Users/rguti/Scraper.Neoauto/Automatizacion_VPS_UNIFI/comandos_emergencia.md).
+> - [x] **Respaldo en Git**: Se confirmaron los cambios y se subieron a GitHub sobreescribiendo la rama remota `funcional.27.05.26`.
+
+
 
