@@ -769,9 +769,17 @@ def main_app():
                     with c_notas:
                         st.write("**Bitácora / Notas (Historial)**")
                         
+                        # Recuperar notas finales de GyP
+                        gyp_data_v = fetch_gyp(lead['url']) or {}
+                        com_val = gyp_data_v.get("comentarios", {})
+                        gyp_com_text = com_val.get("texto", "") if isinstance(com_val, dict) else str(com_val)
+                        
                         # Historial en HTML con Scroll
                         notas_html = ""
-                        if not n_history:
+                        if gyp_com_text and gyp_com_text.strip() and gyp_com_text.strip() != "{}":
+                            notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#b71c1c;'>Nota de Cierre (GyP):</strong> <span style='color:#555;'>{gyp_com_text}</span></div>"
+                            
+                        if not n_history and not notas_html:
                             notas_html = "<div style='color:#777; font-size:14px;'>No hay actividad registrada todavía.</div>"
                         else:
                             for key, val in n_history.items():
