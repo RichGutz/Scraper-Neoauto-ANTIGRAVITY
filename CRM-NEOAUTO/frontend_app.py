@@ -779,6 +779,7 @@ def main_app():
                         gyp_data_v = fetch_gyp(lead['url']) or {}
                         com_val = gyp_data_v.get("comentarios", {})
                         gyp_com_text = com_val.get("texto", "").strip() if isinstance(com_val, dict) else str(com_val).strip()
+                        gyp_com_fecha = com_val.get("fecha", "") if isinstance(com_val, dict) else ""
                         
                         # 3. Construir HTML del historial
                         notas_html = ""
@@ -787,9 +788,7 @@ def main_app():
                             notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#333;'>{key}:</strong> <span style='color:#555;'>{val}</span></div>"
                         # Luego los comentarios de GyP (si los hay)
                         if gyp_com_text and gyp_com_text not in ("", "{}"):
-                            gyp_updated = gyp_data_v.get("updated_at", "") or gyp_data_v.get("created_at", "")
-                            gyp_fecha = str(gyp_updated)[:16].replace("T", " ") if gyp_updated else ""
-                            fecha_label = f" <span style='font-weight:normal; color:#999; font-size:12px;'>({gyp_fecha})</span>" if gyp_fecha else ""
+                            fecha_label = f" <span style='font-weight:normal; color:#999; font-size:12px;'>({gyp_com_fecha})</span>" if gyp_com_fecha else ""
                             notas_html += f"<div style='margin-bottom:8px; font-size:14px; border-top:1px solid #eee; padding-top:8px;'><strong style='color:#b71c1c;'>📝 Comentarios GyP:{fecha_label}</strong><br><span style='color:#555; white-space:pre-wrap;'>{gyp_com_text}</span></div>"
                         
                         if not notas_html:
@@ -812,7 +811,8 @@ def main_app():
                                 # Concatenar sobre el texto existente
                                 texto_actual = gyp_com_text if gyp_com_text and gyp_com_text not in ("", "{}") else ""
                                 texto_nuevo = (texto_actual + "\n" + nueva_linea).strip()
-                                if save_gyp(lead['url'], {"comentarios": {"texto": texto_nuevo}}):
+                                # Guardar texto + fecha de ultima modificacion
+                                if save_gyp(lead['url'], {"comentarios": {"texto": texto_nuevo, "fecha": timestamp}}):
                                     st.cache_data.clear()
                                     st.success("Nota adicional guardada en GyP.")
                                     st.rerun()
