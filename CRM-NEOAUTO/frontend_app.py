@@ -787,7 +787,10 @@ def main_app():
                             notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#333;'>{key}:</strong> <span style='color:#555;'>{val}</span></div>"
                         # Luego los comentarios de GyP (si los hay)
                         if gyp_com_text and gyp_com_text not in ("", "{}"):
-                            notas_html += f"<div style='margin-bottom:8px; font-size:14px; border-top:1px solid #eee; padding-top:8px;'><strong style='color:#b71c1c;'>📝 Comentarios GyP:</strong><br><span style='color:#555; white-space:pre-wrap;'>{gyp_com_text}</span></div>"
+                            gyp_updated = gyp_data_v.get("updated_at", "") or gyp_data_v.get("created_at", "")
+                            gyp_fecha = str(gyp_updated)[:16].replace("T", " ") if gyp_updated else ""
+                            fecha_label = f" <span style='font-weight:normal; color:#999; font-size:12px;'>({gyp_fecha})</span>" if gyp_fecha else ""
+                            notas_html += f"<div style='margin-bottom:8px; font-size:14px; border-top:1px solid #eee; padding-top:8px;'><strong style='color:#b71c1c;'>📝 Comentarios GyP:{fecha_label}</strong><br><span style='color:#555; white-space:pre-wrap;'>{gyp_com_text}</span></div>"
                         
                         if not notas_html:
                             notas_html = "<div style='color:#777; font-size:14px;'>No hay actividad CRM registrada todavía.</div>"
