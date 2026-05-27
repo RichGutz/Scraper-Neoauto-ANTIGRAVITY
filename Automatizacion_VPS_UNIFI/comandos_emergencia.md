@@ -30,4 +30,65 @@ Si quieres verificar en tiempo real cuándo la ThinkPad termina de encenderse o 
 ```powershell
 ping -t 192.168.0.150
 ```
+```
 * Presiona `Ctrl + C` para detenerlo.
+
+---
+
+## 🛠️ 4. Persistencia de Cron de WOL en el Gateway UniFi
+Para evitar que el cron se borre en cada reinicio del Gateway UniFi, configuramos un servicio de Systemd persistente.
+
+### A. Si ya estás conectado por SSH dentro del Gateway:
+Ejecuta esto para crear el servicio, habilitarlo y verificarlo:
+
+```bash
+# 1. Crear el servicio de systemd que auto-inyecta el cron en cada arranque
+cat << 'EOF' > /etc/systemd/system/restore-wol-cron.service
+[Unit]
+Description=Restaurar Cron de WOL en Inicio
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '(crontab -l 2>/dev/null | grep -v "bridge_wol.sh"; echo "30 18 * * * /data/bridge_wol.sh >> /data/wol.log 2>&1"; echo "0 0 * * 1 /data/bridge_wol.sh >> /data/wol.log 2>&1") | crontab -'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 2. Registrar y arrancar el servicio
+systemctl daemon-reload
+systemctl enable restore-wol-cron.service
+systemctl start restore-wol-cron.service
+
+# 3. Verificar que el cron se inyectó con éxito
+crontab -l
+```
+
+### B. Si quieres hacerlo remotamente desde PowerShell en Windows:
+Copia y ejecuta estos comandos (pedirá la contraseña de root del gateway):
+
+```powershell
+# 1. Crear el archivo de servicio en el Gateway remotamente
+ssh root@192.168.0.1 "cat << 'EOF' > /etc/systemd/system/restore-wol-cron.service
+[Unit]
+Description=Restaurar Cron de WOL en Inicio
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '(crontab -l 2>/dev/null | grep -v \"bridge_wol.sh\"; echo \"30 18 * * * /data/bridge_wol.sh >> /data/wol.log 2>&1\"; echo \"0 0 * * 1 /data/bridge_wol.sh >> /data/wol.log 2>&1\") | crontab -'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+# 2. Registrar y activar el servicio en el Gateway
+ssh root@192.168.0.1 "systemctl daemon-reload && systemctl enable restore-wol-cron.service && systemctl start restore-wol-cron.service"
+
+# 3. Comprobar que los cronjobs estén activos en el Gateway
+ssh root@192.168.0.1 "crontab -l"
+```
+
