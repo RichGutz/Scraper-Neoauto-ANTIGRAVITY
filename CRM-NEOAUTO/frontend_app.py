@@ -732,6 +732,67 @@ def main_app():
 
 
                 # ============================================================
+                # PANEL VENDIDOS — solo para Estado 6: Vendido
+                # ============================================================
+                elif estado == "Estado 6: Vendido":
+                    c_datos, c_notas = st.columns([1, 1.5])
+                    
+                    with c_datos:
+                        st.write("**Datos del Vehículo**")
+                        m1, m2 = st.columns(2)
+
+                        def safe_val(val, suffix="", is_price=False):
+                            try:
+                                if not val or str(val).strip().upper() == "N/A": return "N/A"
+                                clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
+                                if is_price: return f"${clean_num:,.0f}"
+                                return f"{clean_num:,.0f}{suffix}"
+                            except:
+                                return "N/A"
+
+                        with m1:
+                            st.text_input("Marca:",  value=lead.get('Make', 'N/A'),     disabled=True, key=f"v_mk_{lead['url']}")
+                            st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"v_pr_{lead['url']}")
+                            st.text_input("Anio:",   value=lead.get('Year', 'N/A'),     disabled=True, key=f"v_yr_{lead['url']}")
+                        with m2:
+                            st.text_input("Modelo:",   value=lead.get('Model', 'N/A'),    disabled=True, key=f"v_md_{lead['url']}")
+                            st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"v_dt_{lead['url']}")
+                            st.text_input("KM:",       value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"v_km_{lead['url']}")
+                            
+                        st.markdown(f'''
+                        <br>
+                        <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
+                        Ver Aviso en NeoAuto
+                        </a>
+                        ''', unsafe_allow_html=True)
+                        
+                    with c_notas:
+                        st.write("**Bitácora / Notas (Historial)**")
+                        
+                        # Historial en HTML con Scroll
+                        notas_html = ""
+                        if not n_history:
+                            notas_html = "<div style='color:#777; font-size:14px;'>No hay actividad registrada todavía.</div>"
+                        else:
+                            for key, val in n_history.items():
+                                notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#333;'>{key}:</strong> <span style='color:#555;'>{val}</span></div>"
+                                
+                        st.markdown(f"""
+                        <div style="max-height: 250px; overflow-y: auto; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; margin-bottom: 15px;">
+                            {notas_html}
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.write("**Agregar Nueva Nota**")
+                        n_text = st.text_area("Escribe aquí...", key=f"v_txt_{lead['url']}", height=80, label_visibility="collapsed")
+                        
+                        if st.button("Guardar Nota Adicional", use_container_width=True, type="primary", key=f"v_btn_n_{lead['url']}"):
+                            if add_note_to_lead(lead['url'], n_history, estado, n_text):
+                                st.cache_data.clear()
+                                st.success("Nota adicional guardada exitosamente.")
+                                st.rerun()
+
+                # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
                 # ============================================================
                 else:
