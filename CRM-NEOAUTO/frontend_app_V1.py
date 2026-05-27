@@ -406,7 +406,7 @@ def main_app():
                 except:
                     km_f = "N/A"
                     
-                row_data = {
+                grid_data.append({
                     "Seleccionar": False,
                     "Vendedor": row.get('nombre_vendedor', 'N/A'),
                     "Vehiculo": f"{marca} {modelo}".strip(),
@@ -414,15 +414,6 @@ def main_app():
                     "Anio": row.get('Year', 'N/A'),
                     "Distrito": row.get('District', 'N/A'),
                     "KM": km_f,
-                }
-                
-                if estado == "Estado 6: Vendido":
-                    gyp_data_row = fetch_gyp(row['url']) or {}
-                    utilidad = float(gyp_data_row.get("utilidad_neta_usd", 0) or 0)
-                    row_data["Ganancia"] = f"${utilidad:,.2f}"
-                    row_data["Placa"] = str(gyp_data_row.get("placa", "N/A"))
-
-                row_data.update({
                     "Chat": f"https://wa.me/{tel}" if tel and tel != "None" else None,
                     "NeoAuto": row['url'],
                     "Fecha": str(row.get('fecha_actualizacion', ''))[:10] if row.get('fecha_actualizacion') else "N/A",
@@ -430,25 +421,19 @@ def main_app():
                     "_raw_notas": row.get('notas_actividad', {}),
                     "_raw_row": row.to_dict()
                 })
-                grid_data.append(row_data)
                 
             grid_df = pd.DataFrame(grid_data)
             
-            col_config = {
-                "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
-                "Chat": st.column_config.LinkColumn("WhatsApp", display_text=r"(\d+)"),
-                "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
-                "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
-                "_raw_url": None, "_raw_notas": None, "_raw_row": None
-            }
-            if estado == "Estado 6: Vendido":
-                col_config["Ganancia"] = st.column_config.TextColumn("Ganancia USD")
-                col_config["Placa"] = st.column_config.TextColumn("Placa")
-
             # Grid Maestro Estilo Inandes
             edited_df = st.data_editor(
                 grid_df,
-                column_config=col_config,
+                column_config={
+                    "Seleccionar": st.column_config.CheckboxColumn("Sel.", required=True),
+                    "Chat": st.column_config.LinkColumn("WhatsApp", display_text=r"(\d+)"),
+                    "NeoAuto": st.column_config.LinkColumn("Link", display_text="Ver Auto"),
+                    "Vehiculo": st.column_config.TextColumn("Marca/Modelo"),
+                    "_raw_url": None, "_raw_notas": None, "_raw_row": None
+                },
                 hide_index=True,
                 use_container_width=True,
                 key=f"grid_v45_{estado}"
@@ -667,7 +652,6 @@ def main_app():
                         vendido_habilitado = total_ingresos > 0
                         if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
                             if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
-                                st.cache_data.clear()
                                 st.success("Lead movido a Vendido.")
                                 st.rerun()
 
