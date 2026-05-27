@@ -769,21 +769,28 @@ def main_app():
                     with c_notas:
                         st.write("**Bitácora / Notas (Historial)**")
                         
-                        # Recuperar notas finales de GyP
+                        # 1. Notas CRM de crm_contactos (filtrar campos técnicos del auto)
+                        CAMPOS_AUTO = {"Make","Model","Year","Price","District","Province","Fuel_Type",
+                                       "Kilometers","Engine_Size","unico_dueno","Transmission","Registro",
+                                       "estado_embudo","url","nombre_vendedor","telefono_whatsapp"}
+                        crm_notas = {k: v for k, v in n_history.items() if k not in CAMPOS_AUTO}
+                        
+                        # 2. Comentarios de crm_gyp
                         gyp_data_v = fetch_gyp(lead['url']) or {}
                         com_val = gyp_data_v.get("comentarios", {})
-                        gyp_com_text = com_val.get("texto", "") if isinstance(com_val, dict) else str(com_val)
+                        gyp_com_text = com_val.get("texto", "").strip() if isinstance(com_val, dict) else str(com_val).strip()
                         
-                        # Historial en HTML con Scroll
+                        # 3. Construir HTML del historial
                         notas_html = ""
-                        if gyp_com_text and gyp_com_text.strip() and gyp_com_text.strip() != "{}":
-                            notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#b71c1c;'>Nota de Cierre (GyP):</strong> <span style='color:#555;'>{gyp_com_text}</span></div>"
-                            
-                        if not n_history and not notas_html:
-                            notas_html = "<div style='color:#777; font-size:14px;'>No hay actividad registrada todavía.</div>"
-                        else:
-                            for key, val in n_history.items():
-                                notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#333;'>{key}:</strong> <span style='color:#555;'>{val}</span></div>"
+                        # Primero las notas de trayecto CRM
+                        for key, val in crm_notas.items():
+                            notas_html += f"<div style='margin-bottom:8px; font-size:14px;'><strong style='color:#333;'>{key}:</strong> <span style='color:#555;'>{val}</span></div>"
+                        # Luego los comentarios de GyP (si los hay)
+                        if gyp_com_text and gyp_com_text not in ("", "{}"):
+                            notas_html += f"<div style='margin-bottom:8px; font-size:14px; border-top:1px solid #eee; padding-top:8px;'><strong style='color:#b71c1c;'>📝 Comentarios GyP:</strong><br><span style='color:#555; white-space:pre-wrap;'>{gyp_com_text}</span></div>"
+                        
+                        if not notas_html:
+                            notas_html = "<div style='color:#777; font-size:14px;'>No hay actividad CRM registrada todavía.</div>"
                                 
                         st.markdown(f"""
                         <div style="max-height: 250px; overflow-y: auto; padding: 12px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; margin-bottom: 15px;">
@@ -791,14 +798,23 @@ def main_app():
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        st.write("**Agregar Nueva Nota**")
+                        # 4. Campo para agregar nota adicional — se guarda en crm_gyp.comentarios
+                        st.write("**Agregar Nota Adicional (se guarda en GyP)**")
                         n_text = st.text_area("Escribe aquí...", key=f"v_txt_{lead['url']}", height=80, label_visibility="collapsed")
                         
                         if st.button("Guardar Nota Adicional", use_container_width=True, type="primary", key=f"v_btn_n_{lead['url']}"):
-                            if add_note_to_lead(lead['url'], n_history, estado, n_text):
-                                st.cache_data.clear()
-                                st.success("Nota adicional guardada exitosamente.")
-                                st.rerun()
+                            if n_text and n_text.strip():
+                                timestamp = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')
+                                nueva_linea = f"[{timestamp}] {n_text.strip()}"
+                                # Concatenar sobre el texto existente
+                                texto_actual = gyp_com_text if gyp_com_text and gyp_com_text not in ("", "{}") else ""
+                                texto_nuevo = (texto_actual + "\n" + nueva_linea).strip()
+                                if save_gyp(lead['url'], {"comentarios": {"texto": texto_nuevo}}):
+                                    st.cache_data.clear()
+                                    st.success("Nota adicional guardada en GyP.")
+                                    st.rerun()
+                            else:
+                                st.warning("Escribe algo antes de guardar.")
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
