@@ -784,6 +784,10 @@ def main_app():
                         utilidad = precio_venta - (total_compra + total_gastos)
                         pct_ganancia = (utilidad / total_compra * 100) if total_compra > 0 else 0.0
                         
+                        # Función para limpiar sangrías y evitar que Streamlit renderice HTML como texto de código
+                        def clean_html(html_str):
+                            return "".join(line.strip() for line in html_str.split("\n"))
+                        
                         # Tabla resumen HTML
                         rows_html = f"""
                         <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #1b5e20;">
@@ -816,7 +820,7 @@ def main_app():
                         bg_utilidad = "#e8f5e9" if utilidad >= 0 else "#ffebee"
                         border_utilidad = "#c8e6c9" if utilidad >= 0 else "#ffcdd2"
                         
-                        st.markdown(f"""
+                        html_table = f"""
                         <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
                             {rows_html}
                         </table>
@@ -825,7 +829,8 @@ def main_app():
                             <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
                         </div>
                         <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
-                        """, unsafe_allow_html=True)
+                        """
+                        st.markdown(clean_html(html_table), unsafe_allow_html=True)
                         
                         st.markdown(f'''
                         <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
