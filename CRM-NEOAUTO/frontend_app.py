@@ -832,12 +832,7 @@ def main_app():
                         """
                         st.markdown(clean_html(html_table), unsafe_allow_html=True)
                         
-                        st.markdown(f'''
-                        <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
-                        Ver Aviso en NeoAuto
-                        </a>
-                        ''', unsafe_allow_html=True)
-                        
+
                     with c_notas:
                         st.write("**Bitácora / Notas (Historial)**")
                         
