@@ -534,7 +534,10 @@ def main_app():
                 st.divider()
 
                 # --- PANEL DE HERRAMIENTAS ---
-                st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
+                if estado == "Estado 6: Vendido":
+                    st.markdown(f"#### 🚗 Vehículo Vendido por: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
+                else:
+                    st.markdown(f"#### Panel de Gestion: {lead.get('nombre_vendedor', 'N/A')} ({lead.get('Make', '')} {lead.get('Model', '')})")
 
                 # Mostrar errores persistentes de calendario si existen
                 if "calendar_error" in st.session_state:
@@ -735,32 +738,96 @@ def main_app():
                 # PANEL VENDIDOS — solo para Estado 6: Vendido
                 # ============================================================
                 elif estado == "Estado 6: Vendido":
-                    c_datos, c_notas = st.columns([1, 1.5])
+                    c_datos, c_notas = st.columns([1.2, 1.3])
                     
                     with c_datos:
-                        st.write("**Datos del Vehículo**")
-                        m1, m2 = st.columns(2)
-
-                        def safe_val(val, suffix="", is_price=False):
-                            try:
-                                if not val or str(val).strip().upper() == "N/A": return "N/A"
-                                clean_num = float(str(val).replace("$", "").replace(",", "").replace("km", "").strip())
-                                if is_price: return f"${clean_num:,.0f}"
-                                return f"{clean_num:,.0f}{suffix}"
-                            except:
-                                return "N/A"
-
-                        with m1:
-                            st.text_input("Marca:",  value=lead.get('Make', 'N/A'),     disabled=True, key=f"v_mk_{lead['url']}")
-                            st.text_input("Precio:", value=safe_val(lead.get('Price'), is_price=True), disabled=True, key=f"v_pr_{lead['url']}")
-                            st.text_input("Anio:",   value=lead.get('Year', 'N/A'),     disabled=True, key=f"v_yr_{lead['url']}")
-                        with m2:
-                            st.text_input("Modelo:",   value=lead.get('Model', 'N/A'),    disabled=True, key=f"v_md_{lead['url']}")
-                            st.text_input("Distrito:", value=lead.get('District', 'N/A'), disabled=True, key=f"v_dt_{lead['url']}")
-                            st.text_input("KM:",       value=safe_val(lead.get('Kilometers'), suffix=" km"), disabled=True, key=f"v_km_{lead['url']}")
+                        st.write("📊 **Resumen Financiero (GyP)**")
+                        
+                        gyp_data_v = fetch_gyp(lead['url']) or {}
+                        tc = float(gyp_data_v.get("tipo_cambio", 3.4) or 3.4)
+                        
+                        v_rubros = [
+                            ("Precio de Venta", "precio_venta"),
+                            ("Precio de Compra", "precio_compra"),
+                            ("Gastos Notariales", "notarial"),
+                            ("Gastos Registrales", "registral"),
+                            ("Pintura y Aros", "pintura_aros"),
+                            ("Lavado", "lavado"),
+                            ("Combustible", "gasolina"),
+                            ("Cochera", "cochera"),
+                            ("Mecanica", "mecanica"),
+                            ("Llantas", "llantas"),
+                            ("Publicidad NeoAuto", "neoauto"),
+                            ("Cheque Gerencia", "cheque_gerencia"),
+                            ("Intereses", "intereses")
+                        ]
+                        
+                        total_compra = 0.0
+                        total_gastos = 0.0
+                        precio_venta = 0.0
+                        gastos_desglosados = []
+                        
+                        for label, key_name in v_rubros:
+                            val_u = float(gyp_data_v.get(f"{key_name}_usd", 0) or 0)
+                            val_p = float(gyp_data_v.get(f"{key_name}_pen", 0) or 0)
+                            subtotal = val_u + (val_p / tc if tc > 0 else 0)
                             
+                            if subtotal > 0:
+                                if key_name == "precio_venta":
+                                    precio_venta = subtotal
+                                elif key_name == "precio_compra":
+                                    total_compra = subtotal
+                                else:
+                                    total_gastos += subtotal
+                                    gastos_desglosados.append((label, subtotal))
+                        
+                        utilidad = precio_venta - (total_compra + total_gastos)
+                        pct_ganancia = (utilidad / total_compra * 100) if total_compra > 0 else 0.0
+                        
+                        # Tabla resumen HTML
+                        rows_html = f"""
+                        <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #1b5e20;">
+                            <td style="padding: 6px 0;">Precio Venta</td>
+                            <td style="text-align: right; padding: 6px 0;">${precio_venta:,.2f}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee; color: #b71c1c;">
+                            <td style="padding: 4px 0;">Precio Compra</td>
+                            <td style="text-align: right; padding: 4px 0;">-${total_compra:,.2f}</td>
+                        </tr>
+                        """
+                        
+                        for label_g, monto_g in gastos_desglosados:
+                            rows_html += f"""
+                            <tr style="border-bottom: 1px solid #f3f3f3; color: #555; font-size: 0.9rem;">
+                                <td style="padding: 3px 0; padding-left: 10px; color: #666;">• {label_g}</td>
+                                <td style="text-align: right; padding: 3px 0; color: #b71c1c;">-${monto_g:,.2f}</td>
+                            </tr>
+                            """
+                            
+                        if total_gastos > 0:
+                            rows_html += f"""
+                            <tr style="border-bottom: 1px solid #eee; font-weight: bold; color: #b71c1c;">
+                                <td style="padding: 4px 0;">Total Gastos Operativos</td>
+                                <td style="text-align: right; padding: 4px 0;">-${total_gastos:,.2f}</td>
+                            </tr>
+                            """
+                            
+                        color_utilidad = "#1b5e20" if utilidad >= 0 else "#b71c1c"
+                        bg_utilidad = "#e8f5e9" if utilidad >= 0 else "#ffebee"
+                        border_utilidad = "#c8e6c9" if utilidad >= 0 else "#ffcdd2"
+                        
+                        st.markdown(f"""
+                        <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
+                            {rows_html}
+                        </table>
+                        <div style="background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Real</span>
+                            <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
+                        </div>
+                        <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
+                        """, unsafe_allow_html=True)
+                        
                         st.markdown(f'''
-                        <br>
                         <a href="{lead['url']}" target="_blank" style="display:block;text-align:center;background:#0068c9;color:white;padding:8px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:0.85rem;">
                         Ver Aviso en NeoAuto
                         </a>
