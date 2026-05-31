@@ -499,20 +499,75 @@ def main_app():
                                     
                                     st.plotly_chart(fig, use_container_width=True)
                                     
-                                    # FUSION: Auto-Descarga del PDF
-                                    pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
-                                    if pdf:
-                                        import base64
-                                        b64 = base64.b64encode(pdf).decode()
-                                        href = f'<a id="auto-download" href="data:application/pdf;base64,{b64}" download="Mercado_{s_brand}_{s_model}_{s_year}.pdf"></a>'
-                                        js = f"{href}<script>document.getElementById('auto-download').click();</script>"
-                                        import streamlit.components.v1 as components
-                                        components.html(js, height=0, width=0)
-                                        st.toast("Reporte PDF Generado y Descargando...", icon="📄")
+                                    # FUSION: Auto-Descarga del Reporte HTML Interactivo
+                                    import base64
                                     
-                                    # Tabla Expandida sin Scroll, ordenada DESC por precio
-                                    df_sorted = df_mkt[['URL', 'Price', 'Kilometers', 'District']].sort_values(by='Price', ascending=False)
-                                    st.table(df_sorted)
+                                    # Generar contenido HTML dinámico
+                                    html_content = f"""
+                                    <html>
+                                    <head>
+                                        <meta charset="utf-8">
+                                        <title>Reporte Mercado: {s_brand} {s_model} {s_year}</title>
+                                        <style>
+                                            body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
+                                            .verdict {{ background-color: #f8f9fa; border-left: 10px solid {color if lead_data else '#ccc'}; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                                            table {{ border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }}
+                                            th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
+                                            th {{ background-color: #1a3a5a; color: white; }}
+                                            tr:nth-child(even) {{ background-color: #f2f2f2; }}
+                                            a {{ color: #0066cc; text-decoration: none; font-weight: bold; }}
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <h2>Investigación de Mercado: {s_brand} {s_model} ({s_year})</h2>
+                                        <p><b>Muestra:</b> {len(df_mkt)} unidades | <b>Precio Mediano:</b> ${med_price:,.0f} | <b>KM Mediano:</b> {df_mkt['Kilometers'].median():,.0f}</p>
+                                    """
+                                    
+                                    if lead_data:
+                                        html_content += f"""
+                                        <div class="verdict">
+                                            <span style="font-size:1.2em;"><b>[{verdict}]</b> Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano. <b>{dif_text}</b>.</span><br><br>
+                                            <a href="{url_input_v2}" target="_blank">🔗 Ver Anuncio Original en Neoauto</a>
+                                        </div>
+                                        """
+                                        
+                                    html_content += "<h3>Gráfico de Dispersión (Interactivo)</h3>"
+                                    html_content += fig.to_html(full_html=False, include_plotlyjs='cdn')
+                                    
+                                    html_content += "<h3>Inventario de Mercado (Ordenado por Precio)</h3>"
+                                    df_html = df_mkt[['URL', 'Price', 'Kilometers', 'District']].copy()
+                                    df_html = df_html.sort_values(by='Price', ascending=False)
+                                    df_html['URL'] = df_html['URL'].apply(lambda x: f'<a href="{x}" target="_blank">Abrir Link</a>')
+                                    df_html['Price'] = df_html['Price'].apply(lambda x: f"${x:,.0f}")
+                                    df_html['Kilometers'] = df_html['Kilometers'].apply(lambda x: f"{x:,.0f} km")
+                                    html_content += df_html.to_html(escape=False, index=False)
+                                    
+                                    html_content += "</body></html>"
+                                    
+                                    b64 = base64.b64encode(html_content.encode('utf-8')).decode()
+                                    href = f'<a id="auto-download" href="data:text/html;base64,{b64}" download="Mercado_{s_brand}_{s_model}_{s_year}.html"></a>'
+                                    js = f"{href}<script>document.getElementById('auto-download').click();</script>"
+                                    import streamlit.components.v1 as components
+                                    components.html(js, height=0, width=0)
+                                    st.toast("Reporte HTML Dinámico Generado y Descargando...", icon="🌐")
+                                    
+                                    # Tabla Expandida sin Scroll, ordenada DESC por precio, formateada
+                                    df_sorted = df_mkt[['URL', 'Price', 'Kilometers', 'District']].copy()
+                                    df_sorted = df_sorted.sort_values(by='Price', ascending=False)
+                                    # Forzamos enteros para evitar decimales en Streamlit
+                                    df_sorted['Price'] = df_sorted['Price'].fillna(0).astype(int)
+                                    df_sorted['Kilometers'] = df_sorted['Kilometers'].fillna(0).astype(int)
+                                    
+                                    st.dataframe(
+                                        df_sorted,
+                                        use_container_width=True,
+                                        hide_index=True,
+                                        column_config={
+                                            "URL": st.column_config.LinkColumn("Enlace", display_text="🔗 Ver Aviso"),
+                                            "Price": st.column_config.NumberColumn("Precio ($)", format="%d"),
+                                            "Kilometers": st.column_config.NumberColumn("Kilómetros", format="%d")
+                                        }
+                                    )
                                 else:
                                     st.warning("No se encontraron datos para esta combinación.")
 
