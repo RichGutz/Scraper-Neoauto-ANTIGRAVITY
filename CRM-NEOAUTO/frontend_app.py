@@ -384,7 +384,7 @@ def main_app():
                             st.error("No se encontró información de este link en nuestra base de datos diaria. Asegúrate de que el link sea correcto o que el scraper lo haya procesado.")
         with mercado_v2_tab:
             st.subheader("Investigación de Mercado Dinámica (Unificada)")
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             brands = get_unique_brands(supabase)
             s_brand = c1.selectbox("1. Marca", [""] + brands, key="m2_brand")
             if s_brand:
@@ -394,11 +394,12 @@ def main_app():
                     years = get_years_by_model(supabase, s_brand, s_model)
                     s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m2_year")
                     
+                    url_input_v2 = c4.text_input("4. URL del Lead (Opcional)", placeholder="https://neoauto.com/auto/usado/...", key="m2_url")
+                    
                     st.write("---")
-                    url_input_v2 = st.text_input("URL del Lead (Opcional)", placeholder="https://neoauto.com/auto/usado/...", key="m2_url")
                     
                     if s_year:
-                        if st.button("Analizar Mercado V2", type="primary", use_container_width=True):
+                        if st.button("Analizar Mercado V2 (Genera PDF)", type="primary", use_container_width=True):
                             # VALIDACION AGUAS ARRIBA
                             lead_data = None
                             abort_analysis = False
@@ -447,6 +448,22 @@ def main_app():
                                         res_col1.metric("Precio Lead", f"${t_price:,.0f}")
                                         res_col2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
                                         res_col3.metric("Diferencia (%)", f"{pct_diff:.1f}%", delta=f"{pct_diff:.1f}%", delta_color="inverse")
+                                        
+                                        # ALGORITMO VEREDICTO SI HAY LEAD (UNA SOLA LINEA ARRIBA DEL GRAFICO)
+                                        df_m = df_mkt.dropna(subset=['Price'])
+                                        count = len(df_m)
+                                        color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
+                                        verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
+                                        dif_text = f"Ahorro: ${(med_price - t_price):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_price - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
+                                        
+                                        st.success(f"Análisis completado para {s_brand} {s_model} {s_year} - [Ver Anuncio Neoauto]({url_input_v2})")
+                                        
+                                        html_res = f"""
+                                        <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 15px; border-radius: 8px; margin-top: 10px; margin-bottom: 20px;">
+                                            <span style="font-size:1.1em;"><b>[{verdict}]</b> Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano. <b>{dif_text}</b>. (Basado en una muestra de {count} similares).</span>
+                                        </div>
+                                        """
+                                        st.markdown(html_res, unsafe_allow_html=True)
                                     
                                     # --- GRAFICO INTERACTIVO PLOTLY ---
                                     import plotly.express as px
@@ -482,27 +499,20 @@ def main_app():
                                     
                                     st.plotly_chart(fig, use_container_width=True)
                                     
-                                    # ALGORITMO VEREDICTO SI HAY LEAD (UNA SOLA LINEA)
-                                    if lead_data:
-                                        df_m = df_mkt.dropna(subset=['Price'])
-                                        count = len(df_m)
-                                        color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
-                                        verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
-                                        dif_text = f"Ahorro: ${(med_price - t_price):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_price - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
-                                        
-                                        st.success(f"Análisis completado para {s_brand} {s_model} {s_year} - [Ver Anuncio Neoauto]({url_input_v2})")
-                                        
-                                        html_res = f"""
-                                        <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                                            <span style="font-size:1.1em;"><b>[{verdict}]</b> Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano. <b>{dif_text}</b>. (Basado en una muestra de {count} similares).</span>
-                                        </div>
-                                        """
-                                        st.markdown(html_res, unsafe_allow_html=True)
-                                    
+                                    # FUSION: Auto-Descarga del PDF
                                     pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
                                     if pdf:
-                                        st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_V2_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf", key="dl_v2")
-                                    st.dataframe(df_mkt[['URL', 'Price', 'Kilometers', 'District']], use_container_width=True)
+                                        import base64
+                                        b64 = base64.b64encode(pdf).decode()
+                                        href = f'<a id="auto-download" href="data:application/pdf;base64,{b64}" download="Mercado_{s_brand}_{s_model}_{s_year}.pdf"></a>'
+                                        js = f"{href}<script>document.getElementById('auto-download').click();</script>"
+                                        import streamlit.components.v1 as components
+                                        components.html(js, height=0, width=0)
+                                        st.toast("Reporte PDF Generado y Descargando...", icon="📄")
+                                    
+                                    # Tabla Expandida sin Scroll, ordenada DESC por precio
+                                    df_sorted = df_mkt[['URL', 'Price', 'Kilometers', 'District']].sort_values(by='Price', ascending=False)
+                                    st.table(df_sorted)
                                 else:
                                     st.warning("No se encontraron datos para esta combinación.")
 
