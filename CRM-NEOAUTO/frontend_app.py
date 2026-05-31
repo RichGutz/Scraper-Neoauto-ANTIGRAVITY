@@ -411,8 +411,13 @@ def main_app():
                                         real_year = extract_year_from_url(url_input_v2)
                                         l_year = real_year if real_year > 0 else (int(lead_data.get("Year")) if lead_data.get("Year") else 0)
                                         
-                                        # OPCION A: BLOQUEO ESTRICTO
-                                        if lead_data.get("Make") != s_brand or lead_data.get("Model") != s_model or str(l_year) != s_year:
+                                        # OPCION A: BLOQUEO ESTRICTO (Ignorando Mayúsculas/Minúsculas)
+                                        l_make = str(lead_data.get("Make", "")).strip().upper()
+                                        l_model = str(lead_data.get("Model", "")).strip().upper()
+                                        s_make = str(s_brand).strip().upper()
+                                        s_mod = str(s_model).strip().upper()
+                                        
+                                        if l_make != s_make or l_model != s_mod or str(l_year) != s_year:
                                             st.error(f"❌ Error: El link pertenece a un {lead_data.get('Make')} {lead_data.get('Model')} {l_year}, pero seleccionaste {s_brand} {s_model} {s_year}. Por favor corrige los selectores o el link.")
                                             abort_analysis = True
                                         else:
