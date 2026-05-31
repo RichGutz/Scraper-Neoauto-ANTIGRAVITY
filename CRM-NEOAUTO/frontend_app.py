@@ -112,7 +112,7 @@ def fetch_leads():
         
         # 2. Obtener Detalles de Autos (para Marca, Modelo, Año, Distrito, Precio, KM)
         urls = [c['url'] for c in contacts]
-        resp_details = supabase.table("autos_detalles_diarios").select("URL, Make, Model, Year, District, Price, Kilometers").in_("URL", urls).execute()
+        resp_details = supabase.table("autos_detalles_diarios").select("URL, Make, Model, Year, District, Price, Kilometers, DateTime").in_("URL", urls).execute()
         details = resp_details.data
         
         # 3. Merge en Pandas
@@ -120,6 +120,7 @@ def fetch_leads():
         df_d = pd.DataFrame(details)
         
         if not df_d.empty:
+            df_d = df_d.sort_values(by='DateTime', ascending=True).drop_duplicates(subset=['URL'], keep='last')
             df_d = df_d.rename(columns={"URL": "url"})
             df_final = pd.merge(df_c, df_d, on="url", how="left")
         else:
