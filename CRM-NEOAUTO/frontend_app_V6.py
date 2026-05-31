@@ -134,24 +134,14 @@ def fetch_leads():
 # --- FUNCIONES GYP ---
 
 @st.cache_data(ttl=60) # Caché de 1 minuto para GyP
-def fetch_all_gyp():
-    """Trae todos los registros de crm_gyp y devuelve un dict indexado por lead_url."""
-    try:
-        res = supabase.table("crm_gyp").select("*").execute()
-        if res.data:
-            return {item["lead_url"]: item for item in res.data}
-        return {}
-    except Exception as e:
-        st.error(f"Error al leer GyP masivo: {e}")
-        return {}
-
 def fetch_gyp(lead_url):
-    """Obtiene el GyP de un lead desde la caché masiva."""
-    return fetch_all_gyp().get(lead_url, None)
-
-def clear_crm_caches():
-    fetch_leads.clear()
-    fetch_all_gyp.clear()
+    """Trae el registro de crm_gyp para un lead. Retorna dict o None."""
+    try:
+        res = supabase.table("crm_gyp").select("*").eq("lead_url", lead_url).execute()
+        return res.data[0] if res.data else None
+    except Exception as e:
+        st.error(f"Error al leer GyP: {e}")
+        return None
 
 
 def save_gyp(lead_url, payload):
@@ -208,7 +198,7 @@ def main_app():
     with col_r:
         st.markdown("<br>", unsafe_allow_html=True) # Alineación vertical
         if st.button("🔄 Recargar", use_container_width=True):
-            clear_crm_caches()
+            st.cache_data.clear()
             st.rerun()
             
     with col_l:
@@ -374,7 +364,7 @@ def main_app():
                                             "fecha_actualizacion": now
                                         }).execute()
                                         st.success("¡Lead enviado al CRM correctamente!")
-                                        clear_crm_caches()
+                                        st.cache_data.clear()
                                     except Exception as e:
                                         st.error(f"Error al registrar: {e}")
                             else:
@@ -728,7 +718,7 @@ def main_app():
                                 
                             if save_gyp(lead['url'], gyp_payload):
                                 # Limpiar caché para reflejar cambios
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 # Limpiar estado de calculo para forzar recarga de DB en el proximo render
                                 if f"calc_{lead['url']}" in st.session_state:
                                     del st.session_state[f"calc_{lead['url']}"]
@@ -739,7 +729,7 @@ def main_app():
                         vendido_habilitado = total_ingresos > 0
                         if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
                             if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Lead movido a Vendido.")
                                 st.rerun()
 
@@ -890,7 +880,7 @@ def main_app():
                                 texto_nuevo = (texto_actual + "\n" + nueva_linea).strip()
                                 # Guardar texto + fecha de ultima modificacion
                                 if save_gyp(lead['url'], {"comentarios": {"texto": texto_nuevo, "fecha": timestamp}}):
-                                    clear_crm_caches()
+                                    st.cache_data.clear()
                                     st.success("Nota adicional guardada en GyP.")
                                     st.rerun()
                             else:
@@ -953,13 +943,13 @@ def main_app():
                                     else:
                                         st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
                             if move_lead_state(lead['url'], estado, n_state, n_history):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Estado actualizado")
                                 st.rerun()
                     with b2:
                         if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
                             if add_note_to_lead(lead['url'], n_history, estado, n_text):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Nota guardada")
                                 st.rerun()
                     with b3:

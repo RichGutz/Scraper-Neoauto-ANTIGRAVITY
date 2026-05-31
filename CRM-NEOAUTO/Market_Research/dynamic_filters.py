@@ -1,12 +1,9 @@
 import pandas as pd
+import streamlit as st
 from supabase import Client
 import io
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.units import cm
+
 
 
 def clean_brand_name(brand: str) -> str:
@@ -49,9 +46,10 @@ def extract_year_from_url(url: str) -> int:
                 return y
     return 0
 
-def get_unique_brands(supabase: Client):
+@st.cache_data(ttl=1800)
+def get_unique_brands(_supabase: Client):
     try:
-        resp = supabase.table("autos_detalles").select("Make").execute()
+        resp = _supabase.table("autos_detalles").select("Make").execute()
         if not resp.data: return []
         df = pd.DataFrame(resp.data)
         df['CleanMake'] = df['Make'].apply(clean_brand_name)
@@ -62,9 +60,10 @@ def get_unique_brands(supabase: Client):
         return []
 
 
-def get_models_by_brand(supabase: Client, brand: str):
+@st.cache_data(ttl=1800)
+def get_models_by_brand(_supabase: Client, brand: str):
     try:
-        resp = supabase.table("autos_detalles").select("Model").ilike("Make", f"{brand}%").execute()
+        resp = _supabase.table("autos_detalles").select("Model").ilike("Make", f"{brand}%").execute()
         if not resp.data: return []
         df = pd.DataFrame(resp.data)
         df['CleanModel'] = df['Model'].str.upper().str.strip()
@@ -74,10 +73,11 @@ def get_models_by_brand(supabase: Client, brand: str):
         return []
 
 
-def get_years_by_model(supabase: Client, brand: str, model: str):
+@st.cache_data(ttl=1800)
+def get_years_by_model(_supabase: Client, brand: str, model: str):
     try:
         # Traemos URL para extraer el año real
-        resp = supabase.table("autos_detalles").select("URL") \
+        resp = _supabase.table("autos_detalles").select("URL") \
             .ilike("Make", f"{brand}%") \
             .ilike("Model", model) \
             .execute()
@@ -95,10 +95,11 @@ def get_years_by_model(supabase: Client, brand: str, model: str):
         return []
 
 
-def fetch_market_data(supabase: Client, brand: str, model: str, year: int):
+@st.cache_data(ttl=1800)
+def fetch_market_data(_supabase: Client, brand: str, model: str, year: int):
     try:
         # Traemos todos los datos para este modelo y filtramos por el año extraído de la URL
-        resp = supabase.table("autos_detalles") \
+        resp = _supabase.table("autos_detalles") \
             .select("*") \
             .ilike("Make", f"{brand}%") \
             .ilike("Model", model) \
@@ -121,6 +122,12 @@ def fetch_market_data(supabase: Client, brand: str, model: str, year: int):
 def create_pdf_report(df: pd.DataFrame, brand: str, model: str, year: int):
     """Genera PDF usando reportlab (ya instalado en el servidor)."""
     try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=A4,
                                 rightMargin=2*cm, leftMargin=2*cm,
