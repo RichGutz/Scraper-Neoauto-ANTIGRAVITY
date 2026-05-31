@@ -242,7 +242,7 @@ def main_app():
 
     # === SECCIÓN INVESTIGACIÓN (early return antes de crear tabs) ===
     if seccion == "Investigación":
-        inv_tab, lead_tab = st.tabs(["Mercado", "LEAD NEOAUTO"])
+        inv_tab, lead_tab, mercado_v2_tab = st.tabs(["Mercado", "LEAD NEOAUTO", "MERCADO V2 (UNIFICADO)"])
 
         with inv_tab:
             st.subheader("Investigación de Mercado Dinámica")
@@ -382,6 +382,139 @@ def main_app():
                                 st.warning("No hay suficientes datos de mercado para comparar este modelo/año.")
                         else:
                             st.error("No se encontró información de este link en nuestra base de datos diaria. Asegúrate de que el link sea correcto o que el scraper lo haya procesado.")
+        with mercado_v2_tab:
+            st.subheader("Investigación de Mercado Dinámica (Unificada)")
+            c1, c2, c3 = st.columns(3)
+            brands = get_unique_brands(supabase)
+            s_brand = c1.selectbox("1. Marca", [""] + brands, key="m2_brand")
+            if s_brand:
+                models = get_models_by_brand(supabase, s_brand)
+                s_model = c2.selectbox("2. Modelo", [""] + models, key="m2_model")
+                if s_model:
+                    years = get_years_by_model(supabase, s_brand, s_model)
+                    s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m2_year")
+                    
+                    st.write("---")
+                    url_input_v2 = st.text_input("URL del Lead (Opcional)", placeholder="https://neoauto.com/auto/usado/...", key="m2_url")
+                    
+                    if s_year:
+                        if st.button("Analizar Mercado V2", type="primary", use_container_width=True):
+                            # VALIDACION AGUAS ARRIBA
+                            lead_data = None
+                            abort_analysis = False
+                            
+                            if url_input_v2:
+                                with st.spinner("Validando Lead..."):
+                                    resp = supabase.table("autos_detalles").select("*").eq("URL", url_input_v2).execute()
+                                    if resp.data:
+                                        lead_data = resp.data[0]
+                                        real_year = extract_year_from_url(url_input_v2)
+                                        l_year = real_year if real_year > 0 else (int(lead_data.get("Year")) if lead_data.get("Year") else 0)
+                                        
+                                        # OPCION A: BLOQUEO ESTRICTO
+                                        if lead_data.get("Make") != s_brand or lead_data.get("Model") != s_model or str(l_year) != s_year:
+                                            st.error(f"❌ Error: El link pertenece a un {lead_data.get('Make')} {lead_data.get('Model')} {l_year}, pero seleccionaste {s_brand} {s_model} {s_year}. Por favor corrige los selectores o el link.")
+                                            abort_analysis = True
+                                        else:
+                                            # Formatear lead_data para plot
+                                            lead_data['Price'] = float(lead_data.get("Price")) if lead_data.get("Price") else 0.0
+                                            lead_data['Kilometers'] = int(lead_data.get("Kilometers")) if lead_data.get("Kilometers") else 0
+                                            lead_data['Year'] = l_year
+                                    else:
+                                        st.error("❌ No se encontró información de este link en nuestra BD diaria.")
+                                        abort_analysis = True
+                            
+                            if not abort_analysis:
+                                data = fetch_market_data(supabase, s_brand, s_model, int(s_year))
+                                if data:
+                                    df_mkt = pd.DataFrame(data)
+                                    m1, m2, m3 = st.columns(3)
+                                    m1.metric("Precio Mediano", f"${df_mkt['Price'].median():,.0f}")
+                                    m2.metric("KM Mediano", f"{df_mkt['Kilometers'].median():,.0f}")
+                                    m3.metric("Muestra", len(df_mkt))
+                                    
+                                    # --- GRAFICO INTERACTIVO PLOTLY ---
+                                    import plotly.express as px
+                                    import plotly.graph_objects as go
+                                    
+                                    fig = px.scatter(
+                                        df_mkt, 
+                                        x="Kilometers", 
+                                        y="Price",
+                                        hover_data=["URL", "District"],
+                                        title=f"Distribución de Mercado: {s_brand} {s_model} ({s_year})",
+                                        labels={"Kilometers": "Kilometraje (KM)", "Price": "Precio ($)"},
+                                        template="plotly_white",
+                                        color="Price",
+                                        color_continuous_scale="Viridis"
+                                    )
+                                    med_price = df_mkt['Price'].median()
+                                    fig.add_hline(y=med_price, line_dash="dash", line_color="red", annotation_text="Mediana Mercado")
+                                    
+                                    # ESTRELLA SI HAY LEAD
+                                    if lead_data:
+                                        fig.add_trace(go.Scatter(
+                                            x=[lead_data['Kilometers']],
+                                            y=[lead_data['Price']],
+                                            mode='markers',
+                                            marker=dict(symbol='star', size=24, color='orange', line=dict(width=2, color='DarkSlateGrey')),
+                                            name='LEAD ANALIZADO',
+                                            hoverinfo='text',
+                                            hovertext=f"Precio: ${lead_data['Price']}<br>KM: {lead_data['Kilometers']}"
+                                        ))
+                                    
+                                    st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    # ALGORITMO VEREDICTO SI HAY LEAD
+                                    if lead_data:
+                                        df_m = df_mkt.dropna(subset=['Price'])
+                                        count = len(df_m)
+                                        
+                                        t_price = lead_data['Price']
+                                        pct_diff = ((t_price - med_price) / med_price) * 100 if med_price > 0 else 0
+                                        color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
+                                        verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
+                                        dif_text = f"Ahorro: ${(med_price - t_price):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_price - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
+                                        
+                                        st.success(f"Análisis completado para {s_brand} {s_model} {s_year}")
+                                        
+                                        res_col1, res_col2, res_col3 = st.columns(3)
+                                        res_col1.metric("Precio Lead", f"${t_price:,.0f}")
+                                        res_col2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
+                                        res_col3.metric("Diferencia (%)", f"{pct_diff:.1f}%", delta=f"{pct_diff:.1f}%", delta_color="inverse")
+                                        
+                                        html_res = f"""
+                                        <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                                            <h3 style="margin-top:0; color:{color};">{verdict}</h3>
+                                            <p style="font-size:1.2em;">Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano de mercado.</p>
+                                            <p style="font-size:1.1em; font-weight:bold;">{dif_text}</p>
+                                            <p style="color:#666;">Basado en una muestra de {count} vehículos similares encontrados.</p>
+                                        </div>
+                                        """
+                                        st.markdown(html_res, unsafe_allow_html=True)
+                                        
+                                        if st.button("🚀 Registrar Lead V2 en CRM", type="primary"):
+                                            try:
+                                                now = datetime.datetime.now().isoformat()
+                                                supabase.table("crm_contactos").upsert({
+                                                    "url": url_input_v2,
+                                                    "nombre_vendedor": "Lead Web Analizador",
+                                                    "telefono_whatsapp": "N/A",
+                                                    "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
+                                                    "fecha_actualizacion": now
+                                                }).execute()
+                                                st.success("¡Lead enviado al CRM correctamente!")
+                                                clear_crm_caches()
+                                            except Exception as e:
+                                                st.error(f"Error al registrar: {e}")
+                                    
+                                    pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
+                                    if pdf:
+                                        st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_V2_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf", key="dl_v2")
+                                    st.dataframe(df_mkt[['URL', 'Price', 'Kilometers', 'District']], use_container_width=True)
+                                else:
+                                    st.warning("No se encontraron datos para esta combinación.")
+
         return  # <- early return: no ejecutar el bloque CRM
 
     # === SECCIÓN CRM ===
