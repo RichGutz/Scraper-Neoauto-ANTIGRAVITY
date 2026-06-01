@@ -942,7 +942,7 @@ def main_app():
                                 <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_ar_b:,.2f} ({pct_ar_b:g}%)</span>
                             </div>
                             <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Richard Gutierrez</span>
+                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Rich Gutz</span>
                                 <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_rg_b:,.2f} ({pct_rg_b:g}%)</span>
                             </div>
                             <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
