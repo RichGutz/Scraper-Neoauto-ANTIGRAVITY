@@ -514,7 +514,14 @@ def main_app():
                     row_data["F. Compra"] = f_compra_str[:10] if f_compra_str else "N/A"
                     row_data["F. Venta"] = f_venta_str[:10] if f_venta_str else "N/A"
                     row_data["Días Stock"] = dias_stock
+                    pct_rg_db = float(gyp_data_row.get("porcentaje_richard") or 50.0)
+                    pct_ar_db = float(gyp_data_row.get("porcentaje_anny") or (100.0 - pct_rg_db))
+                    gan_rg = utilidad * (pct_rg_db / 100)
+                    gan_ar = utilidad * (pct_ar_db / 100)
+                    
                     row_data["Ganancia %"] = f"{pct_ganancia:.1f}%"
+                    row_data["Ganancias AR"] = f"${gan_ar:,.2f}"
+                    row_data["Ganancia RG"] = f"${gan_rg:,.2f}"
                     row_data["Ganancia USD"] = f"${utilidad:,.2f}"
                     row_data["_raw_f_venta"] = f_venta_str if f_venta_str else "1900-01-01"
 
@@ -552,7 +559,7 @@ def main_app():
                 editor_kwargs["column_order"] = [
                     "Seleccionar", "Vendedor", "Vehiculo", "Anio", "Distrito", 
                     "Precio", "P. Compra", "P. Venta", "Placa", "F. Compra", "F. Venta", 
-                    "Días Stock", "Ganancia %", "Ganancia USD"
+                    "Días Stock", "Ganancia %", "Ganancias AR", "Ganancia RG", "Ganancia USD"
                 ]
                 col_config["Precio"] = st.column_config.TextColumn("P. Anuncio")
                 col_config["P. Compra"] = st.column_config.TextColumn("P. Compra")
@@ -562,6 +569,8 @@ def main_app():
                 col_config["F. Venta"] = st.column_config.TextColumn("F. Venta")
                 col_config["Días Stock"] = st.column_config.TextColumn("Días Stock")
                 col_config["Ganancia %"] = st.column_config.TextColumn("Ganancia %")
+                col_config["Ganancias AR"] = st.column_config.TextColumn("Ganancias AR")
+                col_config["Ganancia RG"] = st.column_config.TextColumn("Ganancia RG")
                 col_config["Ganancia USD"] = st.column_config.TextColumn("Ganancia USD")
 
             # Grid Maestro Estilo Inandes
@@ -697,27 +706,37 @@ def main_app():
 
                     st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
                     
-                    # --- CAMPOS DE NOTARÍA Y VEHÍCULO ---
-                    st.markdown("##### Datos de Notaría y Vehículo")
-                    # Fila Compra + Placa
-                    nc1, nc2, nc3 = st.columns(3)
-                    with nc1:
-                        notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
-                    with nc2:
-                        def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
-                        fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
-                    with nc3:
-                        placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
+                    # --- CAMPOS DE NOTARÍA, VEHÍCULO Y DIVISIÓN GANANCIAS ---
+                    sec_col1, sec_col2 = st.columns([3, 1])
+                    
+                    with sec_col1:
+                        st.markdown("##### Datos de Notaría y Vehículo")
+                        # Fila Compra + Placa
+                        nc1, nc2, nc3 = st.columns(3)
+                        with nc1:
+                            notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
+                        with nc2:
+                            def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
+                            fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
+                        with nc3:
+                            placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
 
-                    # Fila Venta + Año
-                    nv1, nv2, nv3 = st.columns(3)
-                    with nv1:
-                        notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
-                    with nv2:
-                        def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
-                        fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
-                    with nv3:
-                        st.empty() 
+                        # Fila Venta + Año
+                        nv1, nv2, nv3 = st.columns(3)
+                        with nv1:
+                            notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
+                        with nv2:
+                            def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
+                            fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
+                        with nv3:
+                            st.empty() 
+                            
+                    with sec_col2:
+                        st.markdown("##### División de Ganancias")
+                        val_rg = float(g.get("porcentaje_richard", 50.0))
+                        pct_rg = st.number_input("% Richard", min_value=0.0, max_value=100.0, value=val_rg, step=1.0, key=f"prg_{lead['url']}")
+                        pct_ar = 100.0 - pct_rg
+                        st.number_input("% Anny", value=pct_ar, disabled=True, key=f"par_{lead['url']}")
 
                     st.divider()
                     
@@ -757,7 +776,9 @@ def main_app():
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
                                 "placa": placa.upper(),
-                                "anio": str(lead.get("Year", "N/A"))
+                                "anio": str(lead.get("Year", "N/A")),
+                                "porcentaje_richard": pct_rg,
+                                "porcentaje_anny": pct_ar
                             }
 
 
@@ -776,7 +797,10 @@ def main_app():
                                 if kn == "precio_venta": final_inc = subtotal
                                 else: final_exp += subtotal
                             
-                            gyp_payload["utilidad_neta_usd"] = round(final_inc - final_exp, 2)
+                            utilidad_neta = round(final_inc - final_exp, 2)
+                            gyp_payload["utilidad_neta_usd"] = utilidad_neta
+                            gyp_payload["ganancia_richard"] = round(utilidad_neta * (pct_rg / 100), 2)
+                            gyp_payload["ganancia_anny"] = round(utilidad_neta * (pct_ar / 100), 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
                                 # Limpiar caché para reflejar cambios
@@ -882,13 +906,28 @@ def main_app():
                         bg_utilidad = "#e8f5e9" if utilidad >= 0 else "#ffebee"
                         border_utilidad = "#c8e6c9" if utilidad >= 0 else "#ffcdd2"
                         
+                        pct_rg_b = float(gyp_data_v.get("porcentaje_richard") or 50.0)
+                        pct_ar_b = float(gyp_data_v.get("porcentaje_anny") or (100.0 - pct_rg_b))
+                        gan_rg_b = utilidad * (pct_rg_b / 100)
+                        gan_ar_b = utilidad * (pct_ar_b / 100)
+                        
                         html_table = f"""
                         <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
                             {rows_html}
                         </table>
-                        <div style="background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center; margin-bottom: 15px;">
-                            <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Real</span>
-                            <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
+                        <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
+                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Anny Rojas</span>
+                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_ar_b:,.2f} ({pct_ar_b:g}%)</span>
+                            </div>
+                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
+                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Total</span>
+                                <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
+                            </div>
+                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
+                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Richard Gutierrez</span>
+                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_rg_b:,.2f} ({pct_rg_b:g}%)</span>
+                            </div>
                         </div>
                         <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
                         """
