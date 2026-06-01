@@ -9,14 +9,16 @@ import io
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.metadata.readonly']
 
+# Rutas dinámicas para que funcione tanto en Windows local como en Linux (Hostinger)
+G_DRIVE_UPLOADER_DIR = Path(__file__).resolve().parent
+BASE_DIR = G_DRIVE_UPLOADER_DIR.parent.parent # Sube a Scraper.Neoauto o /opt/crm_neoauto
+
 # Apuntamos a los tokens que ya existen en el scraper de Neoauto
-GOOGLE_DRIVE_DIR = Path("C:/Users/rguti/Scraper.Neoauto/google_drive")
+GOOGLE_DRIVE_DIR = BASE_DIR / "google_drive"
 CLIENT_SECRET_FILE = GOOGLE_DRIVE_DIR / 'client_secret.json'
 
-# El token lo guardaremos LOCALMENTE aquí para que no interfiera con el del Scraper,
-# y así forzaremos que te pida Iniciar Sesión con rgutil@gmail.com
-LOCAL_DIR = Path("C:/Users/rguti/Scraper.Neoauto/CRM-NEOAUTO/G_Drive_Uploader")
-TOKEN_FILE = LOCAL_DIR / 'token.json'
+# El token lo guardaremos LOCALMENTE aquí para que no interfiera con el del Scraper
+TOKEN_FILE = G_DRIVE_UPLOADER_DIR / 'token.json'
 
 def get_drive_service():
     """
