@@ -1020,14 +1020,6 @@ def main_app():
                             except:
                                 docs_list = []
                                 
-                        if docs_list:
-                            st.markdown("📄 **Archivos Subidos:**")
-                            for d in docs_list:
-                                st.markdown(f"- 📎 [{d.get('nombre')}]({d.get('link')}) <br> <span style='font-size:0.75rem; color:#888;'>Categoría: {d.get('categoria')}</span>", unsafe_allow_html=True)
-                        else:
-                            st.info("No hay documentos subidos aún.")
-                            
-                        st.markdown("---")
                         st.write("⬆️ **Subir Nuevos Documentos**")
                         
                         cat_options = ["Fotos", "Tarjeta De propiedad", "Testimonio de Compra", "Testimonio de Venta", "RxH Anny Rojas", "Constancia de Transferencia"]
@@ -1048,15 +1040,21 @@ def main_app():
                                                 if gd_path not in sys.path:
                                                     sys.path.append(gd_path)
                                                 from drive_api import get_drive_service, create_folder, upload_file
+                                                from drive_ui import render_drive_tree
                                                 
-
                                                 service = get_drive_service()
                                                 CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
                                                 
-                                                # Convención de nombres
-                                                fecha_venta = pd.Timestamp.now().strftime('%Y%m%d')
+                                                # Evitar duplicar carpeta madre por cambio de día (buscar por placa)
                                                 placa_id = lead['url'].split('-')[-1].upper()
-                                                folder_vehiculo = f"{fecha_venta}_{placa_id}"
+                                                query_exist = f"'{CRM_ROOT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and name contains '{placa_id}' and trashed=false"
+                                                res_exist = service.files().list(q=query_exist, spaces='drive', fields='files(id, name)', supportsAllDrives=True).execute()
+                                                
+                                                if res_exist.get('files'):
+                                                    folder_vehiculo = res_exist.get('files')[0]['name']
+                                                else:
+                                                    fecha_venta = pd.Timestamp.now().strftime('%Y%m%d')
+                                                    folder_vehiculo = f"{fecha_venta}_{placa_id}"
                                                 
                                                 succ_p, parent_id = create_folder(service, CRM_ROOT_FOLDER_ID, folder_vehiculo)
                                                 if succ_p:
@@ -1099,6 +1097,26 @@ def main_app():
                                                     st.error("Error creando carpeta padre.")
                                             except Exception as e:
                                                 st.error(f"Error en la subida: {e}")
+                                                
+                    # ============================================================
+                    # EXPLORADOR DE DRIVE EN VIVO (Fuera de las 3 columnas, pero dentro de "Vendido")
+                    # ============================================================
+                    try:
+                        import sys
+                        import os
+                        gd_path = os.path.join(os.path.dirname(__file__), "G_Drive_Uploader")
+                        if gd_path not in sys.path:
+                            sys.path.append(gd_path)
+                        from drive_api import get_drive_service
+                        from drive_ui import render_drive_tree
+                        
+                        service = get_drive_service()
+                        CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
+                        placa_id = lead['url'].split('-')[-1].upper()
+                        # Se pasa solo la placa_id como hint, el arbol internamente busca por contiene placa_id
+                        render_drive_tree(service, placa_id, CRM_ROOT_FOLDER_ID, key_prefix=f"dt_{placa_id}")
+                    except Exception as e:
+                        st.error(f"No se pudo cargar el explorador de Drive: {e}")
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
