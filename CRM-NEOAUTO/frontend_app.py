@@ -1029,7 +1029,11 @@ def main_app():
                             col_target = col_doc1 if idx_cat % 2 == 0 else col_doc2
                             with col_target:
                                 with st.expander(f"➕ {cat}"):
-                                    uploaded_files = st.file_uploader(f"Arrastra aquí", accept_multiple_files=True, key=f"up_{cat}_{lead['url']}")
+                                    up_key_name = f"up_key_{cat}_{lead['url']}"
+                                    if up_key_name not in st.session_state:
+                                        st.session_state[up_key_name] = 0
+                                    dynamic_key = f"up_{cat}_{lead['url']}_{st.session_state[up_key_name]}"
+                                    uploaded_files = st.file_uploader(f"Arrastra aquí", accept_multiple_files=True, key=dynamic_key)
                                 if uploaded_files:
                                     if st.button("Subir a Drive", type="primary", key=f"btn_{cat}_{lead['url']}"):
                                         with st.spinner(f"Subiendo {len(uploaded_files)} archivo(s) a Drive..."):
@@ -1046,7 +1050,7 @@ def main_app():
                                                 CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
                                                 
                                                 # Evitar duplicar carpeta madre por cambio de día (buscar por placa)
-                                                placa_id = lead['url'].split('-')[-1].upper()
+                                                placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
                                                 query_exist = f"'{CRM_ROOT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and name contains '{placa_id}' and trashed=false"
                                                 res_exist = service.files().list(q=query_exist, spaces='drive', fields='files(id, name)', supportsAllDrives=True).execute()
                                                 
@@ -1089,6 +1093,8 @@ def main_app():
                                                         # Update Supabase
                                                         supabase.table("crm_gyp").update({"documentos": nuevos_docs}).eq("lead_url", lead['url']).execute()
                                                         clear_crm_caches()
+                                                        # Reset Uploader Key to hide files and button
+                                                        st.session_state[up_key_name] += 1
                                                         st.success(f"¡{len(uploaded_files)} archivo(s) subidos exitosamente!")
                                                         st.rerun()
                                                     else:
@@ -1112,7 +1118,7 @@ def main_app():
                         
                         service = get_drive_service()
                         CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
-                        placa_id = lead['url'].split('-')[-1].upper()
+                        placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
                         # Se pasa solo la placa_id como hint, el arbol internamente busca por contiene placa_id
                         render_drive_tree(service, placa_id, CRM_ROOT_FOLDER_ID, key_prefix=f"dt_{placa_id}")
                     except Exception as e:
