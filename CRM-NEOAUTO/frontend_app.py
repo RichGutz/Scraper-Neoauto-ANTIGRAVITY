@@ -942,12 +942,12 @@ def main_app():
                                 <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_ar_b:,.2f} ({pct_ar_b:g}%)</span>
                             </div>
                             <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Total</span>
-                                <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
-                            </div>
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
                                 <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Richard Gutierrez</span>
                                 <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_rg_b:,.2f} ({pct_rg_b:g}%)</span>
+                            </div>
+                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
+                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Total</span>
+                                <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
                             </div>
                         </div>
                         <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
@@ -1030,11 +1030,14 @@ def main_app():
                         st.markdown("---")
                         st.write("⬆️ **Subir Nuevos Documentos**")
                         
-                        cat_options = ["Fotos", "Tarjeta De propiedad", "Testimonio de Compra", "Testimonio de Venta"]
+                        cat_options = ["Fotos", "Tarjeta De propiedad", "Testimonio de Compra", "Testimonio de Venta", "RxH Anny Rojas", "Constancia de Transferencia"]
                         
-                        for cat in cat_options:
-                            with st.expander(f"➕ {cat}"):
-                                uploaded_files = st.file_uploader(f"Arrastra los archivos de {cat} aquí", accept_multiple_files=True, key=f"up_{cat}_{lead['url']}")
+                        col_doc1, col_doc2 = st.columns(2)
+                        for idx_cat, cat in enumerate(cat_options):
+                            col_target = col_doc1 if idx_cat % 2 == 0 else col_doc2
+                            with col_target:
+                                with st.expander(f"➕ {cat}"):
+                                    uploaded_files = st.file_uploader(f"Arrastra aquí", accept_multiple_files=True, key=f"up_{cat}_{lead['url']}")
                                 if uploaded_files:
                                     if st.button("Subir a Drive", type="primary", key=f"btn_{cat}_{lead['url']}"):
                                         with st.spinner(f"Subiendo {len(uploaded_files)} archivo(s) a Drive..."):
