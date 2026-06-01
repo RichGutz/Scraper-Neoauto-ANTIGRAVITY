@@ -1065,15 +1065,20 @@ def main_app():
                                                     
                                                     if succ_s:
                                                         nuevos_docs = list(docs_list)
+                                                        existing_count = sum(1 for d in docs_list if d.get("categoria") == cat)
+                                                        
                                                         for f_idx, up_file in enumerate(uploaded_files):
                                                             f_bytes = up_file.getvalue()
                                                             f_ext = up_file.name.split(".")[-1]
                                                             if "Testimonio" in cat:
-                                                                new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{f_idx+1}.{f_ext}"
+                                                                new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
                                                             elif cat == "Fotos":
-                                                                new_name = f"{folder_vehiculo}_FOTO{f_idx+1}.{f_ext}"
+                                                                new_name = f"{folder_vehiculo}_FOTO{existing_count + f_idx + 1}.{f_ext}"
                                                             else:
-                                                                new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}.{f_ext}"
+                                                                if existing_count + f_idx > 0:
+                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
+                                                                else:
+                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}.{f_ext}"
                                                                 
                                                             succ_u, f_resp = upload_file(service, f_bytes, new_name, sub_id, mime_type=up_file.type)
                                                             if succ_u:
