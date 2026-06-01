@@ -1045,8 +1045,8 @@ def main_app():
                                                 if gd_path not in sys.path:
                                                     sys.path.append(gd_path)
                                                 from drive_api import get_drive_service, create_folder, upload_file
-                                                import pandas as pd
                                                 
+
                                                 service = get_drive_service()
                                                 CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
                                                 
