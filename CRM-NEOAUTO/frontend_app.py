@@ -450,6 +450,9 @@ def main_app():
             # Preparar Grilla con datos enriquecidos
             grid_data = []
             ganancia_total_acumulada = 0.0
+            ganancia_ar_acumulada = 0.0
+            ganancia_rg_acumulada = 0.0
+            p_compra_total_acumulado = 0.0
             
             for index, row in state_df.iterrows():
                 tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
@@ -519,6 +522,10 @@ def main_app():
                     gan_rg = utilidad * (pct_rg_db / 100)
                     gan_ar = utilidad * (pct_ar_db / 100)
                     
+                    ganancia_ar_acumulada += gan_ar
+                    ganancia_rg_acumulada += gan_rg
+                    p_compra_total_acumulado += p_compra_total
+                    
                     row_data["Ganancia %"] = f"{pct_ganancia:.1f}%"
                     row_data["Ganancias AR"] = f"${gan_ar:,.2f}"
                     row_data["Ganancia RG"] = f"${gan_rg:,.2f}"
@@ -577,10 +584,26 @@ def main_app():
             edited_df = st.data_editor(**editor_kwargs)
             
             if estado == "Estado 6: Vendido":
+                pct_acumulado = (ganancia_total_acumulada / p_compra_total_acumulado * 100) if p_compra_total_acumulado > 0 else 0.0
                 st.markdown(f'''
                 <br>
-                <div style="text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <h2 style="color:#2e7d32; margin:0;">💰 GANANCIA TOTAL ACUMULADA: ${ganancia_total_acumulada:,.2f}</h2>
+                <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px;">
+                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
+                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Anny</span>
+                        <h3 style="color:#2e7d32; margin:0;">${ganancia_ar_acumulada:,.2f}</h3>
+                    </div>
+                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
+                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Richard</span>
+                        <h3 style="color:#2e7d32; margin:0;">${ganancia_rg_acumulada:,.2f}</h3>
+                    </div>
+                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
+                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Total</span>
+                        <h3 style="color:#2e7d32; margin:0;">${ganancia_total_acumulada:,.2f}</h3>
+                    </div>
+                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
+                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Rentabilidad</span>
+                        <h3 style="color:#2e7d32; margin:0;">{pct_acumulado:.1f}%</h3>
+                    </div>
                 </div>
                 ''', unsafe_allow_html=True)
             
@@ -735,8 +758,6 @@ def main_app():
                         st.markdown("##### División de Ganancias")
                         val_rg = float(g.get("porcentaje_richard", 50.0))
                         pct_rg = st.number_input("% Richard", min_value=0.0, max_value=100.0, value=val_rg, step=1.0, key=f"prg_{lead['url']}")
-                        pct_ar = 100.0 - pct_rg
-                        st.number_input("% Anny", value=pct_ar, disabled=True, key=f"par_{lead['url']}")
 
                     st.divider()
                     
@@ -778,7 +799,7 @@ def main_app():
                                 "placa": placa.upper(),
                                 "anio": str(lead.get("Year", "N/A")),
                                 "porcentaje_richard": pct_rg,
-                                "porcentaje_anny": pct_ar
+                                "porcentaje_anny": 100.0 - pct_rg
                             }
 
 
@@ -799,8 +820,8 @@ def main_app():
                             
                             utilidad_neta = round(final_inc - final_exp, 2)
                             gyp_payload["utilidad_neta_usd"] = utilidad_neta
-                            gyp_payload["ganancia_richard"] = round(utilidad_neta * (pct_rg / 100), 2)
-                            gyp_payload["ganancia_anny"] = round(utilidad_neta * (pct_ar / 100), 2)
+                            gyp_payload["ganancia_richard"] = round(utilidad_neta * (pct_rg / 100.0), 2)
+                            gyp_payload["ganancia_anny"] = round(utilidad_neta * ((100.0 - pct_rg) / 100.0), 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
                                 # Limpiar caché para reflejar cambios
