@@ -282,7 +282,7 @@ def filter_data(df, filters):
     
     # Date logic
     print("Converting DateTime...")
-    df.loc[:, 'DateTime'] = pd.to_datetime(df['DateTime'], format='mixed', utc=True, errors='coerce')
+    df['DateTime'] = pd.to_datetime(df['DateTime'], format='mixed', utc=True, errors='coerce')
     df = df.dropna(subset=['DateTime'])
     try:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
@@ -301,8 +301,8 @@ def filter_data(df, filters):
 
     # 2. Complex Brand/Model Filter
     # Standardize cols
-    df.loc[:, 'Make'] = df['Make'].str.upper().str.strip()
-    df.loc[:, 'Model'] = df['Model'].str.upper().str.strip()
+    df['Make'] = df['Make'].str.upper().str.strip()
+    df['Model'] = df['Model'].str.upper().str.strip()
 
     if selected_map:
         # Build a boolean mask for all selected combinations

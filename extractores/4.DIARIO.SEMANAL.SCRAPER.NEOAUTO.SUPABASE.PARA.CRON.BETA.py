@@ -463,96 +463,114 @@ def run_scraping_session(table_name: str, sort_desc: bool = False):
     El bucle termina cuando el RPC no devuelve más URLs.
     VERSIÓN BETA: Incluye lógica de refresco de contexto para mitigar fugas de memoria.
     """
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        
-        def create_new_context_and_page():
-            """Crea un nuevo contexto y página para empezar desde un estado limpio."""
-            print("\n" + "-"*20 + " REFRESCANDO CONTEXTO DEL NAVEGADOR " + "-"*20)
-            user_agent = random.choice(USER_AGENTS)
-            print(f"Nuevo User-Agent: {user_agent.split(')')[0]}...)")
-            context = browser.new_context(
-                user_agent=user_agent,
-                viewport={"width": 1366, "height": 768}
-            )
-            page = context.new_page()
-            print("-"*66 + "\n")
-            return context, page
+    MAX_SESSION_RETRIES = 100
+    session_retries = 0
 
-        context, page = create_new_context_and_page()
-        output_dir = ensure_results_dir()
-
-        processed_count = 0
-        # Contador para refrescar el contexto del navegador
-        context_refresh_counter = 0
-        CONTEXT_REFRESH_THRESHOLD = 25 # Renovar contexto cada 25 URLs
-
-        while True:
-            # Lógica para refrescar el contexto y la página
-            if context_refresh_counter >= CONTEXT_REFRESH_THRESHOLD:
-                print(f"\n--- Alcanzado el umbral de {CONTEXT_REFRESH_THRESHOLD} URLs. Refrescando... ---")
-                page.close()
-                context.close()
-                context, page = create_new_context_and_page()
+    while session_retries < MAX_SESSION_RETRIES:
+        try:
+            print(f"\n[Sesión] Iniciando ciclo de navegador (Intento {session_retries + 1})")
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
                 
-                # Forzar recolección de basura
-                print("--- Forzando recolección de basura (gc.collect()) ---")
-                gc.collect()
-                
-                context_refresh_counter = 0 # Resetear contador
+                def create_new_context_and_page():
+                    """Crea un nuevo contexto y página para empezar desde un estado limpio."""
+                    print("\n" + "-"*20 + " REFRESCANDO CONTEXTO DEL NAVEGADOR " + "-"*20)
+                    user_agent = random.choice(USER_AGENTS)
+                    print(f"Nuevo User-Agent: {user_agent.split(')')[0]}...)")
+                    context = browser.new_context(
+                        user_agent=user_agent,
+                        viewport={"width": 1366, "height": 768}
+                    )
+                    page = context.new_page()
+                    print("-"*66 + "\n")
+                    return context, page
 
-            remaining_count = get_unprocessed_url_count(table_name)
-            print(f"URLs restantes en {table_name}: {remaining_count} | Procesadas en sesión: {processed_count} | Próximo refresco en: {CONTEXT_REFRESH_THRESHOLD - context_refresh_counter} URLs")
-
-            if remaining_count == 0:
-                print(f"No hay más URLs para procesar en {table_name}. Finalizando.")
-                break
-
-            url = get_next_url(table_name, sort_desc)
-
-            if not url:
-                print(f"No hay más URLs para procesar en {table_name}. Finalizando.")
-                break
-
-            if not url.startswith('https://neoauto.com/'):
-                print(f"URL inválida obtenida del RPC: {url}")
-                continue
-
-            try:
-                data = advanced_scraping(url, page)
-                
-                if data:
-                    origen = "diario" if table_name == "urls_autos_diarios" else "semanal"
-                    output_file = output_dir / generate_output_filename(url, origen)
-                    with open(output_file, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, indent=4, ensure_ascii=False)
-                    print(f"Datos guardados en: {output_file}")
-                    processed_count += 1
-                    context_refresh_counter += 1
-                else:
-                    print(f"Scraping falló para {url}. Se considera procesada.")
-                    context_refresh_counter += 1
-
-                time.sleep(random.uniform(2, 5))
-
-            except Exception as e:
-                print(f"\nERROR MAYOR en el bucle de procesamiento para {url}: {e}")
-                print("--- Un error grave puede indicar un contexto corrupto. Refrescando inmediatamente. ---")
                 try:
-                    page.close()
-                    context.close()
-                except Exception as close_err:
-                    print(f"Error al cerrar contexto/página durante manejo de error: {close_err}")
+                    context, page = create_new_context_and_page()
+                except Exception as e:
+                     print(f"Error creando contexto inicial: {e}")
+                     browser.close()
+                     continue
 
-                context, page = create_new_context_and_page()
-                gc.collect()
+                output_dir = ensure_results_dir()
+                processed_count = 0
                 context_refresh_counter = 0
-                continue
-        
-        print(f"\nSesión para {table_name} completada. Total de URLs procesadas: {processed_count}")
-        page.close()
-        context.close()
-        browser.close()
+                CONTEXT_REFRESH_THRESHOLD = 25 
+
+                # Flag para saber si salir del bucle principal de la función (cuando no hay más URLs)
+                finished_all_urls = False
+
+                while True:
+                    # Lógica para refrescar el contexto y la página
+                    if context_refresh_counter >= CONTEXT_REFRESH_THRESHOLD:
+                        print(f"\n--- Alcanzado el umbral de {CONTEXT_REFRESH_THRESHOLD} URLs. Refrescando... ---")
+                        try:
+                            page.close()
+                            context.close()
+                            context, page = create_new_context_and_page()
+                            gc.collect()
+                            context_refresh_counter = 0 
+                        except Exception as e:
+                            print(f"Error al refrescar contexto: {e}. Reiniciando navegador completo.")
+                            break # Rompe el while interno para reiniciar el browser
+
+                    remaining_count = get_unprocessed_url_count(table_name)
+                    # Solo imprimimos cada cierto tiempo o es mucho spam
+                    if processed_count % 5 == 0:
+                        print(f"URLs restantes en {table_name}: {remaining_count} | Procesadas en sesión: {processed_count}")
+
+                    if remaining_count == 0:
+                        print(f"No hay más URLs para procesar en {table_name}. Finalizando.")
+                        finished_all_urls = True
+                        break
+
+                    url = get_next_url(table_name, sort_desc)
+
+                    if not url:
+                        print(f"No hay más URLs para procesar en {table_name}. Finalizando.")
+                        finished_all_urls = True
+                        break
+
+                    if not url.startswith('https://neoauto.com/'):
+                        print(f"URL inválida obtenida del RPC: {url}")
+                        continue
+
+                    try:
+                        data = advanced_scraping(url, page)
+                        
+                        if data:
+                            origen = "diario" if table_name == "urls_autos_diarios" else "semanal"
+                            output_file = output_dir / generate_output_filename(url, origen)
+                            with open(output_file, 'w', encoding='utf-8') as f:
+                                json.dump(data, f, indent=4, ensure_ascii=False)
+                            print(f"Datos guardados en: {output_file}")
+                            processed_count += 1
+                            context_refresh_counter += 1
+                        else:
+                            print(f"Scraping falló para {url}. Se considera procesada.")
+                            context_refresh_counter += 1
+
+                        time.sleep(random.uniform(2, 5))
+
+                    except Exception as e:
+                        print(f"\nERROR MAYOR en el bucle de procesamiento para {url}: {e}")
+                        print("--- Un error grave indica problema con navegador. Reiniciando navegador completo. ---")
+                        # Romper el bucle interno para reinicializar todo el browser
+                        break 
+                
+                # Fuera del while True interno
+                browser.close()
+                if finished_all_urls:
+                    print(f"Finalizado procesamiento completo de {table_name}")
+                    return # Salimos de la función run_scraping_session
+
+        except Exception as e:
+            print(f"CRASH NAVEGADOR DETECTADO: {e}")
+            print("Reiniciando sesión completa de Playwright en 5 segundos...")
+            time.sleep(5)
+            session_retries += 1
+    
+    print("Se excedió el número máximo de reintentos de sesión.")
 
 def main():
     """Función principal para ejecución automática desde CRON."""

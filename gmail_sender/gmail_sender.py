@@ -223,7 +223,7 @@ def main():
             try:
                 sent_message = service_gmail.users().messages().send(userId='me', body=mensaje_final).execute()
                 logger.info(f"  SUCCESS. Email sent to {dest_info['email']}. Message ID: {sent_message['id']}. Subject: {new_subject}") # MODIFIED
-                mover_correo_a_papelera(service_gmail, sent_message['id'])
+                # mover_correo_a_papelera(service_gmail, sent_message['id'])
             except Exception as error:
                 logger.error(f"  ERROR sending email to {dest_info['email']}: {error}")
         logger.info(f"--- Send cycle {i + 1} finished ---")

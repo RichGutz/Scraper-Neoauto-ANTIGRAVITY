@@ -32,18 +32,38 @@ run_python_script() {
 }
 
 # --- Secuencia de Ejecución ---
-# --- Secuencia de Ejecución ---
-# run_python_script "extractores/1.SEMANAL.extractor_VCLI.py"  <-- OMITIDO (Funcionalidad integrada en V2)
-run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py" # <-- NUEVO EXTRACTOR V2
-# run_python_script "extractores/2.SEMANAL.car_urls_module_VCLI.py" <-- OMITIDO (Reemplazado por V2)
-run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
+echo "--> Comprobando si hay URLs pendientes de una ejecución previa..."
+PENDING_COUNT=$($PYTHON_EXEC -c "
+import os
+from dotenv import load_dotenv
+from supabase import create_client
+load_dotenv()
+try:
+    supabase = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_KEY'))
+    res = supabase.table('urls_autos_random').select('id', count='exact').or_('procesado.is.null,procesado.eq.false').execute()
+    print(res.count if res.count else 0)
+except Exception as e:
+    print(0)
+")
 
-# --- Ejecución del scraper (una sola instancia) ---
+# Limpiar espacios
+PENDING_COUNT=$(echo "$PENDING_COUNT" | tr -d '[:space:]')
+
+if [ -n "$PENDING_COUNT" ] && [ "$PENDING_COUNT" -gt 0 ]; then
+    echo "¡Se detectaron $PENDING_COUNT URLs pendientes en 'urls_autos_random'!"
+    echo "Reanudando el scraping directamente sin reiniciar la cola de URLs..."
+else
+    echo "Cola vacía o nueva ejecución. Iniciando desde cero..."
+    run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py"
+    run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
+fi
+
+
+# --- Ejecución del scraper (7 instancias en paralelo) ---
 echo ""
-echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
-SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
-$PYTHON_EXEC "$SCRIPT_TO_RUN"
-echo "--> Finalizada la instancia del scraper."
+echo "--> Ejecutando 7 instancias paralelas de SCRAPER.NEOAUTO..."
+$PYTHON_EXEC "parallel_launcher_semanal.py"
+echo "--> Finalizadas todas las instancias del scraper."
 # --- Fin de la ejecución ---
 
 run_python_script "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"

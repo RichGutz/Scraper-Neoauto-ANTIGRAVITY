@@ -112,15 +112,19 @@ class NeoAutoWeeklyScraper:
             found_slugs = set()
             
             # Estrategia 1: JSON Escapado
-            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo)/[^"]+)\\"', raw_html)
+            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo|seminuevo)/[^"]+)\\"', raw_html)
             found_slugs.update(slugs_json_escaped)
             
             # Estrategia 2: JSON Simple
-            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo)/[^"]+)"', raw_html)
+            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo|seminuevo)/[^"]+)"', raw_html)
             found_slugs.update(slugs_json_simple)
 
+            # Estrategia 2B: Nuevo JSON "url" simple
+            slugs_url_json = re.findall(r'"url":"https://neoauto.com(/auto/(?:usado|nuevo|seminuevo)/[^"]+)"', raw_html)
+            found_slugs.update(slugs_url_json)
+
             # Estrategia 3: HTML Anchor tags
-            hrefs_html = re.findall(r'href=["\'](/?auto/(?:usado|nuevo)/[^"\']+)["\']', raw_html)
+            hrefs_html = re.findall(r'href=["\'](?:https://neoauto.com)?(/auto/(?:usado|nuevo|seminuevo)/[^"\']+)["\']', raw_html)
             found_slugs.update(hrefs_html)
 
             # Normalizar
@@ -132,7 +136,7 @@ class NeoAutoWeeklyScraper:
                 
                 # Extraer marca de la URL para guardar metadata correcta
                 # Ejemplo: /auto/usado/volkswagen-amarok-2016-1859567 -> volkswagen
-                brand_match = re.search(r'/(?:usado|nuevo)/([a-z0-9]+)-', s)
+                brand_match = re.search(r'/(?:usado|nuevo|seminuevo)/([a-z0-9]+)-', s)
                 brand_in_url = brand_match.group(1) if brand_match else "unknown"
                 
                 full_url = f"https://neoauto.com{s}"

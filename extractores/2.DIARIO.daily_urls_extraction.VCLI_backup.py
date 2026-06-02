@@ -123,19 +123,15 @@ class NeoAutoDailyScraper:
             found_slugs = set()
             
             # Estrategia 1: JSON Escapado (Next.js props usualmente)
-            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo|seminuevo)/[^"]+)\\"', raw_html)
+            slugs_json_escaped = re.findall(r'\\"slug\\":\\"(/auto/(?:usado|nuevo)/[^"]+)\\"', raw_html)
             found_slugs.update(slugs_json_escaped)
             
             # Estrategia 2: JSON Simple (fallback)
-            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo|seminuevo)/[^"]+)"', raw_html)
+            slugs_json_simple = re.findall(r'"slug":"(/auto/(?:usado|nuevo)/[^"]+)"', raw_html)
             found_slugs.update(slugs_json_simple)
 
-            # Estrategia 2B: Nuevo JSON "url" simple
-            slugs_url_json = re.findall(r'"url":"https://neoauto.com(/auto/(?:usado|nuevo|seminuevo)/[^"]+)"', raw_html)
-            found_slugs.update(slugs_url_json)
-
             # Estrategia 3: HTML Anchor tags (Fallback a estructura clásica/SSR)
-            hrefs_html = re.findall(r'href=["\'](?:https://neoauto.com)?(/auto/(?:usado|nuevo|seminuevo)/[^"\']+)["\']', raw_html)
+            hrefs_html = re.findall(r'href=["\'](/?auto/(?:usado|nuevo)/[^"\']+)["\']', raw_html)
             found_slugs.update(hrefs_html)
 
             # Normalizar slugs (asegurar slash inicial)

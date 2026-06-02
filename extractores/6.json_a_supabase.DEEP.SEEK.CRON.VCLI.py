@@ -138,10 +138,19 @@ def validar_y_extraer_datos(json_data: Dict[str, Any], filename: str) -> Optiona
 
 def importar_json_a_supabase(filepath: str):
     """
-    Procesa un archivo JSON, lo inserta en Supabase y finalmente lo mueve a la carpeta de procesados.
+    Procesa un archivo JSON, lo inserta en Supabase (autos_detalles para semanal,
+    autos_detalles_diarios para diario) y finalmente lo mueve a la carpeta de procesados.
     """
     filename = os.path.basename(filepath)
     print(f"--- Iniciando procesamiento para: {filename} ---")
+
+    # Determinar dinámicamente la tabla destino basada en el prefijo del archivo
+    if filename.startswith('semanal_result_'):
+        table_name = 'autos_detalles'
+    elif filename.startswith('diario_result_'):
+        table_name = 'autos_detalles_diarios'
+    else:
+        table_name = SUPABASE_TABLE_NAME  # Fallback a la configurada por defecto
 
     try:
         # Paso 1: Leer y validar el archivo JSON
@@ -156,26 +165,15 @@ def importar_json_a_supabase(filepath: str):
         if data_to_insert is None:
             return
 
-        # Paso 2: Verificar si la URL ya existe en Supabase
-        url_to_check = data_to_insert['URL']
+        # Paso 2: Insertar los datos en Supabase (Sin chequeo de duplicados por URL)
         try:
-            response = supabase.from_(SUPABASE_TABLE_NAME).select("URL").eq("URL", url_to_check).execute()
+            response = supabase.from_(table_name).insert(data_to_insert).execute()
             if response.data:
-                print(f"URL '{url_to_check}' ya existe en Supabase. Omitiendo inserción.")
-                return
-        except Exception as e:
-            print(f"Error al verificar URL duplicada en Supabase para '{filename}': {e}")
-            return
-
-        # Paso 3: Insertar los datos en Supabase
-        try:
-            response = supabase.from_(SUPABASE_TABLE_NAME).insert(data_to_insert).execute()
-            if response.data:
-                print(f"Datos de '{filename}' insertados exitosamente.")
+                print(f"Datos de '{filename}' insertados exitosamente en '{table_name}'.")
             else:
-                print(f"Inserción de '{filename}' completada (la API no devolvió datos, lo cual es normal).")
+                print(f"Inserción de '{filename}' en '{table_name}' completada (la API no devolvió datos, lo cual es normal).")
         except Exception as e:
-            print(f"Error al insertar datos de '{filename}' en Supabase: {e}")
+            print(f"Error al insertar datos de '{filename}' en '{table_name}': {e}")
 
     finally:
         # Paso final: Mover el archivo a la carpeta de procesados

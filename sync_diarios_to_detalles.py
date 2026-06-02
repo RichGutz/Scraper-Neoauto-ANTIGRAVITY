@@ -64,17 +64,12 @@ def sync_data():
         batch = all_source_data[i:i+100]
         urls = [r['URL'] for r in batch]
         
-        # Consultar si estas URLs ya existen en el destino
-        existing_res = supabase.table(TARGET_TABLE).select("URL").in_("URL", urls).execute()
-        existing_urls = {r['URL'] for r in existing_res.data}
-        
         for record in batch:
-            if record['URL'] not in existing_urls:
-                # Limpiar el record (eliminar ID si es autoincremental en el destino)
-                clean_record = record.copy()
-                if 'id' in clean_record:
-                    del clean_record['id']
-                records_to_insert.append(clean_record)
+            # Limpiar el record (eliminar ID si es autoincremental en el destino)
+            clean_record = record.copy()
+            if 'id' in clean_record:
+                del clean_record['id']
+            records_to_insert.append(clean_record)
 
     print(f"Registros nuevos identificados: {len(records_to_insert)}")
 

@@ -267,21 +267,6 @@ class FilterDialog:
             messagebox.showerror("Error", "Por favor ingresa valores numéricos válidos.")
 
 def get_user_filters(data_summary):
-    import os
-    if os.name == 'posix' and not os.environ.get('DISPLAY'):
-        print("[INFO] Ejecución en cron/headless detectada (sin GUI). Usando filtros guardados.")
-        saved_filters = load_filters()
-        if saved_filters:
-            return saved_filters
-        current_year = datetime.now().year
-        return {
-            "km_max": 200000,
-            "year_min": current_year - 15,
-            "days_back": 30,
-            "selected_map": {},
-            "fuels": ["Diesel", "Gasolina", "GNV", "GLP", "Híbrido", "Eléctrico"]
-        }
-
     root = tk.Tk()
     # Center window - 2 columns layout
     window_width = 1000
