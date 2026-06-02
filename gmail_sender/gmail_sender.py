@@ -167,6 +167,8 @@ def mover_correo_a_papelera(service_gmail, message_id):
     except Exception as e:
         logger.error(f"Unexpected error while moving email '{message_id}' to trash: {e}")
 
+import argparse
+
 def main():
     parser = argparse.ArgumentParser(description="Script to send email reports.")
     parser.add_argument('--enviar-correos', action='store_true', help='Activates email sending.')
@@ -175,11 +177,15 @@ def main():
     parser.add_argument('--retardo-segundos', type=int, default=0, help='Delay in seconds between cycles.')
     parser.add_argument('--drive-link', type=str, help='Google Drive link to include in the email.', default=None) # NEW
     parser.add_argument('--pdf-path', type=str, help='Absolute path to the PDF file to attach.', default=None) # NEW PDF PATH
+    parser.add_argument('--send-audit', action='store_true', help='Sends the scraper audit report instead of leads.')
     args = parser.parse_args()
 
     logger.info("--- INITIATING EMAIL SENDER SCRIPT ---")
 
-    if not args.enviar_correos:
+    # compatibility check
+    enviar_correos_active = args.enviar_correos
+
+    if not enviar_correos_active:
         logger.info("Test mode: No emails will be sent. Use '--enviar-correos' to activate.")
         return
 
@@ -198,7 +204,18 @@ def main():
         script_dir = Path(__file__).parent
         outputs_dir = script_dir.parent / "outputs"
         today_str = datetime.date.today().strftime("%Y-%m-%d")
-        html_file_path = outputs_dir / f"gmail_attractive_leads_{today_str}.html"
+        
+        if args.send_audit:
+            html_file_path = outputs_dir / "scraper_audit_report.html"
+            new_subject = f"Auditoría de Salud - Scraper Semanal ({today_str})"
+            drive_link = None
+            pdf_path = None
+        else:
+            html_file_path = outputs_dir / f"gmail_attractive_leads_{today_str}.html"
+            new_subject = f"Lista de Leads Calientes {today_str}"
+            drive_link = args.drive_link
+            pdf_path = args.pdf_path
+            
         html_filename = html_file_path.name
         logger.info(f"Report file to send: {html_file_path}")
     except Exception as e:
@@ -212,17 +229,21 @@ def main():
     destinatarios_info = leer_destinatarios_y_asuntos(RECIPIENT_EMAILS_FILE)
     if not destinatarios_info: logger.critical("PROCESS STOPPED: No recipients found."); return
 
-    new_subject = f"Lista de Leads Calientes {html_filename}"
     logger.info(f"--- STARTING EMAIL SEND (Cycles: {args.ciclos}, Delay: {args.retardo_segundos}s) ---")
     for i in range(args.ciclos):
         logger.info(f"--- Starting send cycle {i + 1} of {args.ciclos} ---")
         for dest_info in destinatarios_info:
             logger.info(f"Preparing email for: {dest_info['email']}")
-            mensaje_final = crear_mensaje_email(dest_info['email'], new_subject, cuerpo_html, args.drive_link, args.pdf_path) # MODIFIED
-            logger.debug(f"Attempting to send email to {dest_info['email']} with subject: {new_subject}") # NEW
+            
+            subject_to_use = new_subject
+            if not args.send_audit and dest_info.get('subject'):
+                subject_to_use = dest_info['subject']
+                
+            mensaje_final = crear_mensaje_email(dest_info['email'], subject_to_use, cuerpo_html, drive_link, pdf_path) # MODIFIED
+            logger.debug(f"Attempting to send email to {dest_info['email']} with subject: {subject_to_use}") # NEW
             try:
                 sent_message = service_gmail.users().messages().send(userId='me', body=mensaje_final).execute()
-                logger.info(f"  SUCCESS. Email sent to {dest_info['email']}. Message ID: {sent_message['id']}. Subject: {new_subject}") # MODIFIED
+                logger.info(f"  SUCCESS. Email sent to {dest_info['email']}. Message ID: {sent_message['id']}. Subject: {subject_to_use}") # MODIFIED
                 # mover_correo_a_papelera(service_gmail, sent_message['id'])
             except Exception as error:
                 logger.error(f"  ERROR sending email to {dest_info['email']}: {error}")
@@ -235,3 +256,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

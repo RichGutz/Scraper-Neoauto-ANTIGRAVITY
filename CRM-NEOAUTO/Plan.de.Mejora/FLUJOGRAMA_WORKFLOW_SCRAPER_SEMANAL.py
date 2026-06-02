@@ -79,7 +79,7 @@ def generate_pdf_workflow_scraper_semanal():
             
             Procesador [label="🧮 Procesador TXT a JSON\\n(5.DIARIO.SEMANAL.Procesador...)\\nExtrae metadata y renombra a _procesado.txt", shape=rect, fillcolor="#C8E6C9"];
             LocalJson [label="📦 Archivos JSON (.json)\\n(extractores/results_json/)", shape=note, fillcolor="#E8F5E9"];
-            SupabaseUploader [label="📤 Carga a Supabase\\n(6.json_a_supabase...)\\nInserta datos y mueve JSON a PROCESADO", shape=rect, fillcolor="#C8E6C9"];
+            SupabaseUploader [label="📤 Carga a Supabase\\n(6.json_a_supabase...)\\nInserta datos, genera reporte de salud\\ny mueve JSON a PROCESADO", shape=rect, fillcolor="#C8E6C9"];
             
             SupabaseDB [label="🗄️ Supabase DB\\n(Tabla: autos_detalles)", shape=cylinder, fillcolor="#A5D6A7"];
             
@@ -117,6 +117,7 @@ def generate_pdf_workflow_scraper_semanal():
             
             DriveUploader [label="☁️ Drive Uploader\\n(google_drive/drive_uploader.py)\\nSube outputs y genera link público", shape=rect, fillcolor="#CFD8DC"];
             GmailSender [label="📧 Envió de Gmail\\n(gmail_sender/gmail_sender.py)\\nNotifica al correo con link de Drive", shape=rect, fillcolor="#CFD8DC"];
+            GmailAudit [label="📧 Envío de Auditoría\\n(gmail_sender/gmail_sender.py --send-audit)\\nNotifica salud y marcas en correo separado", shape=rect, fillcolor="#CFD8DC"];
             Shutdown [label="🔌 Apagado de Servidor\\n(shutdown -h now)", shape=ellipse, fillcolor="#FFCCBC"];
         }
 
@@ -124,7 +125,9 @@ def generate_pdf_workflow_scraper_semanal():
         ReportHTML -> DriveUploader [label="Sube reporte"];
         ModelPages -> DriveUploader [style="dotted"];
         DriveUploader -> GmailSender [label="Enlace público"];
-        GmailSender -> Shutdown [label="Fin exitoso de secuencia"];
+        GmailSender -> GmailAudit [label="Siguiente paso"];
+        SupabaseUploader -> GmailAudit [label="Lee html de salud", style="dotted", color="#78909c"];
+        GmailAudit -> Shutdown [label="Fin de secuencia"];
     }
     """
     

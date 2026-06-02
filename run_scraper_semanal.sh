@@ -87,7 +87,11 @@ SUBJECT="Reporte Semanal - $(date +'%Y-%m-%d')"
 $PYTHON_EXEC "$PROJECT_DIR/gmail_sender/gmail_sender.py" --enviar-correos --drive-link "$DRIVE_LINK"
 echo "Proceso de envío finalizado."
 
-
+# --- Envío de Correo de Auditoría de Salud ---
+echo ""
+echo "--> Enviando reporte de auditoría y salud del scraper (Gmail)..."
+$PYTHON_EXEC "$PROJECT_DIR/gmail_sender/gmail_sender.py" --enviar-correos --send-audit
+echo "Proceso de auditoría de salud finalizado."
 echo ""
 echo "=================================================="
 echo "SECUENCIA DE SCRAPING SEMANAL COMPLETADA"

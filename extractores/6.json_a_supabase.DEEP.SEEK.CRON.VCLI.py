@@ -136,6 +136,223 @@ def validar_y_extraer_datos(json_data: Dict[str, Any], filename: str) -> Optiona
 
     return mapped_data
 
+# --- Métricas de Auditoría ---
+stats = {
+    'total_procesados': 0,
+    'nuevos_insertados': 0,
+    'duplicados_omitidos': 0,
+    'errores': 0,
+    'marcas': {}
+}
+
+def generar_reporte_auditoria_html():
+    from datetime import datetime
+    today_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    total = stats['total_procesados']
+    health_status = "SALUDABLE" if total >= 2000 else "REVISIÓN REQUERIDA"
+    health_color = "#10b981" if total >= 2000 else "#f59e0b"
+    health_bg = "rgba(16, 185, 129, 0.1)" if total >= 2000 else "rgba(245, 158, 11, 0.1)"
+    
+    if total < 2000:
+        warning_msg = f"""
+        <div style="background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 25px; border-radius: 4px; color: #ef4444;">
+            <strong>⚠️ ADVERTENCIA DE VOLUMEN:</strong> Se procesaron solo {total:,} vehículos en esta sesión semanal. 
+            El volumen esperado de un lunes saludable es mayor a 2,000 vehículos. Por favor, verifica si la sesión se interrumpió o si hubo bloqueos de IP en Neoauto.
+        </div>
+        """
+    else:
+        warning_msg = ""
+
+    sorted_brands = sorted(stats['marcas'].items(), key=lambda x: x[1]['procesados'], reverse=True)
+    
+    table_rows = ""
+    for brand, b_stats in sorted_brands:
+        processed = b_stats['procesados']
+        inserted = b_stats['insertados']
+        omitidos = b_stats['omitidos']
+        errores = b_stats['errores']
+        
+        if errores > 0:
+            status_td = '<span style="color: #ef4444; font-weight: bold;">⚠️ Error</span>'
+        elif processed == 0:
+            status_td = '<span style="color: #6b7280;">Sin datos</span>'
+        else:
+            status_td = '<span style="color: #10b981; font-weight: bold;">✓ OK</span>'
+            
+        table_rows += f"""
+        <tr style="border-bottom: 1px solid #2d3748;">
+            <td style="padding: 12px; font-weight: bold; color: #e2e8f0;">{brand}</td>
+            <td style="padding: 12px; text-align: center; color: #a0aec0;">{processed:,}</td>
+            <td style="padding: 12px; text-align: center; color: #48bb78;">{inserted:,}</td>
+            <td style="padding: 12px; text-align: center; color: #4299e1;">{omitidos:,}</td>
+            <td style="padding: 12px; text-align: center; color: #f56565;">{errores:,}</td>
+            <td style="padding: 12px; text-align: center;">{status_td}</td>
+        </tr>
+        """
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoría de Salud - Scraper Semanal</title>
+    <style>
+        body {{
+            font-family: 'Outfit', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+        }}
+        .header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }}
+        .title h1 {{
+            font-size: 24px;
+            margin: 0;
+            color: #38bdf8;
+            font-weight: 700;
+        }}
+        .title p {{
+            font-size: 14px;
+            color: #94a3b8;
+            margin: 5px 0 0 0;
+        }}
+        .status-badge {{
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .grid {{
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }}
+        .card {{
+            background-color: #0f172a;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #334155;
+        }}
+        .card .value {{
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 5px;
+        }}
+        .card .label {{
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .table-container {{
+            margin-top: 25px;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }}
+        th {{
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 12px;
+            border-bottom: 2px solid #334155;
+        }}
+        tr:hover {{
+            background-color: #1e293b;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">
+                <h1>Reporte de Auditoría Scraper Semanal</h1>
+                <p>Fecha de ejecución: {today_str}</p>
+            </div>
+            <div class="status-badge" style="background-color: {health_bg}; color: {health_color}; border: 1px solid {health_color};">
+                {health_status}
+            </div>
+        </div>
+
+        {warning_msg}
+
+        <div class="grid">
+            <div class="card" style="border-top: 4px solid #38bdf8;">
+                <div class="label">Procesados</div>
+                <div class="value" style="color: #38bdf8;">{stats['total_procesados']:,}</div>
+            </div>
+            <div class="card" style="border-top: 4px solid #10b981;">
+                <div class="label">Nuevos</div>
+                <div class="value" style="color: #10b981;">{stats['nuevos_insertados']:,}</div>
+            </div>
+            <div class="card" style="border-top: 4px solid #3b82f6;">
+                <div class="label">Duplicados</div>
+                <div class="value" style="color: #3b82f6;">{stats['duplicados_omitidos']:,}</div>
+            </div>
+            <div class="card" style="border-top: 4px solid #ef4444;">
+                <div class="label">Errores</div>
+                <div class="value" style="color: #ef4444;">{stats['errores']:,}</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2 style="font-size: 18px; margin-bottom: 15px; color: #38bdf8; font-weight: 600;">Detalle por Marca</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Marca</th>
+                        <th>Total Procesados</th>
+                        <th>Nuevos Insertados</th>
+                        <th>Duplicados Omitidos</th>
+                        <th>Errores</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {table_rows}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #64748b;">
+            Sistema de Monitoreo Scraper-Neoauto. Generado automáticamente.
+        </div>
+    </div>
+</body>
+</html>
+"""
+    outputs_dir = Path(__file__).resolve().parent.parent / "outputs"
+    outputs_dir.mkdir(exist_ok=True)
+    report_path = outputs_dir / "scraper_audit_report.html"
+    report_path.write_text(html_content, encoding="utf-8")
+    print(f"Reporte de auditoría de salud generado en: {report_path}")
+
 def importar_json_a_supabase(filepath: str):
     """
     Procesa un archivo JSON, lo inserta en Supabase (autos_detalles para semanal,
@@ -143,6 +360,11 @@ def importar_json_a_supabase(filepath: str):
     """
     filename = os.path.basename(filepath)
     print(f"--- Iniciando procesamiento para: {filename} ---")
+    
+    global stats
+    stats['total_procesados'] += 1
+    
+    make_name = "Desconocido"
 
     # Determinar dinámicamente la tabla destino basada en el prefijo del archivo
     if filename.startswith('semanal_result_'):
@@ -159,21 +381,50 @@ def importar_json_a_supabase(filepath: str):
                 json_data = json.load(f)
         except Exception as e:
             print(f"Error al leer o parsear JSON en '{filename}': {e}")
+            stats['errores'] += 1
+            stats['marcas'].setdefault("Desconocido", {"procesados": 0, "insertados": 0, "omitidos": 0, "errores": 0})
+            stats['marcas']["Desconocido"]["errores"] += 1
+            stats['marcas']["Desconocido"]["procesados"] += 1
             return
 
         data_to_insert = validar_y_extraer_datos(json_data, filename)
         if data_to_insert is None:
+            stats['errores'] += 1
+            # Intentar extraer marca de la URL para registrar el error por marca
+            url_url = json_data.get('metadata', {}).get('url_anuncio')
+            if url_url:
+                datos_de_url = extraer_datos_de_url(url_url)
+                make_name = datos_de_url.get('Marca') or "Desconocido"
+            stats['marcas'].setdefault(make_name, {"procesados": 0, "insertados": 0, "omitidos": 0, "errores": 0})
+            stats['marcas'][make_name]["errores"] += 1
+            stats['marcas'][make_name]["procesados"] += 1
             return
 
-        # Paso 2: Insertar los datos en Supabase (Sin chequeo de duplicados por URL)
+        make_name = data_to_insert.get('Make') or "Desconocido"
+        make_name = make_name.strip().title()
+        
+        stats['marcas'].setdefault(make_name, {"procesados": 0, "insertados": 0, "omitidos": 0, "errores": 0})
+        stats['marcas'][make_name]["procesados"] += 1
+
+        # Paso 2: Insertar los datos en Supabase (Se confía en la restricción UNIQUE de la base de datos)
         try:
             response = supabase.from_(table_name).insert(data_to_insert).execute()
             if response.data:
                 print(f"Datos de '{filename}' insertados exitosamente en '{table_name}'.")
             else:
                 print(f"Inserción de '{filename}' en '{table_name}' completada (la API no devolvió datos, lo cual es normal).")
+            stats['nuevos_insertados'] += 1
+            stats['marcas'][make_name]["insertados"] += 1
         except Exception as e:
-            print(f"Error al insertar datos de '{filename}' en '{table_name}': {e}")
+            err_str = str(e)
+            if "duplicate key" in err_str or "already exists" in err_str or "unique constraint" in err_str:
+                print(f"URL ya existe en '{table_name}'. Omitiendo inserción (duplicado).")
+                stats['duplicados_omitidos'] += 1
+                stats['marcas'][make_name]["omitidos"] += 1
+            else:
+                print(f"Error al insertar datos de '{filename}' en '{table_name}': {e}")
+                stats['errores'] += 1
+                stats['marcas'][make_name]["errores"] += 1
 
     finally:
         # Paso final: Mover el archivo a la carpeta de procesados
@@ -209,3 +460,6 @@ if __name__ == "__main__":
             full_filepath = os.path.join(JSON_INPUT_FOLDER, json_file)
             importar_json_a_supabase(full_filepath)
         print("Proceso de importación finalizado.")
+    
+    # Generar reporte de auditoría siempre al finalizar (aunque sean 0 archivos)
+    generar_reporte_auditoria_html()
