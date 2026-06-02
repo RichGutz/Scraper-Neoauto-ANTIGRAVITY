@@ -66,7 +66,8 @@ def get_models_by_brand(_supabase: Client, brand: str):
         resp = _supabase.table("autos_detalles").select("Model").ilike("Make", f"{brand}%").execute()
         if not resp.data: return []
         df = pd.DataFrame(resp.data)
-        df['CleanModel'] = df['Model'].str.upper().str.strip()
+        # Normalizamos cambiando guiones por espacios para la vista del selectbox
+        df['CleanModel'] = df['Model'].str.upper().str.replace('-', ' ').str.replace('  ', ' ').str.strip()
         return sorted([str(m) for m in df['CleanModel'].dropna().unique().tolist()])
     except Exception as e:
         print(f"Error modelos: {e}")
@@ -76,18 +77,23 @@ def get_models_by_brand(_supabase: Client, brand: str):
 @st.cache_data(ttl=1800)
 def get_years_by_model(_supabase: Client, brand: str, model: str):
     try:
-        # Traemos URL para extraer el año real
-        resp = _supabase.table("autos_detalles").select("URL") \
+        # Traemos todos los de la marca para poder unificar las variantes del modelo (CX-9, CX 9, etc)
+        resp = _supabase.table("autos_detalles").select("Model, URL") \
             .ilike("Make", f"{brand}%") \
-            .ilike("Model", model) \
             .execute()
         if not resp.data: return []
         
+        def norm(m):
+            return str(m).upper().replace("-", "").replace(" ", "").strip() if m else ""
+            
+        target_model_norm = norm(model)
+        
         years = []
         for item in resp.data:
-            y = extract_year_from_url(item.get('URL', ''))
-            if y > 0:
-                years.append(y)
+            if norm(item.get('Model', '')) == target_model_norm:
+                y = extract_year_from_url(item.get('URL', ''))
+                if y > 0:
+                    years.append(y)
         
         return sorted(list(set(years)), reverse=True)
     except Exception as e:
@@ -98,22 +104,36 @@ def get_years_by_model(_supabase: Client, brand: str, model: str):
 @st.cache_data(ttl=1800)
 def fetch_market_data(_supabase: Client, brand: str, model: str, year: int):
     try:
-        # Traemos todos los datos para este modelo y filtramos por el año extraído de la URL
+        # Traemos todos los datos de la marca para no perder variaciones en el guion/espacio del modelo
         resp = _supabase.table("autos_detalles") \
             .select("*") \
             .ilike("Make", f"{brand}%") \
-            .ilike("Model", model) \
             .execute()
         
         if not resp.data: return []
         
-        # Filtrado manual por año extraído de URL
+        def norm(m):
+            return str(m).upper().replace("-", "").replace(" ", "").strip() if m else ""
+            
+        target_model_norm = norm(model)
+        
+        # Filtrado manual por modelo unificado y año extraído de URL
         filtered_data = []
         for item in resp.data:
-            if extract_year_from_url(item.get('URL', '')) == year:
-                filtered_data.append(item)
-                
-        return filtered_data
+            if norm(item.get('Model', '')) == target_model_norm:
+                if extract_year_from_url(item.get('URL', '')) == year:
+                    filtered_data.append(item)
+                    
+        if not filtered_data: return []
+        
+        # Eliminar duplicados manteniendo el escaneo más reciente (corrige kilometrajes 0 de escaneos antiguos)
+        df = pd.DataFrame(filtered_data)
+        if 'DateTime' in df.columns:
+            df = df.sort_values('DateTime').drop_duplicates('URL', keep='last')
+        else:
+            df = df.drop_duplicates('URL', keep='last')
+            
+        return df.to_dict('records')
     except Exception as e:
         print(f"Error data mercado: {e}")
         return []
