@@ -112,7 +112,7 @@ def fetch_leads():
         
         # 2. Obtener Detalles de Autos (para Marca, Modelo, Año, Distrito, Precio, KM)
         urls = [c['url'] for c in contacts]
-        resp_details = supabase.table("autos_detalles_diarios").select("URL, Make, Model, Year, District, Price, Kilometers, DateTime").in_("URL", urls).execute()
+        resp_details = supabase.table("autos_detalles_diarios").select("URL, Make, Model, Year, District, Price, Kilometers").in_("URL", urls).execute()
         details = resp_details.data
         
         # 3. Merge en Pandas
@@ -120,7 +120,6 @@ def fetch_leads():
         df_d = pd.DataFrame(details)
         
         if not df_d.empty:
-            df_d = df_d.sort_values(by='DateTime', ascending=True).drop_duplicates(subset=['URL'], keep='last')
             df_d = df_d.rename(columns={"URL": "url"})
             df_final = pd.merge(df_c, df_d, on="url", how="left")
         else:
@@ -135,24 +134,14 @@ def fetch_leads():
 # --- FUNCIONES GYP ---
 
 @st.cache_data(ttl=60) # Caché de 1 minuto para GyP
-def fetch_all_gyp():
-    """Trae todos los registros de crm_gyp y devuelve un dict indexado por lead_url."""
-    try:
-        res = supabase.table("crm_gyp").select("*").execute()
-        if res.data:
-            return {item["lead_url"]: item for item in res.data}
-        return {}
-    except Exception as e:
-        st.error(f"Error al leer GyP masivo: {e}")
-        return {}
-
 def fetch_gyp(lead_url):
-    """Obtiene el GyP de un lead desde la caché masiva."""
-    return fetch_all_gyp().get(lead_url, None)
-
-def clear_crm_caches():
-    fetch_leads.clear()
-    fetch_all_gyp.clear()
+    """Trae el registro de crm_gyp para un lead. Retorna dict o None."""
+    try:
+        res = supabase.table("crm_gyp").select("*").eq("lead_url", lead_url).execute()
+        return res.data[0] if res.data else None
+    except Exception as e:
+        st.error(f"Error al leer GyP: {e}")
+        return None
 
 
 def save_gyp(lead_url, payload):
@@ -209,7 +198,7 @@ def main_app():
     with col_r:
         st.markdown("<br>", unsafe_allow_html=True) # Alineación vertical
         if st.button("🔄 Recargar", use_container_width=True):
-            clear_crm_caches()
+            st.cache_data.clear()
             st.rerun()
             
     with col_l:
@@ -242,54 +231,21 @@ def main_app():
 
     # === SECCIÓN INVESTIGACIÓN (early return antes de crear tabs) ===
     if seccion == "Investigación":
-        st.subheader("Investigación de Mercado Dinámica")
-        c1, c2, c3, c4 = st.columns(4)
-        brands = get_unique_brands(supabase)
-        s_brand = c1.selectbox("1. Marca", [""] + brands, key="m2_brand")
-        if s_brand:
-            models = get_models_by_brand(supabase, s_brand)
-            s_model = c2.selectbox("2. Modelo", [""] + models, key="m2_model")
-            if s_model:
-                years = get_years_by_model(supabase, s_brand, s_model)
-                s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m2_year")
-                
-                url_input_v2 = c4.text_input("4. URL del Lead (Opcional)", placeholder="https://neoauto.com/auto/usado/...", key="m2_url")
-                
-                st.write("---")
-                
-                if s_year:
-                    if st.button("Analizar Mercado V2 (Genera PDF)", type="primary", use_container_width=True):
-                        # VALIDACION AGUAS ARRIBA
-                        lead_data = None
-                        abort_analysis = False
-                        
-                        if url_input_v2:
-                            with st.spinner("Validando Lead..."):
-                                resp = supabase.table("autos_detalles").select("*").eq("URL", url_input_v2).execute()
-                                if resp.data:
-                                    lead_data = resp.data[0]
-                                    real_year = extract_year_from_url(url_input_v2)
-                                    l_year = real_year if real_year > 0 else (int(lead_data.get("Year")) if lead_data.get("Year") else 0)
-                                    
-                                    # OPCION A: BLOQUEO ESTRICTO (Ignorando Mayúsculas/Minúsculas)
-                                    l_make = str(lead_data.get("Make", "")).strip().upper()
-                                    l_model = str(lead_data.get("Model", "")).strip().upper()
-                                    s_make = str(s_brand).strip().upper()
-                                    s_mod = str(s_model).strip().upper()
-                                    
-                                    if l_make != s_make or l_model != s_mod or str(l_year) != s_year:
-                                        st.error(f"❌ Error: El link pertenece a un {lead_data.get('Make')} {lead_data.get('Model')} {l_year}, pero seleccionaste {s_brand} {s_model} {s_year}. Por favor corrige los selectores o el link.")
-                                        abort_analysis = True
-                                    else:
-                                        # Formatear lead_data para plot
-                                        lead_data['Price'] = float(lead_data.get("Price")) if lead_data.get("Price") else 0.0
-                                        lead_data['Kilometers'] = int(lead_data.get("Kilometers")) if lead_data.get("Kilometers") else 0
-                                        lead_data['Year'] = l_year
-                                else:
-                                    st.error("❌ No se encontró información de este link en nuestra BD diaria.")
-                                    abort_analysis = True
-                        
-                        if not abort_analysis:
+        inv_tab, lead_tab = st.tabs(["Mercado", "LEAD NEOAUTO"])
+
+        with inv_tab:
+            st.subheader("Investigación de Mercado Dinámica")
+            c1, c2, c3 = st.columns(3)
+            brands = get_unique_brands(supabase)
+            s_brand = c1.selectbox("1. Marca", [""] + brands, key="m_brand")
+            if s_brand:
+                models = get_models_by_brand(supabase, s_brand)
+                s_model = c2.selectbox("2. Modelo", [""] + models, key="m_model")
+                if s_model:
+                    years = get_years_by_model(supabase, s_brand, s_model)
+                    s_year = c3.selectbox("3. Año", [""] + [str(y) for y in years], key="m_year")
+                    if s_year:
+                        if st.button("Analizar Mercado", type="primary"):
                             data = fetch_market_data(supabase, s_brand, s_model, int(s_year))
                             if data:
                                 df_mkt = pd.DataFrame(data)
@@ -298,36 +254,8 @@ def main_app():
                                 m2.metric("KM Mediano", f"{df_mkt['Kilometers'].median():,.0f}")
                                 m3.metric("Muestra", len(df_mkt))
                                 
-                                # Preparar datos de comparación antes del gráfico si hay Lead
-                                med_price = df_mkt['Price'].median()
-                                if lead_data:
-                                    t_price = lead_data['Price']
-                                    pct_diff = ((t_price - med_price) / med_price) * 100 if med_price > 0 else 0
-                                    res_col1, res_col2, res_col3 = st.columns(3)
-                                    res_col1.metric("Precio Lead", f"${t_price:,.0f}")
-                                    res_col2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
-                                    res_col3.metric("Diferencia (%)", f"{pct_diff:.1f}%", delta=f"{pct_diff:.1f}%", delta_color="inverse")
-                                    
-                                    # ALGORITMO VEREDICTO SI HAY LEAD (UNA SOLA LINEA ARRIBA DEL GRAFICO)
-                                    df_m = df_mkt.dropna(subset=['Price'])
-                                    count = len(df_m)
-                                    color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
-                                    verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
-                                    dif_text = f"Ahorro: ${(med_price - t_price):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_price - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
-                                    
-                                    st.success(f"Análisis completado para {s_brand} {s_model} {s_year} - [Ver Anuncio Neoauto]({url_input_v2})")
-                                    
-                                    html_res = f"""
-                                    <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 15px; border-radius: 8px; margin-top: 10px; margin-bottom: 20px;">
-                                        <span style="font-size:1.1em;"><b>[{verdict}]</b> Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano. <b>{dif_text}</b>. (Basado en una muestra de {count} similares).</span>
-                                    </div>
-                                    """
-                                    st.markdown(html_res, unsafe_allow_html=True)
-                                
-                                # --- GRAFICO INTERACTIVO PLOTLY ---
+                                # --- GRÁFICO INTERACTIVO PLOTLY ---
                                 import plotly.express as px
-                                import plotly.graph_objects as go
-                                
                                 fig = px.scatter(
                                     df_mkt, 
                                     x="Kilometers", 
@@ -339,100 +267,110 @@ def main_app():
                                     color="Price",
                                     color_continuous_scale="Viridis"
                                 )
-                                fig.add_hline(y=med_price, line_dash="dash", line_color="red", annotation_text="Mediana Mercado")
-                                
-                                # ESTRELLA SI HAY LEAD
-                                if lead_data:
-                                    fig.add_trace(go.Scatter(
-                                        x=[lead_data['Kilometers']],
-                                        y=[lead_data['Price']],
-                                        mode='markers+text',
-                                        text=['LEAD ANALIZADO'],
-                                        textposition='middle right',
-                                        marker=dict(symbol='star', size=24, color='red'),
-                                        name='LEAD ANALIZADO',
-                                        showlegend=False,
-                                        hoverinfo='text',
-                                        hovertext=f"Precio: ${lead_data['Price']}<br>KM: {lead_data['Kilometers']}<br>URL: {url_input_v2}"
-                                    ))
-                                
+                                # Añadir línea de mediana de precio
+                                fig.add_hline(y=df_mkt['Price'].median(), line_dash="dash", line_color="red", annotation_text="Mediana Mercado")
                                 st.plotly_chart(fig, use_container_width=True)
-                                
-                                # FUSION: Auto-Descarga del Reporte HTML Interactivo
-                                import base64
-                                
-                                # Generar contenido HTML dinámico
-                                html_content = f"""
-                                <html>
-                                <head>
-                                    <meta charset="utf-8">
-                                    <title>Reporte Mercado: {s_brand} {s_model} {s_year}</title>
-                                    <style>
-                                        body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
-                                        .verdict {{ background-color: #f8f9fa; border-left: 10px solid {color if lead_data else '#ccc'}; padding: 15px; border-radius: 8px; margin: 20px 0; }}
-                                        table {{ border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }}
-                                        th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
-                                        th {{ background-color: #1a3a5a; color: white; }}
-                                        tr:nth-child(even) {{ background-color: #f2f2f2; }}
-                                        a {{ color: #0066cc; text-decoration: none; font-weight: bold; }}
-                                    </style>
-                                </head>
-                                <body>
-                                    <h2>Investigación de Mercado: {s_brand} {s_model} ({s_year})</h2>
-                                    <p><b>Muestra:</b> {len(df_mkt)} unidades | <b>Precio Mediano:</b> ${med_price:,.0f} | <b>KM Mediano:</b> {df_mkt['Kilometers'].median():,.0f}</p>
-                                """
-                                
-                                if lead_data:
-                                    html_content += f"""
-                                    <div class="verdict">
-                                        <span style="font-size:1.2em;"><b>[{verdict}]</b> Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano. <b>{dif_text}</b>.</span><br><br>
-                                        <a href="{url_input_v2}" target="_blank">🔗 Ver Anuncio Original en Neoauto</a>
-                                    </div>
-                                    """
-                                    
-                                html_content += "<h3>Gráfico de Dispersión (Interactivo)</h3>"
-                                html_content += fig.to_html(full_html=False, include_plotlyjs='cdn')
-                                
-                                html_content += "<h3>Inventario de Mercado (Ordenado por Precio)</h3>"
-                                df_html = df_mkt[['URL', 'Price', 'Kilometers', 'District']].copy()
-                                df_html = df_html.sort_values(by='Price', ascending=False)
-                                df_html.insert(0, 'N°', range(1, len(df_html) + 1))
-                                df_html['URL'] = df_html['URL'].apply(lambda x: f'<a href="{x}" target="_blank">Abrir Link</a>')
-                                df_html['Price'] = df_html['Price'].apply(lambda x: f"${x:,.0f}")
-                                df_html['Kilometers'] = df_html['Kilometers'].apply(lambda x: f"{x:,.0f} km")
-                                html_content += df_html.to_html(escape=False, index=False)
-                                
-                                html_content += "</body></html>"
-                                
-                                b64 = base64.b64encode(html_content.encode('utf-8')).decode()
-                                href = f'<a id="auto-download" href="data:text/html;base64,{b64}" download="Mercado_{s_brand}_{s_model}_{s_year}.html"></a>'
-                                js = f"{href}<script>document.getElementById('auto-download').click();</script>"
-                                import streamlit.components.v1 as components
-                                components.html(js, height=0, width=0)
-                                st.toast("Reporte HTML Dinámico Generado y Descargando...", icon="🌐")
-                                
-                                # Tabla Expandida sin Scroll, ordenada DESC por precio, formateada
-                                df_sorted = df_mkt[['URL', 'Price', 'Kilometers', 'District']].copy()
-                                df_sorted = df_sorted.sort_values(by='Price', ascending=False)
-                                df_sorted.insert(0, 'N°', range(1, len(df_sorted) + 1))
-                                # Forzamos enteros para evitar decimales en Streamlit
-                                df_sorted['Price'] = df_sorted['Price'].fillna(0).astype(int)
-                                df_sorted['Kilometers'] = df_sorted['Kilometers'].fillna(0).astype(int)
-                                
-                                st.dataframe(
-                                    df_sorted,
-                                    use_container_width=True,
-                                    hide_index=True,
-                                    column_config={
-                                        "N°": st.column_config.NumberColumn("N°", format="%d"),
-                                        "URL": st.column_config.LinkColumn("Enlace", display_text="🔗 Ver Aviso"),
-                                        "Price": st.column_config.NumberColumn("Precio ($)", format="%d"),
-                                        "Kilometers": st.column_config.NumberColumn("Kilómetros", format="%d")
-                                    }
-                                )
+
+                                pdf = create_pdf_report(df_mkt, s_brand, s_model, int(s_year))
+                                if pdf:
+                                    st.download_button("📄 Bajar Reporte PDF", pdf, f"Mercado_{s_brand}_{s_model}_{s_year}.pdf", "application/pdf")
+                                st.dataframe(df_mkt[['URL', 'Price', 'Kilometers', 'District']], use_container_width=True)
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
 
+        with lead_tab:
+            st.subheader("Análisis de Lead Neoauto")
+            st.write("Ingresa el link de Neoauto para analizar el precio contra el mercado actual.")
+            
+            url_input = st.text_input("URL de Neoauto", placeholder="https://neoauto.com/auto/usado/...")
+            
+            if st.button("Analizar Lead", type="primary", use_container_width=True):
+                if not url_input:
+                    st.error("Por favor ingresa una URL válida.")
+                else:
+                    with st.spinner("Analizando vehículo..."):
+                        # 1. Intentar buscar en la base de datos maestra (autos_detalles)
+                        resp = supabase.table("autos_detalles").select("*").eq("URL", url_input).execute()
+                        
+                        if resp.data:
+                            data = resp.data[0]
+                            real_year = extract_year_from_url(url_input)
+                            
+                            t_data = {
+                                "Make": data.get("Make"),
+                                "Model": data.get("Model"),
+                                "Year": real_year if real_year > 0 else (int(data.get("Year")) if data.get("Year") else 0),
+                                "Price": float(data.get("Price")) if data.get("Price") else 0.0,
+                                "Kilometers": int(data.get("Kilometers")) if data.get("Kilometers") else 0
+                            }
+                            
+                            # 2. Consultar Mercado en la tabla maestra (filtrando luego por año de URL)
+                            query = supabase.table("autos_detalles") \
+                                        .select("*") \
+                                        .eq("Make", t_data['Make']) \
+                                        .eq("Model", t_data['Model'])
+                            
+                            mkt_resp = query.execute()
+                            
+                            # Filtrar mercado por año real de URL
+                            filtered_mkt = []
+                            for m in mkt_resp.data:
+                                if extract_year_from_url(m.get('URL', '')) == t_data['Year']:
+                                    filtered_mkt.append(m)
+                                    
+                            df_m = pd.DataFrame(filtered_mkt)
+                            
+                            if not df_m.empty:
+                                df_m['Price'] = pd.to_numeric(df_m['Price'], errors='coerce')
+                                df_m['Kilometers'] = pd.to_numeric(df_m['Kilometers'], errors='coerce')
+                                df_m = df_m.dropna(subset=['Price'])
+                                
+                                med_price = df_m['Price'].median()
+                                med_km = df_m['Kilometers'].median()
+                                count = len(df_m)
+                                
+                                pct_diff = ((t_data['Price'] - med_price) / med_price) * 100 if med_price > 0 else 0
+                                color = "#28a745" if pct_diff < -5 else "#dc3545" if pct_diff > 5 else "#17a2b8"
+                                verdict = "BUEN TRATO" if pct_diff < -5 else "MAL TRATO" if pct_diff > 5 else "TRATO JUSTO"
+                                dif_text = f"Ahorro: ${(med_price - t_data['Price']):,.0f}" if pct_diff < -5 else f"Sobreprecio: ${(t_data['Price'] - med_price):,.0f}" if pct_diff > 5 else "Precio Acorde"
+                                
+                                st.success(f"Análisis completado para {t_data['Make']} {t_data['Model']} {t_data['Year']}")
+                                
+                                # UI de Resultado Estilo Richard
+                                res_col1, res_col2, res_col3 = st.columns(3)
+                                res_col1.metric("Precio Lead", f"${t_data['Price']:,.0f}")
+                                res_col2.metric("Precio Mercado (Mediana)", f"${med_price:,.0f}")
+                                res_col3.metric("Diferencia (%)", f"{pct_diff:.1f}%", delta=f"{pct_diff:.1f}%", delta_color="inverse")
+                                
+                                html_res = f"""
+                                <div style="background-color: #f8f9fa; border-left: 10px solid {color}; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                                    <h3 style="margin-top:0; color:{color};">{verdict}</h3>
+                                    <p style="font-size:1.2em;">Este vehículo está <b>{abs(pct_diff):.1f}%</b> {'por debajo' if pct_diff < 0 else 'por encima'} del precio mediano de mercado.</p>
+                                    <p style="font-size:1.1em; font-weight:bold;">{dif_text}</p>
+                                    <p style="color:#666;">Basado en una muestra de {count} vehículos similares encontrados.</p>
+                                </div>
+                                """
+                                st.markdown(html_res, unsafe_allow_html=True)
+                                
+                                # Botón para registrar en CRM si es Buen Trato
+                                if st.button("🚀 Registrar este Lead en CRM", type="primary"):
+                                    try:
+                                        now = datetime.datetime.now().isoformat()
+                                        supabase.table("crm_contactos").upsert({
+                                            "url": url_input,
+                                            "nombre_vendedor": "Lead Web Analizador",
+                                            "telefono_whatsapp": "N/A",
+                                            "estado_embudo": "Estado 1: 1er Contacto WhatsApp",
+                                            "fecha_actualizacion": now
+                                        }).execute()
+                                        st.success("¡Lead enviado al CRM correctamente!")
+                                        st.cache_data.clear()
+                                    except Exception as e:
+                                        st.error(f"Error al registrar: {e}")
+                            else:
+                                st.warning("No hay suficientes datos de mercado para comparar este modelo/año.")
+                        else:
+                            st.error("No se encontró información de este link en nuestra base de datos diaria. Asegúrate de que el link sea correcto o que el scraper lo haya procesado.")
         return  # <- early return: no ejecutar el bloque CRM
 
     # === SECCIÓN CRM ===
@@ -450,9 +388,6 @@ def main_app():
             # Preparar Grilla con datos enriquecidos
             grid_data = []
             ganancia_total_acumulada = 0.0
-            ganancia_ar_acumulada = 0.0
-            ganancia_rg_acumulada = 0.0
-            p_compra_total_acumulado = 0.0
             
             for index, row in state_df.iterrows():
                 tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
@@ -517,18 +452,7 @@ def main_app():
                     row_data["F. Compra"] = f_compra_str[:10] if f_compra_str else "N/A"
                     row_data["F. Venta"] = f_venta_str[:10] if f_venta_str else "N/A"
                     row_data["Días Stock"] = dias_stock
-                    pct_rg_db = float(gyp_data_row.get("porcentaje_richard") or 50.0)
-                    pct_ar_db = float(gyp_data_row.get("porcentaje_anny") or (100.0 - pct_rg_db))
-                    gan_rg = utilidad * (pct_rg_db / 100)
-                    gan_ar = utilidad * (pct_ar_db / 100)
-                    
-                    ganancia_ar_acumulada += gan_ar
-                    ganancia_rg_acumulada += gan_rg
-                    p_compra_total_acumulado += p_compra_total
-                    
                     row_data["Ganancia %"] = f"{pct_ganancia:.1f}%"
-                    row_data["Ganancias AR"] = f"${gan_ar:,.2f}"
-                    row_data["Ganancia RG"] = f"${gan_rg:,.2f}"
                     row_data["Ganancia USD"] = f"${utilidad:,.2f}"
                     row_data["_raw_f_venta"] = f_venta_str if f_venta_str else "1900-01-01"
 
@@ -566,7 +490,7 @@ def main_app():
                 editor_kwargs["column_order"] = [
                     "Seleccionar", "Vendedor", "Vehiculo", "Anio", "Distrito", 
                     "Precio", "P. Compra", "P. Venta", "Placa", "F. Compra", "F. Venta", 
-                    "Días Stock", "Ganancia %", "Ganancias AR", "Ganancia RG", "Ganancia USD"
+                    "Días Stock", "Ganancia %", "Ganancia USD"
                 ]
                 col_config["Precio"] = st.column_config.TextColumn("P. Anuncio")
                 col_config["P. Compra"] = st.column_config.TextColumn("P. Compra")
@@ -576,34 +500,16 @@ def main_app():
                 col_config["F. Venta"] = st.column_config.TextColumn("F. Venta")
                 col_config["Días Stock"] = st.column_config.TextColumn("Días Stock")
                 col_config["Ganancia %"] = st.column_config.TextColumn("Ganancia %")
-                col_config["Ganancias AR"] = st.column_config.TextColumn("Ganancias AR")
-                col_config["Ganancia RG"] = st.column_config.TextColumn("Ganancia RG")
                 col_config["Ganancia USD"] = st.column_config.TextColumn("Ganancia USD")
 
             # Grid Maestro Estilo Inandes
             edited_df = st.data_editor(**editor_kwargs)
             
             if estado == "Estado 6: Vendido":
-                pct_acumulado = (ganancia_total_acumulada / p_compra_total_acumulado * 100) if p_compra_total_acumulado > 0 else 0.0
                 st.markdown(f'''
                 <br>
-                <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px;">
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Anny</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_ar_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Richard</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_rg_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Total</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_total_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Rentabilidad</span>
-                        <h3 style="color:#2e7d32; margin:0;">{pct_acumulado:.1f}%</h3>
-                    </div>
+                <div style="text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h2 style="color:#2e7d32; margin:0;">💰 GANANCIA TOTAL ACUMULADA: ${ganancia_total_acumulada:,.2f}</h2>
                 </div>
                 ''', unsafe_allow_html=True)
             
@@ -729,35 +635,27 @@ def main_app():
 
                     st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
                     
-                    # --- CAMPOS DE NOTARÍA, VEHÍCULO Y DIVISIÓN GANANCIAS ---
-                    sec_col1, sec_col2 = st.columns([3, 1])
-                    
-                    with sec_col1:
-                        st.markdown("##### Datos de Notaría y Vehículo")
-                        # Fila Compra + Placa
-                        nc1, nc2, nc3 = st.columns(3)
-                        with nc1:
-                            notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
-                        with nc2:
-                            def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
-                            fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
-                        with nc3:
-                            placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
+                    # --- CAMPOS DE NOTARÍA Y VEHÍCULO ---
+                    st.markdown("##### Datos de Notaría y Vehículo")
+                    # Fila Compra + Placa
+                    nc1, nc2, nc3 = st.columns(3)
+                    with nc1:
+                        notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
+                    with nc2:
+                        def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
+                        fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
+                    with nc3:
+                        placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
 
-                        # Fila Venta + Año
-                        nv1, nv2, nv3 = st.columns(3)
-                        with nv1:
-                            notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
-                        with nv2:
-                            def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
-                            fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
-                        with nv3:
-                            st.empty() 
-                            
-                    with sec_col2:
-                        st.markdown("##### División de Ganancias")
-                        val_rg = float(g.get("porcentaje_richard", 50.0))
-                        pct_rg = st.number_input("% Richard", min_value=0.0, max_value=100.0, value=val_rg, step=1.0, key=f"prg_{lead['url']}")
+                    # Fila Venta + Año
+                    nv1, nv2, nv3 = st.columns(3)
+                    with nv1:
+                        notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
+                    with nv2:
+                        def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
+                        fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
+                    with nv3:
+                        st.empty() 
 
                     st.divider()
                     
@@ -797,9 +695,7 @@ def main_app():
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
                                 "placa": placa.upper(),
-                                "anio": str(lead.get("Year", "N/A")),
-                                "porcentaje_richard": pct_rg,
-                                "porcentaje_anny": 100.0 - pct_rg
+                                "anio": str(lead.get("Year", "N/A"))
                             }
 
 
@@ -818,14 +714,11 @@ def main_app():
                                 if kn == "precio_venta": final_inc = subtotal
                                 else: final_exp += subtotal
                             
-                            utilidad_neta = round(final_inc - final_exp, 2)
-                            gyp_payload["utilidad_neta_usd"] = utilidad_neta
-                            gyp_payload["ganancia_richard"] = round(utilidad_neta * (pct_rg / 100.0), 2)
-                            gyp_payload["ganancia_anny"] = round(utilidad_neta * ((100.0 - pct_rg) / 100.0), 2)
+                            gyp_payload["utilidad_neta_usd"] = round(final_inc - final_exp, 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
                                 # Limpiar caché para reflejar cambios
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 # Limpiar estado de calculo para forzar recarga de DB en el proximo render
                                 if f"calc_{lead['url']}" in st.session_state:
                                     del st.session_state[f"calc_{lead['url']}"]
@@ -836,7 +729,7 @@ def main_app():
                         vendido_habilitado = total_ingresos > 0
                         if st.button("Mover a Vendido", use_container_width=True, disabled=not vendido_habilitado, key=f"btn_vendido_{lead['url']}"):
                             if move_lead_state(lead['url'], estado, "Estado 6: Vendido", n_history):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Lead movido a Vendido.")
                                 st.rerun()
 
@@ -845,7 +738,7 @@ def main_app():
                 # PANEL VENDIDOS — solo para Estado 6: Vendido
                 # ============================================================
                 elif estado == "Estado 6: Vendido":
-                    c_datos, c_notas, c_docs = st.columns([1.2, 1.1, 1.3])
+                    c_datos, c_notas = st.columns([1.2, 1.3])
                     
                     with c_datos:
                         st.write("📊 **Resumen Financiero (GyP)**")
@@ -927,28 +820,13 @@ def main_app():
                         bg_utilidad = "#e8f5e9" if utilidad >= 0 else "#ffebee"
                         border_utilidad = "#c8e6c9" if utilidad >= 0 else "#ffcdd2"
                         
-                        pct_rg_b = float(gyp_data_v.get("porcentaje_richard") or 50.0)
-                        pct_ar_b = float(gyp_data_v.get("porcentaje_anny") or (100.0 - pct_rg_b))
-                        gan_rg_b = utilidad * (pct_rg_b / 100)
-                        gan_ar_b = utilidad * (pct_ar_b / 100)
-                        
                         html_table = f"""
                         <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
                             {rows_html}
                         </table>
-                        <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px;">
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Anny Rojas</span>
-                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_ar_b:,.2f} ({pct_ar_b:g}%)</span>
-                            </div>
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Rich Gutz</span>
-                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_rg_b:,.2f} ({pct_rg_b:g}%)</span>
-                            </div>
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Total</span>
-                                <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
-                            </div>
+                        <div style="background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Real</span>
+                            <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
                         </div>
                         <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
                         """
@@ -1002,127 +880,11 @@ def main_app():
                                 texto_nuevo = (texto_actual + "\n" + nueva_linea).strip()
                                 # Guardar texto + fecha de ultima modificacion
                                 if save_gyp(lead['url'], {"comentarios": {"texto": texto_nuevo, "fecha": timestamp}}):
-                                    clear_crm_caches()
+                                    st.cache_data.clear()
                                     st.success("Nota adicional guardada en GyP.")
                                     st.rerun()
+                            else:
                                 st.warning("Escribe algo antes de guardar.")
-
-                    with c_docs:
-                        st.write("📁 **Documentos Compra/Venta**")
-                        
-                        # Extraer lista existente de documentos JSONB
-                        docs_val = gyp_data_v.get("documentos")
-                        docs_list = docs_val if isinstance(docs_val, list) else []
-                        if isinstance(docs_val, str):
-                            import json
-                            try:
-                                docs_list = json.loads(docs_val)
-                            except:
-                                docs_list = []
-                                
-                        st.write("⬆️ **Subir Nuevos Documentos**")
-                        
-                        cat_options = ["Fotos", "Tarjeta De propiedad", "Testimonio de Compra", "Testimonio de Venta", "RxH Anny Rojas", "Constancia de Transferencia"]
-                        
-                        col_doc1, col_doc2 = st.columns(2)
-                        for idx_cat, cat in enumerate(cat_options):
-                            col_target = col_doc1 if idx_cat % 2 == 0 else col_doc2
-                            with col_target:
-                                with st.expander(f"➕ {cat}"):
-                                    up_key_name = f"up_key_{cat}_{lead['url']}"
-                                    if up_key_name not in st.session_state:
-                                        st.session_state[up_key_name] = 0
-                                    dynamic_key = f"up_{cat}_{lead['url']}_{st.session_state[up_key_name]}"
-                                    uploaded_files = st.file_uploader(f"Arrastra aquí", accept_multiple_files=True, key=dynamic_key)
-                                if uploaded_files:
-                                    if st.button("Subir a Drive", type="primary", key=f"btn_{cat}_{lead['url']}"):
-                                        with st.spinner(f"Subiendo {len(uploaded_files)} archivo(s) a Drive..."):
-                                            try:
-                                                import sys
-                                                import os
-                                                gd_path = os.path.join(os.path.dirname(__file__), "G_Drive_Uploader")
-                                                if gd_path not in sys.path:
-                                                    sys.path.append(gd_path)
-                                                from drive_api import get_drive_service, create_folder, upload_file
-                                                from drive_ui import render_drive_tree
-                                                
-                                                service = get_drive_service()
-                                                CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
-                                                
-                                                # Evitar duplicar carpeta madre por cambio de día (buscar por placa)
-                                                placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
-                                                query_exist = f"'{CRM_ROOT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and name contains '{placa_id}' and trashed=false"
-                                                res_exist = service.files().list(q=query_exist, spaces='drive', fields='files(id, name)', supportsAllDrives=True).execute()
-                                                
-                                                if res_exist.get('files'):
-                                                    folder_vehiculo = res_exist.get('files')[0]['name']
-                                                else:
-                                                    fecha_venta = pd.Timestamp.now().strftime('%Y%m%d')
-                                                    folder_vehiculo = f"{fecha_venta}_{placa_id}"
-                                                
-                                                succ_p, parent_id = create_folder(service, CRM_ROOT_FOLDER_ID, folder_vehiculo)
-                                                if succ_p:
-                                                    cat_folder = "Testimonios" if "Testimonio" in cat else cat
-                                                    succ_s, sub_id = create_folder(service, parent_id, cat_folder)
-                                                    
-                                                    if succ_s:
-                                                        nuevos_docs = list(docs_list)
-                                                        existing_count = sum(1 for d in docs_list if d.get("categoria") == cat)
-                                                        
-                                                        for f_idx, up_file in enumerate(uploaded_files):
-                                                            f_bytes = up_file.getvalue()
-                                                            f_ext = up_file.name.split(".")[-1]
-                                                            if "Testimonio" in cat:
-                                                                new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
-                                                            elif cat == "Fotos":
-                                                                new_name = f"{folder_vehiculo}_FOTO{existing_count + f_idx + 1}.{f_ext}"
-                                                            else:
-                                                                if existing_count + f_idx > 0:
-                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
-                                                                else:
-                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}.{f_ext}"
-                                                                
-                                                            succ_u, f_resp = upload_file(service, f_bytes, new_name, sub_id, mime_type=up_file.type)
-                                                            if succ_u:
-                                                                nuevos_docs.append({
-                                                                    "categoria": cat,
-                                                                    "nombre": new_name,
-                                                                    "link": f_resp.get("webViewLink")
-                                                                })
-                                                        
-                                                        # Update Supabase
-                                                        supabase.table("crm_gyp").update({"documentos": nuevos_docs}).eq("lead_url", lead['url']).execute()
-                                                        clear_crm_caches()
-                                                        # Reset Uploader Key to hide files and button
-                                                        st.session_state[up_key_name] += 1
-                                                        st.success(f"¡{len(uploaded_files)} archivo(s) subidos exitosamente!")
-                                                        st.rerun()
-                                                    else:
-                                                        st.error("Error creando subcarpeta en Drive.")
-                                                else:
-                                                    st.error("Error creando carpeta padre.")
-                                            except Exception as e:
-                                                st.error(f"Error en la subida: {e}")
-                                                
-                    # ============================================================
-                    # EXPLORADOR DE DRIVE EN VIVO (Fuera de las 3 columnas, pero dentro de "Vendido")
-                    # ============================================================
-                    try:
-                        import sys
-                        import os
-                        gd_path = os.path.join(os.path.dirname(__file__), "G_Drive_Uploader")
-                        if gd_path not in sys.path:
-                            sys.path.append(gd_path)
-                        from drive_api import get_drive_service
-                        from drive_ui import render_drive_tree
-                        
-                        service = get_drive_service()
-                        CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
-                        placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
-                        # Se pasa solo la placa_id como hint, el arbol internamente busca por contiene placa_id
-                        render_drive_tree(service, placa_id, CRM_ROOT_FOLDER_ID, key_prefix=f"dt_{placa_id}")
-                    except Exception as e:
-                        st.error(f"No se pudo cargar el explorador de Drive: {e}")
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados
@@ -1181,13 +943,13 @@ def main_app():
                                     else:
                                         st.error(f"Error de Calendar: {res.get('error', 'Desconocido')}")
                             if move_lead_state(lead['url'], estado, n_state, n_history):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Estado actualizado")
                                 st.rerun()
                     with b2:
                         if st.button("Guardar Nota", use_container_width=True, key=f"btn_n_{lead['url']}"):
                             if add_note_to_lead(lead['url'], n_history, estado, n_text):
-                                clear_crm_caches()
+                                st.cache_data.clear()
                                 st.success("Nota guardada")
                                 st.rerun()
                     with b3:

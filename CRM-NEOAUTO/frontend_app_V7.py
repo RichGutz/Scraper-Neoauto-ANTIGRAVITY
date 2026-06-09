@@ -450,9 +450,6 @@ def main_app():
             # Preparar Grilla con datos enriquecidos
             grid_data = []
             ganancia_total_acumulada = 0.0
-            ganancia_ar_acumulada = 0.0
-            ganancia_rg_acumulada = 0.0
-            p_compra_total_acumulado = 0.0
             
             for index, row in state_df.iterrows():
                 tel = str(row.get('telefono_whatsapp', '')).replace("+51", "").replace(" ", "")
@@ -517,18 +514,7 @@ def main_app():
                     row_data["F. Compra"] = f_compra_str[:10] if f_compra_str else "N/A"
                     row_data["F. Venta"] = f_venta_str[:10] if f_venta_str else "N/A"
                     row_data["Días Stock"] = dias_stock
-                    pct_rg_db = float(gyp_data_row.get("porcentaje_richard") or 50.0)
-                    pct_ar_db = float(gyp_data_row.get("porcentaje_anny") or (100.0 - pct_rg_db))
-                    gan_rg = utilidad * (pct_rg_db / 100)
-                    gan_ar = utilidad * (pct_ar_db / 100)
-                    
-                    ganancia_ar_acumulada += gan_ar
-                    ganancia_rg_acumulada += gan_rg
-                    p_compra_total_acumulado += p_compra_total
-                    
                     row_data["Ganancia %"] = f"{pct_ganancia:.1f}%"
-                    row_data["Ganancias AR"] = f"${gan_ar:,.2f}"
-                    row_data["Ganancia RG"] = f"${gan_rg:,.2f}"
                     row_data["Ganancia USD"] = f"${utilidad:,.2f}"
                     row_data["_raw_f_venta"] = f_venta_str if f_venta_str else "1900-01-01"
 
@@ -566,7 +552,7 @@ def main_app():
                 editor_kwargs["column_order"] = [
                     "Seleccionar", "Vendedor", "Vehiculo", "Anio", "Distrito", 
                     "Precio", "P. Compra", "P. Venta", "Placa", "F. Compra", "F. Venta", 
-                    "Días Stock", "Ganancia %", "Ganancias AR", "Ganancia RG", "Ganancia USD"
+                    "Días Stock", "Ganancia %", "Ganancia USD"
                 ]
                 col_config["Precio"] = st.column_config.TextColumn("P. Anuncio")
                 col_config["P. Compra"] = st.column_config.TextColumn("P. Compra")
@@ -576,34 +562,16 @@ def main_app():
                 col_config["F. Venta"] = st.column_config.TextColumn("F. Venta")
                 col_config["Días Stock"] = st.column_config.TextColumn("Días Stock")
                 col_config["Ganancia %"] = st.column_config.TextColumn("Ganancia %")
-                col_config["Ganancias AR"] = st.column_config.TextColumn("Ganancias AR")
-                col_config["Ganancia RG"] = st.column_config.TextColumn("Ganancia RG")
                 col_config["Ganancia USD"] = st.column_config.TextColumn("Ganancia USD")
 
             # Grid Maestro Estilo Inandes
             edited_df = st.data_editor(**editor_kwargs)
             
             if estado == "Estado 6: Vendido":
-                pct_acumulado = (ganancia_total_acumulada / p_compra_total_acumulado * 100) if p_compra_total_acumulado > 0 else 0.0
                 st.markdown(f'''
                 <br>
-                <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px;">
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Anny</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_ar_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Total Richard</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_rg_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Total</span>
-                        <h3 style="color:#2e7d32; margin:0;">${ganancia_total_acumulada:,.2f}</h3>
-                    </div>
-                    <div style="flex: 1; text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px;">
-                        <span style="color:#2e7d32; font-size: 0.9rem; display: block; font-weight: bold; text-transform: uppercase;">Rentabilidad</span>
-                        <h3 style="color:#2e7d32; margin:0;">{pct_acumulado:.1f}%</h3>
-                    </div>
+                <div style="text-align:center; background-color:#e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h2 style="color:#2e7d32; margin:0;">💰 GANANCIA TOTAL ACUMULADA: ${ganancia_total_acumulada:,.2f}</h2>
                 </div>
                 ''', unsafe_allow_html=True)
             
@@ -729,35 +697,27 @@ def main_app():
 
                     st.markdown("<hr style='margin:10px 0px'>", unsafe_allow_html=True)
                     
-                    # --- CAMPOS DE NOTARÍA, VEHÍCULO Y DIVISIÓN GANANCIAS ---
-                    sec_col1, sec_col2 = st.columns([3, 1])
-                    
-                    with sec_col1:
-                        st.markdown("##### Datos de Notaría y Vehículo")
-                        # Fila Compra + Placa
-                        nc1, nc2, nc3 = st.columns(3)
-                        with nc1:
-                            notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
-                        with nc2:
-                            def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
-                            fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
-                        with nc3:
-                            placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
+                    # --- CAMPOS DE NOTARÍA Y VEHÍCULO ---
+                    st.markdown("##### Datos de Notaría y Vehículo")
+                    # Fila Compra + Placa
+                    nc1, nc2, nc3 = st.columns(3)
+                    with nc1:
+                        notaria_compra = st.text_input("Notaría Compra:", value=g.get("notaria_compra", ""), key=f"nc_{lead['url']}")
+                    with nc2:
+                        def_date_c = datetime.date.fromisoformat(g["fecha_notaria_compra"]) if g.get("fecha_notaria_compra") else datetime.date.today()
+                        fecha_compra = st.date_input("Fecha Compra:", value=def_date_c, key=f"fdc_{lead['url']}")
+                    with nc3:
+                        placa = st.text_input("PLACA:", value=g.get("placa", ""), key=f"pl_{lead['url']}").upper()
 
-                        # Fila Venta + Año
-                        nv1, nv2, nv3 = st.columns(3)
-                        with nv1:
-                            notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
-                        with nv2:
-                            def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
-                            fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
-                        with nv3:
-                            st.empty() 
-                            
-                    with sec_col2:
-                        st.markdown("##### División de Ganancias")
-                        val_rg = float(g.get("porcentaje_richard", 50.0))
-                        pct_rg = st.number_input("% Richard", min_value=0.0, max_value=100.0, value=val_rg, step=1.0, key=f"prg_{lead['url']}")
+                    # Fila Venta + Año
+                    nv1, nv2, nv3 = st.columns(3)
+                    with nv1:
+                        notaria_venta = st.text_input("Notaría Venta:", value=g.get("notaria_venta", ""), key=f"nv_{lead['url']}")
+                    with nv2:
+                        def_date_v = datetime.date.fromisoformat(g["fecha_notaria_venta"]) if g.get("fecha_notaria_venta") else datetime.date.today()
+                        fecha_venta = st.date_input("Fecha Venta:", value=def_date_v, key=f"fdv_{lead['url']}")
+                    with nv3:
+                        st.empty() 
 
                     st.divider()
                     
@@ -797,9 +757,7 @@ def main_app():
                                 "fecha_notaria_compra": fecha_compra.isoformat(),
                                 "fecha_notaria_venta": fecha_venta.isoformat(),
                                 "placa": placa.upper(),
-                                "anio": str(lead.get("Year", "N/A")),
-                                "porcentaje_richard": pct_rg,
-                                "porcentaje_anny": 100.0 - pct_rg
+                                "anio": str(lead.get("Year", "N/A"))
                             }
 
 
@@ -818,10 +776,7 @@ def main_app():
                                 if kn == "precio_venta": final_inc = subtotal
                                 else: final_exp += subtotal
                             
-                            utilidad_neta = round(final_inc - final_exp, 2)
-                            gyp_payload["utilidad_neta_usd"] = utilidad_neta
-                            gyp_payload["ganancia_richard"] = round(utilidad_neta * (pct_rg / 100.0), 2)
-                            gyp_payload["ganancia_anny"] = round(utilidad_neta * ((100.0 - pct_rg) / 100.0), 2)
+                            gyp_payload["utilidad_neta_usd"] = round(final_inc - final_exp, 2)
                                 
                             if save_gyp(lead['url'], gyp_payload):
                                 # Limpiar caché para reflejar cambios
@@ -845,7 +800,7 @@ def main_app():
                 # PANEL VENDIDOS — solo para Estado 6: Vendido
                 # ============================================================
                 elif estado == "Estado 6: Vendido":
-                    c_datos, c_notas, c_docs = st.columns([1.2, 1.1, 1.3])
+                    c_datos, c_notas = st.columns([1.2, 1.3])
                     
                     with c_datos:
                         st.write("📊 **Resumen Financiero (GyP)**")
@@ -927,28 +882,13 @@ def main_app():
                         bg_utilidad = "#e8f5e9" if utilidad >= 0 else "#ffebee"
                         border_utilidad = "#c8e6c9" if utilidad >= 0 else "#ffcdd2"
                         
-                        pct_rg_b = float(gyp_data_v.get("porcentaje_richard") or 50.0)
-                        pct_ar_b = float(gyp_data_v.get("porcentaje_anny") or (100.0 - pct_rg_b))
-                        gan_rg_b = utilidad * (pct_rg_b / 100)
-                        gan_ar_b = utilidad * (pct_ar_b / 100)
-                        
                         html_table = f"""
                         <table style="width:100%; border-collapse: collapse; margin-bottom: 15px;">
                             {rows_html}
                         </table>
-                        <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px;">
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Anny Rojas</span>
-                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_ar_b:,.2f} ({pct_ar_b:g}%)</span>
-                            </div>
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Rich Gutz</span>
-                                <span style="font-size: 1.2rem; color: {color_utilidad}; font-weight: bold; display: block;">${gan_rg_b:,.2f} ({pct_rg_b:g}%)</span>
-                            </div>
-                            <div style="flex: 1; background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center;">
-                                <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Total</span>
-                                <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
-                            </div>
+                        <div style="background-color:{bg_utilidad}; border: 1px solid {border_utilidad}; border-radius: 6px; padding: 10px; text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 0.85rem; color: #555; display: block; font-weight: bold; text-transform: uppercase;">Utilidad Neta Real</span>
+                            <span style="font-size: 1.35rem; color: {color_utilidad}; font-weight: bold; display: block;">${utilidad:,.2f} ({pct_ganancia:.1f}%)</span>
                         </div>
                         <span style="font-size: 0.8rem; color: #888; display: block; margin-bottom: 15px;">T.C. aplicado: {tc:.3f} | Todos los montos expresados en USD</span>
                         """
@@ -1005,124 +945,8 @@ def main_app():
                                     clear_crm_caches()
                                     st.success("Nota adicional guardada en GyP.")
                                     st.rerun()
+                            else:
                                 st.warning("Escribe algo antes de guardar.")
-
-                    with c_docs:
-                        st.write("📁 **Documentos Compra/Venta**")
-                        
-                        # Extraer lista existente de documentos JSONB
-                        docs_val = gyp_data_v.get("documentos")
-                        docs_list = docs_val if isinstance(docs_val, list) else []
-                        if isinstance(docs_val, str):
-                            import json
-                            try:
-                                docs_list = json.loads(docs_val)
-                            except:
-                                docs_list = []
-                                
-                        st.write("⬆️ **Subir Nuevos Documentos**")
-                        
-                        cat_options = ["Fotos", "Tarjeta De propiedad", "Testimonio de Compra", "Testimonio de Venta", "RxH Anny Rojas", "Constancia de Transferencia"]
-                        
-                        col_doc1, col_doc2 = st.columns(2)
-                        for idx_cat, cat in enumerate(cat_options):
-                            col_target = col_doc1 if idx_cat % 2 == 0 else col_doc2
-                            with col_target:
-                                with st.expander(f"➕ {cat}"):
-                                    up_key_name = f"up_key_{cat}_{lead['url']}"
-                                    if up_key_name not in st.session_state:
-                                        st.session_state[up_key_name] = 0
-                                    dynamic_key = f"up_{cat}_{lead['url']}_{st.session_state[up_key_name]}"
-                                    uploaded_files = st.file_uploader(f"Arrastra aquí", accept_multiple_files=True, key=dynamic_key)
-                                if uploaded_files:
-                                    if st.button("Subir a Drive", type="primary", key=f"btn_{cat}_{lead['url']}"):
-                                        with st.spinner(f"Subiendo {len(uploaded_files)} archivo(s) a Drive..."):
-                                            try:
-                                                import sys
-                                                import os
-                                                gd_path = os.path.join(os.path.dirname(__file__), "G_Drive_Uploader")
-                                                if gd_path not in sys.path:
-                                                    sys.path.append(gd_path)
-                                                from drive_api import get_drive_service, create_folder, upload_file
-                                                from drive_ui import render_drive_tree
-                                                
-                                                service = get_drive_service()
-                                                CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
-                                                
-                                                # Evitar duplicar carpeta madre por cambio de día (buscar por placa)
-                                                placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
-                                                query_exist = f"'{CRM_ROOT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and name contains '{placa_id}' and trashed=false"
-                                                res_exist = service.files().list(q=query_exist, spaces='drive', fields='files(id, name)', supportsAllDrives=True).execute()
-                                                
-                                                if res_exist.get('files'):
-                                                    folder_vehiculo = res_exist.get('files')[0]['name']
-                                                else:
-                                                    fecha_venta = pd.Timestamp.now().strftime('%Y%m%d')
-                                                    folder_vehiculo = f"{fecha_venta}_{placa_id}"
-                                                
-                                                succ_p, parent_id = create_folder(service, CRM_ROOT_FOLDER_ID, folder_vehiculo)
-                                                if succ_p:
-                                                    cat_folder = "Testimonios" if "Testimonio" in cat else cat
-                                                    succ_s, sub_id = create_folder(service, parent_id, cat_folder)
-                                                    
-                                                    if succ_s:
-                                                        nuevos_docs = list(docs_list)
-                                                        existing_count = sum(1 for d in docs_list if d.get("categoria") == cat)
-                                                        
-                                                        for f_idx, up_file in enumerate(uploaded_files):
-                                                            f_bytes = up_file.getvalue()
-                                                            f_ext = up_file.name.split(".")[-1]
-                                                            if "Testimonio" in cat:
-                                                                new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
-                                                            elif cat == "Fotos":
-                                                                new_name = f"{folder_vehiculo}_FOTO{existing_count + f_idx + 1}.{f_ext}"
-                                                            else:
-                                                                if existing_count + f_idx > 0:
-                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}_{existing_count + f_idx + 1}.{f_ext}"
-                                                                else:
-                                                                    new_name = f"{folder_vehiculo}_{cat.replace(' ','_').upper()}.{f_ext}"
-                                                                
-                                                            succ_u, f_resp = upload_file(service, f_bytes, new_name, sub_id, mime_type=up_file.type)
-                                                            if succ_u:
-                                                                nuevos_docs.append({
-                                                                    "categoria": cat,
-                                                                    "nombre": new_name,
-                                                                    "link": f_resp.get("webViewLink")
-                                                                })
-                                                        
-                                                        # Update Supabase
-                                                        supabase.table("crm_gyp").update({"documentos": nuevos_docs}).eq("lead_url", lead['url']).execute()
-                                                        clear_crm_caches()
-                                                        # Reset Uploader Key to hide files and button
-                                                        st.session_state[up_key_name] += 1
-                                                        st.success(f"¡{len(uploaded_files)} archivo(s) subidos exitosamente!")
-                                                        st.rerun()
-                                                    else:
-                                                        st.error("Error creando subcarpeta en Drive.")
-                                                else:
-                                                    st.error("Error creando carpeta padre.")
-                                            except Exception as e:
-                                                st.error(f"Error en la subida: {e}")
-                                                
-                    # ============================================================
-                    # EXPLORADOR DE DRIVE EN VIVO (Fuera de las 3 columnas, pero dentro de "Vendido")
-                    # ============================================================
-                    try:
-                        import sys
-                        import os
-                        gd_path = os.path.join(os.path.dirname(__file__), "G_Drive_Uploader")
-                        if gd_path not in sys.path:
-                            sys.path.append(gd_path)
-                        from drive_api import get_drive_service
-                        from drive_ui import render_drive_tree
-                        
-                        service = get_drive_service()
-                        CRM_ROOT_FOLDER_ID = "1_BvUhnTI5J987wsJao4sK3mDX31uNKcd"
-                        placa_id = str(gyp_data_v.get("placa", "SINPLACA")).strip().upper()
-                        # Se pasa solo la placa_id como hint, el arbol internamente busca por contiene placa_id
-                        render_drive_tree(service, placa_id, CRM_ROOT_FOLDER_ID, key_prefix=f"dt_{placa_id}")
-                    except Exception as e:
-                        st.error(f"No se pudo cargar el explorador de Drive: {e}")
 
                 # ============================================================
                 # PANEL ESTANDAR — todos los demas estados

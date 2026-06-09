@@ -54,16 +54,17 @@ if [ -n "$PENDING_COUNT" ] && [ "$PENDING_COUNT" -gt 0 ]; then
     echo "Reanudando el scraping directamente sin reiniciar la cola de URLs..."
 else
     echo "Cola vacía o nueva ejecución. Iniciando desde cero..."
-    run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py"
+    run_python_script "extractores/2.SEMANAL.extractor_VCLI_v3.py" # <-- NUEVO EXTRACTOR V3 (Soporta Seminuevos)
     run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
 fi
 
 
-# --- Ejecución del scraper (7 instancias en paralelo) ---
+# --- Ejecución del scraper ---
 echo ""
-echo "--> Ejecutando 7 instancias paralelas de SCRAPER.NEOAUTO..."
-$PYTHON_EXEC "parallel_launcher_semanal.py"
-echo "--> Finalizadas todas las instancias del scraper."
+echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
+SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.extractor_individual_v4.py"
+$PYTHON_EXEC "$SCRIPT_TO_RUN"
+echo "--> Finalizada la instancia del scraper."
 # --- Fin de la ejecución ---
 
 run_python_script "extractores/5.DIARIO.SEMANAL.Procesador_txt.a.json.DEEPSEEK_VCLI.py"
