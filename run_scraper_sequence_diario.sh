@@ -24,7 +24,7 @@ cd "$PROJECT_DIR" || { echo "ERROR: No se pudo acceder a $PROJECT_DIR"; exit 1; 
 # 1. Extraccion de URLs (1 dia)
 echo ""
 echo "--> Ejecutando Extraccion de URLs..."
-$PYTHON_EXEC "extractores/2.DIARIO.daily_urls_extraction.VCLI.py"
+$PYTHON_EXEC "extractores/2.DIARIO.daily_urls_extraction_v2.py"
 
 if [ $? -ne 0 ]; then
     echo "ERROR en Extraccion de URLs."
