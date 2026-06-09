@@ -66,29 +66,38 @@ systemctl start restore-wol-cron.service
 crontab -l
 ```
 
-### B. Si quieres hacerlo remotamente desde PowerShell en Windows:
-Copia y ejecuta estos comandos (pedirá la contraseña de root del gateway):
+### B. Si estás en Windows (PowerShell / CMD):
+⚠️ **IMPORTANTE: NO INTENTES ENVIAR ESTO EN UN SOLO COMANDO REMOTO DESDE POWERSHELL.** 
+PowerShell de Windows intercepta los símbolos `>>` y `2>&1` creyendo que son comandos locales y arrojará un error de "ParserError" (StreamAlreadyRedirected). 
 
+Para evitar problemas de formato y saltos de línea (`\r\n`), usa el **Método Interactivo**:
+
+**1. Entra al UniFi abriendo la sesión interactiva en PowerShell o CMD:**
 ```powershell
-# 1. Crear el archivo de servicio en el Gateway remotamente
-ssh root@192.168.0.1 "cat << 'EOF' > /etc/systemd/system/restore-wol-cron.service
+ssh root@192.168.0.1
+```
+*(Ingresa tu contraseña cuando te la pida)*
+
+**2. Una vez que veas el mensaje de bienvenida del UniFi, pega TODO este bloque de una sola vez:**
+```bash
+cat << 'EOF' > /etc/systemd/system/restore-wol-cron.service
 [Unit]
 Description=Restaurar Cron de WOL en Inicio
 After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c '(crontab -l 2>/dev/null | grep -v \"bridge_wol.sh\"; echo \"30 18 * * * /data/bridge_wol.sh >> /data/wol.log 2>&1\"; echo \"0 0 * * 1 /data/bridge_wol.sh >> /data/wol.log 2>&1\") | crontab -'
+ExecStart=/bin/sh -c '(crontab -l 2>/dev/null | grep -v "bridge_wol.sh"; echo "30 18 * * * /data/bridge_wol.sh >> /data/wol.log 2>&1"; echo "0 0 * * 1 /data/bridge_wol.sh >> /data/wol.log 2>&1") | crontab -'
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-EOF"
+EOF
 
-# 2. Registrar y activar el servicio en el Gateway
-ssh root@192.168.0.1 "systemctl daemon-reload && systemctl enable restore-wol-cron.service && systemctl start restore-wol-cron.service"
-
-# 3. Comprobar que los cronjobs estén activos en el Gateway
-ssh root@192.168.0.1 "crontab -l"
+systemctl daemon-reload
+systemctl enable restore-wol-cron.service
+systemctl start restore-wol-cron.service
+crontab -l
 ```
+*(El último comando `crontab -l` te mostrará en pantalla que todo quedó registrado correctamente).*
 

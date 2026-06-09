@@ -34,7 +34,8 @@ run_python_script() {
 # --- Secuencia de Ejecución ---
 # --- Secuencia de Ejecución ---
 # run_python_script "extractores/1.SEMANAL.extractor_VCLI.py"  <-- OMITIDO (Funcionalidad integrada en V2)
-run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py" # <-- NUEVO EXTRACTOR V2
+# run_python_script "extractores/2.SEMANAL.extractor_VCLI_v2.py" # <-- RESPALDO V2
+run_python_script "extractores/2.SEMANAL.extractor_VCLI_v3.py" # <-- NUEVO EXTRACTOR V3 (Soporta Seminuevos)
 # run_python_script "extractores/2.SEMANAL.car_urls_module_VCLI.py" <-- OMITIDO (Reemplazado por V2)
 run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
 
