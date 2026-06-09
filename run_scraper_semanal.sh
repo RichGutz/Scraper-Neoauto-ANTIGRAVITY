@@ -42,7 +42,7 @@ run_python_script "extractores/3.SEMANAL.randomize_urls_autos.py"
 # --- Ejecución del scraper (una sola instancia) ---
 echo ""
 echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
-SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
+SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.extractor_individual_v4.py"
 $PYTHON_EXEC "$SCRIPT_TO_RUN"
 echo "--> Finalizada la instancia del scraper."
 # --- Fin de la ejecución ---
