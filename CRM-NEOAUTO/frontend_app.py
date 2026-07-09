@@ -676,7 +676,8 @@ def main_app():
                         ("Llantas", "llantas"),
                         ("Publicidad NeoAuto", "neoauto"),
                         ("Cheque Gerencia", "cheque_gerencia"),
-                        ("Intereses", "intereses")
+                        ("Intereses", "intereses"),
+                        ("Otros", "otros")
                     ]
 
                     # Inicializar resultados en session_state si no existen (Cargar de DB)
