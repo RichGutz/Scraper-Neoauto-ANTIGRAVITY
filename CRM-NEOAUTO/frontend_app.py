@@ -583,6 +583,16 @@ def main_app():
                     "url": st.column_config.LinkColumn("Ver Aviso Neoauto", display_text="🔗 Link Auto")
                 }
             )
+
+            st.markdown("#### 📈 Gráfica de Tendencia: Visitas (Azul) vs Contactos (Naranja)")
+            df_chart = df_stats.sort_values(by="fecha", ascending=True)
+            st.line_chart(
+                df_chart,
+                x="fecha",
+                y=["visitas", "contactos"],
+                color=["#0288d1", "#f57c00"]
+            )
+
         else:
             st.info("Aún no hay reportes registrados en la columna `estadisticas_neoauto`. Completa el formulario para registrar el primero.")
 
