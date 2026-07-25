@@ -104,9 +104,14 @@ ESTADOS = [
 @st.cache_data(ttl=300) # Caché de 5 minutos
 def fetch_leads():
     try:
-        # 1. Obtener Leads base - Solo columnas necesarias
-        cols = "url, estado_embudo, nombre_vendedor, telefono_whatsapp, notas_actividad, fecha_actualizacion"
-        resp = supabase.table("crm_contactos").select(cols).order("fecha_actualizacion", desc=True).execute()
+        # 1. Obtener Leads base - Solo columnas necesarias (incluyendo estadisticas_neoauto)
+        cols = "url, estado_embudo, nombre_vendedor, telefono_whatsapp, notas_actividad, estadisticas_neoauto, fecha_actualizacion"
+        try:
+            resp = supabase.table("crm_contactos").select(cols).order("fecha_actualizacion", desc=True).execute()
+        except Exception:
+            # Fallback si la columna estadisticas_neoauto aun no existe en el select
+            cols_alt = "url, estado_embudo, nombre_vendedor, telefono_whatsapp, notas_actividad, fecha_actualizacion"
+            resp = supabase.table("crm_contactos").select(cols_alt).order("fecha_actualizacion", desc=True).execute()
         contacts = resp.data
         if not contacts: return []
         
@@ -169,7 +174,35 @@ def save_gyp(lead_url, payload):
         st.error(f"Error al guardar GyP: {e}")
         return False
 
+def save_anny_stat_jsonb(url, fecha, visitas, contactos, notas=""):
+    """Guarda estadísticas diarias dentro de la columna JSONB `estadisticas_neoauto` en crm_contactos."""
+    try:
+        resp = supabase.table("crm_contactos").select("estadisticas_neoauto").eq("url", url).execute()
+        current_stats = {}
+        if resp.data and len(resp.data) > 0:
+            current_stats = resp.data[0].get("estadisticas_neoauto") or {}
+            if not isinstance(current_stats, dict):
+                current_stats = {}
+        
+        current_stats[str(fecha)] = {
+            "visitas": int(visitas),
+            "contactos": int(contactos),
+            "notas": notas,
+            "actualizado_el": pd.Timestamp.now().isoformat()
+        }
+        
+        supabase.table("crm_contactos").update({
+            "estadisticas_neoauto": current_stats,
+            "fecha_actualizacion": pd.Timestamp.now().isoformat()
+        }).eq("url", url).execute()
+        return True
+    except Exception as e:
+        st.error(f"Error al actualizar estadisticas_neoauto en Supabase: {e}")
+        return False
+
+
 # --- FUNCIONES DE FLUJO ---
+
 
 def move_lead_state(url, current_state, new_state, notes_history):
     notes_history[new_state] = f"{pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')} - Movido de {current_state}."
@@ -433,12 +466,161 @@ def main_app():
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
 
-        return  # <- early return: no ejecutar el bloque CRM
-
     # === SECCIÓN CRM ===
-    tabs = st.tabs(["WhatsApp", "Citas", "Visitas", "Comprados", "Vendidos", "Cerrado"])
+    st.markdown("""
+    <style>
+    /* Estilo exclusivo para destacar el tab 🔴 Tareas Anny Rojas en color rojo */
+    button[data-baseweb="tab"]:nth-child(5) {
+        background-color: #ffebee !important;
+        border: 2px solid #ef5350 !important;
+        border-radius: 8px !important;
+    }
+    button[data-baseweb="tab"]:nth-child(5) p {
+        color: #d32f2f !important;
+        font-weight: bold !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    for tab, estado in zip(tabs, ESTADOS):
+    tab_ws, tab_cit, tab_vis, tab_comp, tab_anny, tab_vend, tab_cerr = st.tabs([
+        "WhatsApp", 
+        "Citas", 
+        "Visitas", 
+        "Comprados", 
+        "🔴 Tareas Anny Rojas", 
+        "Vendidos", 
+        "Cerrado"
+    ])
+    crm_tabs = [tab_ws, tab_cit, tab_vis, tab_comp, tab_vend, tab_cerr]
+
+    with tab_anny:
+        st.header("📋 Rutina Diaria de Anny Rojas (Control de Anuncios Neoauto)")
+        
+        st.markdown("""
+        <div style="background-color: #ffebee; padding: 15px; border-radius: 10px; border-left: 5px solid #d32f2f; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color: #b71c1c;">📌 Pasos Obligatorios Diarios en Neoauto</h4>
+        <ol style="margin-bottom:0; font-size: 1.05rem; line-height: 1.6; color: #212121;">
+          <li>Entrar a <a href="https://neoauto.com.pe" target="_blank"><b>neoauto.com.pe</b></a> e Iniciar Sesión con:
+              <br>📧 <b>Usuario:</b> <code>annyred9@gmail.com</code> &nbsp;|&nbsp; 🔑 <b>Contraseña:</b> <code>VivaLaVida2026$</code>
+          </li>
+          <li>Abrir los avisos activos: <a href="https://neoauto.com/mi-cuenta/avisos-activos" target="_blank"><b>https://neoauto.com/mi-cuenta/avisos-activos</b></a></li>
+          <li>Abrir el panel de estadísticas: <a href="https://neoauto.com/estadisticas" target="_blank"><b>https://neoauto.com/estadisticas</b></a></li>
+          <li><b>Revisar el gráfico "Total visitas vs contactos" e ingresar los datos del día en el formulario abajo.</b></li>
+        </ol>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Obtener vehículos a la venta (Tab Comprados -> Estado 5: Comprado (Stock))
+        stock_df = df[df["estado_embudo"] == "Estado 5: Comprado (Stock)"] if not df.empty else pd.DataFrame()
+        auto_map = {} # label -> url
+        if not stock_df.empty:
+            for idx, row in stock_df.iterrows():
+                mk = str(row.get("Make", "")).strip()
+                md = str(row.get("Model", "")).strip()
+                yr = str(row.get("Year", "")).strip()
+                nombre_auto = f"{mk} {md} {yr}".strip()
+                if not nombre_auto or nombre_auto == "N/A N/A N/A":
+                    nombre_auto = f"Auto #{idx+1}"
+                url_val = row.get("url", "")
+                label = f"{nombre_auto} ({url_val[:35]}...)" if len(url_val) > 35 else (f"{nombre_auto} ({url_val})" if url_val else nombre_auto)
+                auto_map[label] = url_val
+        
+        st.subheader("➕ Registrar Visitas y Contactos de Anuncios Activos")
+        
+        with st.form("form_estadisticas_anny", clear_on_submit=True):
+            col_f, col_v = st.columns(2)
+            with col_f:
+                fecha_reg = st.date_input("Fecha del Reporte", value=pd.Timestamp.now())
+            with col_v:
+                if auto_map:
+                    label_sel = st.selectbox("Vehículo a la Venta (Stock Comprados)", list(auto_map.keys()))
+                else:
+                    st.info("No hay vehículos registrados en el tab 'Comprados' actualmente.")
+                    label_sel = None
+            
+            c_vis, c_con = st.columns(2)
+            with c_vis:
+                visitas_reg = st.number_input("Número de Visitas del Día", min_value=0, value=0, step=1)
+            with c_con:
+                contactos_reg = st.number_input("Número de Contactos del Día", min_value=0, value=0, step=1)
+            
+            notas_reg = st.text_input("Notas / Observaciones (Opcional)", placeholder="Ej: 1 interesada por chat en Neoauto")
+            
+            submitted = st.form_submit_button("💾 Guardar Reporte Diario de Anny")
+            if submitted:
+                if not label_sel or not auto_map.get(label_sel):
+                    st.error("Por favor selecciona un vehículo de la lista.")
+                else:
+                    target_url = auto_map[label_sel]
+                    if save_anny_stat_jsonb(target_url, fecha_reg, visitas_reg, contactos_reg, notas_reg):
+                        clear_crm_caches()
+                        st.success(f"✅ Registrado exitosamente en Supabase (columna JSONB estadisticas_neoauto) para {label_sel}.")
+                        st.rerun()
+        
+        st.divider()
+        st.subheader("📊 Historial de Reportes Ingresados por Anny (columna JSONB `estadisticas_neoauto`)")
+        
+        # Extraer registros de estadisticas_neoauto acumulados en todos los leads
+        stats_history = []
+        if not df.empty:
+            for idx, row in df.iterrows():
+                st_dict = row.get("estadisticas_neoauto")
+                if isinstance(st_dict, dict) and st_dict:
+                    mk = str(row.get("Make", "")).strip()
+                    md = str(row.get("Model", "")).strip()
+                    yr = str(row.get("Year", "")).strip()
+                    auto_name = f"{mk} {md} {yr}".strip()
+                    if not auto_name or auto_name == "N/A N/A N/A":
+                        auto_name = row.get("url", "Auto")
+                    for fecha_k, val_d in st_dict.items():
+                        if isinstance(val_d, dict):
+                            stats_history.append({
+                                "fecha": fecha_k,
+                                "vehiculo": auto_name,
+                                "visitas": val_d.get("visitas", 0),
+                                "contactos": val_d.get("contactos", 0),
+                                "notas": val_d.get("notas", ""),
+                                "url": row.get("url", "")
+                            })
+        
+        if stats_history:
+            df_stats = pd.DataFrame(stats_history).sort_values(by="fecha", ascending=False)
+            tot_v = int(df_stats['visitas'].sum()) if 'visitas' in df_stats.columns else 0
+            tot_c = int(df_stats['contactos'].sum()) if 'contactos' in df_stats.columns else 0
+            
+            mc1, mc2, mc3 = st.columns(3)
+            mc1.metric("Total Reportes", len(df_stats))
+            mc2.metric("Total Visitas Reportadas", f"{tot_v:,}")
+            mc3.metric("Total Contactos Reportados", f"{tot_c:,}")
+            
+            st.dataframe(
+                df_stats[['fecha', 'vehiculo', 'visitas', 'contactos', 'notas', 'url']],
+                use_container_width=True,
+                column_config={
+                    "fecha": "Fecha",
+                    "vehiculo": "Vehículo / Aviso",
+                    "visitas": st.column_config.NumberColumn("Visitas", format="%d"),
+                    "contactos": st.column_config.NumberColumn("Contactos", format="%d"),
+                    "notas": "Observaciones",
+                    "url": st.column_config.LinkColumn("Ver Aviso Neoauto", display_text="🔗 Link Auto")
+                }
+            )
+
+            st.markdown("#### 📈 Gráfica de Tendencia: Visitas (Azul) vs Contactos (Naranja)")
+            df_chart = df_stats.sort_values(by="fecha", ascending=True)
+            st.line_chart(
+                df_chart,
+                x="fecha",
+                y=["visitas", "contactos"],
+                color=["#0288d1", "#f57c00"]
+            )
+
+        else:
+            st.info("Aún no hay reportes registrados en la columna `estadisticas_neoauto`. Completa el formulario para registrar el primero.")
+
+    for tab, estado in zip(crm_tabs, ESTADOS):
+
+
         with tab:
             state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
             st.subheader(f"{estado} ({len(state_df)})")
@@ -676,7 +858,8 @@ def main_app():
                         ("Llantas", "llantas"),
                         ("Publicidad NeoAuto", "neoauto"),
                         ("Cheque Gerencia", "cheque_gerencia"),
-                        ("Intereses", "intereses")
+                        ("Intereses", "intereses"),
+                        ("Otros", "otros")
                     ]
 
                     # Inicializar resultados en session_state si no existen (Cargar de DB)
