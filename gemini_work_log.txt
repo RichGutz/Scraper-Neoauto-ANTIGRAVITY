@@ -1,5 +1,4 @@
-[2026-07-25 17:05] Desarrollo CRM Neoauto:
-- Añadida pestaña 'Tareas Anny Rojas' antes del tab 'WhatsApp'.
-- Módulo de control diario de anuncios (credenciales + enlaces directos a avisos activos y estadísticas).
-- Persistencia en columna JSONB 'estadisticas_neoauto' sobre la tabla 'crm_contactos'.
-- Despliegue listo para VPS Hostinger.
+[2026-07-25 17:50] Documentación y Redes ThinkPad T430s:
+- Creado documento guia_conexion_remota_thinkpad.md.
+- Confirmada conexión RDP (puerto 3389) para ver la pantalla remota desde mstsc.exe.
+- Repositorio Git master actualizado.

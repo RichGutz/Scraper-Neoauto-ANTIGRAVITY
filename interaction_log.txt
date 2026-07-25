@@ -1,4 +1,4 @@
-[2026-07-25 17:05] Pestaña 'Tareas Anny Rojas' agregada antes de WhatsApp en CRM Neoauto.
-- Implementado formulario de registro diario de visitas y contactos de Neoauto.
-- Integrado selector automático de vehículos desde el stock 'Comprados' (Estado 5).
-- Configurado guardado directo en la columna JSONB 'estadisticas_neoauto' de la tabla 'crm_contactos' en Supabase.
+[2026-07-25 17:50] Documentación y Redes ThinkPad T430s:
+- Creada guía 'guia_conexion_remota_thinkpad.md' en Automatizacion_VPS_UNIFI.
+- Auditado puerto RDP 3389 activo en 192.168.0.150 para Escritorio Remoto con mstsc.exe.
+- Documentado encendido WOL nativo e inyección SSH.
