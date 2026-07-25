@@ -466,18 +466,40 @@ def main_app():
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
 
-        return  # <- early return: no ejecutar el bloque CRM
-
     # === SECCIÓN CRM ===
-    tab_anny, *crm_tabs = st.tabs(["Tareas Anny Rojas", "WhatsApp", "Citas", "Visitas", "Comprados", "Vendidos", "Cerrado"])
+    st.markdown("""
+    <style>
+    /* Estilo exclusivo para destacar el tab 🔴 Tareas Anny Rojas en color rojo */
+    button[data-baseweb="tab"]:nth-child(5) {
+        background-color: #ffebee !important;
+        border: 2px solid #ef5350 !important;
+        border-radius: 8px !important;
+    }
+    button[data-baseweb="tab"]:nth-child(5) p {
+        color: #d32f2f !important;
+        font-weight: bold !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    tab_ws, tab_cit, tab_vis, tab_comp, tab_anny, tab_vend, tab_cerr = st.tabs([
+        "WhatsApp", 
+        "Citas", 
+        "Visitas", 
+        "Comprados", 
+        "🔴 Tareas Anny Rojas", 
+        "Vendidos", 
+        "Cerrado"
+    ])
+    crm_tabs = [tab_ws, tab_cit, tab_vis, tab_comp, tab_vend, tab_cerr]
 
     with tab_anny:
         st.header("📋 Rutina Diaria de Anny Rojas (Control de Anuncios Neoauto)")
         
         st.markdown("""
-        <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0288d1; margin-bottom: 20px;">
-        <h4 style="margin-top:0; color: #0288d1;">📌 Pasos Obligatorios Diarios en Neoauto</h4>
-        <ol style="margin-bottom:0; font-size: 1.05rem; line-height: 1.6;">
+        <div style="background-color: #ffebee; padding: 15px; border-radius: 10px; border-left: 5px solid #d32f2f; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color: #b71c1c;">📌 Pasos Obligatorios Diarios en Neoauto</h4>
+        <ol style="margin-bottom:0; font-size: 1.05rem; line-height: 1.6; color: #212121;">
           <li>Entrar a <a href="https://neoauto.com.pe" target="_blank"><b>neoauto.com.pe</b></a> e Iniciar Sesión con:
               <br>📧 <b>Usuario:</b> <code>annyred9@gmail.com</code> &nbsp;|&nbsp; 🔑 <b>Contraseña:</b> <code>VivaLaVida2026$</code>
           </li>
@@ -596,8 +618,8 @@ def main_app():
         else:
             st.info("Aún no hay reportes registrados en la columna `estadisticas_neoauto`. Completa el formulario para registrar el primero.")
 
-
     for tab, estado in zip(crm_tabs, ESTADOS):
+
 
         with tab:
             state_df = df[df["estado_embudo"] == estado] if not df.empty else pd.DataFrame()
