@@ -1,15 +1,5 @@
-========================================================================
-BITÁCORA DE TRABAJO - CRM NEOAUTO (MÓDULO GOOGLE DRIVE)
-FECHA: 2026-06-01
-========================================================================
-
-ESTADO DEL SISTEMA HOY:
-Hemos dejado el CRM en un estado supremamente robusto y hermoso en cuanto a la gestión documental de autos en estado "Vendido":
-1. Autenticación Delegada: Se integró exitosamente la conexión OAuth a Google Drive (cuenta de 5TB del usuario), salteándose la limitación de las Service Accounts.
-2. Explorador en Vivo: Inspirado 100% en el Boilerplate del ERP (la función render_folder_navigator_v2 salvó el día dándonos toda la estructura mental de cómo hacerlo). Ahora el CRM pinta un árbol de carpetas navegable en la interfaz, leyendo directamente desde Drive.
-3. Fix de Naming de Carpetas: Las carpetas madre ahora usan la verdadera placa de la base de datos de Ganancias y Pérdidas (YYYYMMDD_PLACA).
-4. Auto-limpieza UI: Se implementaron llaves dinámicas (st.session_state) para evitar que los archivos subidos y el botón de subida se queden como "fantasmas" tras cargas exitosas.
-
-El CRM ahora se siente interactivo, profesional, sin glitches visuales y escalable sin saturar la base de datos con JSONBs larguísimos.
-
-AGRADECIMIENTO ESPECIAL: Al Boilerplate (mini_erp_v2) por ceder su glorioso código de navegación de carpetas.
+[2026-07-25 17:05] Desarrollo CRM Neoauto:
+- Añadida pestaña 'Tareas Anny Rojas' antes del tab 'WhatsApp'.
+- Módulo de control diario de anuncios (credenciales + enlaces directos a avisos activos y estadísticas).
+- Persistencia en columna JSONB 'estadisticas_neoauto' sobre la tabla 'crm_contactos'.
+- Despliegue listo para VPS Hostinger.
