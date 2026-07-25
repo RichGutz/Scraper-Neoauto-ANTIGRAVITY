@@ -661,27 +661,11 @@ def generate_html(df, results_map, filters, model_metrics):
     
     # Filter DF to only successfully scraped cars
     valid_ids = [car_id for car_id, data in results_map.items() if data['images']]
-    df = df[df['id'].isin(valid_ids)].copy()
+    df = df[df['id'].isin(valid_ids)]
     
     if df.empty:
         print("No cars left after scraping validation.")
         return ""
-
-    # --- ORDENAMIENTO PERSONALIZADO POR MARCAS Y PRECIO ---
-    BRAND_PRIORITY_ORDER = ["SUBARU", "HONDA", "HYUNDAI", "KIA", "TOYOTA"]
-    
-    df['Make_Upper'] = df['Make'].fillna("").astype(str).str.strip().str.upper()
-    df['Price_Num'] = pd.to_numeric(df['Price'], errors='coerce').fillna(0)
-    
-    df['brand_priority'] = df['Make_Upper'].apply(
-        lambda m: BRAND_PRIORITY_ORDER.index(m) if m in BRAND_PRIORITY_ORDER else 999
-    )
-    
-    df = df.sort_values(
-        by=['brand_priority', 'Make_Upper', 'Price_Num'],
-        ascending=[True, True, True]
-    ).drop(columns=['Make_Upper', 'Price_Num', 'brand_priority'])
-
 
     html_content = """
     <!DOCTYPE html>
