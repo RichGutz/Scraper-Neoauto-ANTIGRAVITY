@@ -2,3 +2,9 @@
 - Creado documento guia_conexion_remota_thinkpad.md.
 - Confirmada conexión RDP (puerto 3389) para ver la pantalla remota desde mstsc.exe.
 - Repositorio Git master actualizado.
+
+[2026-07-29 15:00] Actualización Conexión Remota ThinkPad y Corrección Frontend CRM:
+- Habilitada y verificada conexión VNC espejo en la ThinkPad (x11vnc en display :0, puerto 5900).
+- Configurada llave SSH id_thinkpad_antigravity y autostart en ThinkPad (~/.config/autostart/x11vnc.desktop).
+- Actualizada guia_conexion_remota_thinkpad.md y generado PDF guia_conexion_remota_thinkpad.pdf.
+- Corregido solapamiento de tabs en frontend_app.py agregando st.stop() al finalizar la sección de Investigación.

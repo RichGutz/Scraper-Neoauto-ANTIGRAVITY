@@ -29,7 +29,7 @@ CREDENTIALS_FILE = BASE_DIR / 'credentials.json'
 TOKEN_FILE = BASE_DIR / 'token.json'
 
 # Recipients list (domains to reply to)
-ALLOWED_DOMAINS = ['finanty.com', 'inverpeco.com.pe']
+ALLOWED_DOMAINS = ['finanty.com', 'inverpeco.com.pe', 'verticeempresarial.com']
 
 # Paths to message templates
 HTML_TEMPLATE = BASE_DIR / 'mensaje_respuesta.html'
@@ -79,7 +79,7 @@ def load_html_message():
 
 def get_unread_messages(service):
     """Return a list of unread message IDs from allowed creditor domains."""
-    query = 'is:unread (from:finanty.com OR from:inverpeco.com.pe)'
+    query = 'is:unread (from:finanty.com OR from:inverpeco.com.pe OR from:verticeempresarial.com)'
     results = service.users().messages().list(userId='me', q=query).execute()
     messages = results.get('messages', [])
     return messages
@@ -194,8 +194,7 @@ def main(poll_interval=30, max_cycles=0):
                     all_recipients = load_recipients()
                 # Find recipients that share the same domain
                 target_recipients = set([r for r in all_recipients if r.split('@')[-1].lower() == domain.lower()])
-                # Ensure the original sender is included even if not in the file
-                target_recipients.add(email_addr)
+
                 logger.info(f"Enviando respuestas al dominio {domain} a {len(target_recipients)} destinatario(s)")
                 for recipient in target_recipients:
                     # Personalize the HTML template with the sender's domain

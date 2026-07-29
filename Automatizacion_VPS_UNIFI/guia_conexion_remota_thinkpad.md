@@ -13,12 +13,13 @@ Esta guía documenta el procedimiento oficial y los parámetros técnicos para c
 
 ---
 
-## 1. 🖼️ Conexión por Escritorio Remoto Gráfico (Ver la pantalla completa)
+## 1. 🖼️ Conexión por Escritorio Remoto Gráfico RDP (Nueva Sesión)
 
-Para ver el escritorio visual de Linux con sus ventanas, iconos y navegador (sin necesidad de tener monitor, teclado ni mouse conectados a la ThinkPad):
+Para ver el escritorio visual de Linux con sus ventanas, iconos y navegador (cuando la ThinkPad no tiene sesión gráfica iniciada localmente):
 
 > **⚠️ NOTA TÉCNICA IMPORTANTE:**
-> La ThinkPad utiliza el protocolo **RDP (xrdp)** escuchando en el **Puerto 3389**. *(El puerto VNC 5900 está cerrado por defecto, por lo que VNC Viewer rechazará la conexión).*
+> La ThinkPad utiliza el protocolo **RDP (xrdp)** escuchando en el **Puerto 3389**.
+> **Limitación de sesión:** Si `richgutz` ya tiene la sesión abierta localmente en la laptop física (pantalla encendida/ejecutando un proceso), RDP rechazará el inicio de sesión. Para ver esa sesión activa, usa la **Sección 3 (VNC con x11vnc)**.
 
 ### Pasos en Windows:
 1. En tu teclado presiona la combinación: **`Win + R`** (Abre la ventana *Ejecutar*).
@@ -48,7 +49,42 @@ ssh richgutz@192.168.0.150
 
 ---
 
-## 3. ⚡ Encendido Remoto (Wake-on-LAN)
+## 3. 👁️ Conexión por VNC (`x11vnc`) - Ver Pantalla Física / Sesión Activa (Antigravity IDE)
+
+Esta es la **opción oficial recomendada** para conectarte cuando la ThinkPad ya tiene la sesión local abierta (ejecutando Antigravity IDE o procesos diarios).
+
+> **✅ ESTADO PROBADO Y VERIFICADO:**
+> - **Entorno**: Linux Mint 22.1 / LightDM (Display `:0`).
+> - **Puerto VNC**: `5900` (`192.168.0.150:5900`).
+> - **Autostart**: Configurado en `~/.config/autostart/x11vnc.desktop` para arrancar automáticamente al iniciar Linux.
+
+### A. Conexión rápida desde Windows:
+1. Abre tu visor VNC favorito (**VNC Viewer**, **RealVNC**, **TightVNC**).
+2. Ingresa el servidor:
+   ```text
+   192.168.0.150:5900
+   ```
+3. ¡Conectarás directamente en modo espejo a la sesión activa donde está corriendo **Antigravity IDE**!
+
+### B. Comando de inicio manual (Si se detiene la sesión):
+```bash
+x11vnc -display :0 -auth /var/run/lightdm/root/:0 -forever -shared -rfbport 5900 -repeat -noxdamage &
+```
+
+---
+
+## 4. 🔑 Llaves SSH Autorizadas (Conexión Directa sin Contraseña)
+
+Se ha configurado la llave SSH de la máquina de desarrollo (`rguti@DESKTOP-JPPDHHP`) en la ThinkPad (`~/.ssh/authorized_keys`).
+
+### Conexión desde PowerShell:
+```powershell
+ssh -i C:\Users\rguti\.ssh\id_thinkpad_antigravity richgutz@192.168.0.150
+```
+
+---
+
+## 4. ⚡ Encendido Remoto (Wake-on-LAN)
 
 Si la ThinkPad está apagada pero conectada a la corriente y al cable Ethernet:
 
@@ -61,3 +97,4 @@ python -c "import socket; data = bytes.fromhex('FF'*6 + '3c970e7a9778'*16); s = 
 ```bash
 ssh root@192.168.0.1 "/data/bridge_wol.sh"
 ```
+

@@ -465,6 +465,7 @@ def main_app():
                                 )
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
+        st.stop()
 
     # === SECCIÓN CRM ===
     st.markdown("""

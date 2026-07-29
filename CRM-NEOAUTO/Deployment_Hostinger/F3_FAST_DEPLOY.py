@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 VPS_HOST = "91.108.125.253"
 VPS_PORT = 22
 VPS_USER = "root"
-VPS_PASS = "doHtFib1poV+f0F7"
+VPS_PASS = "Thiagutz061121@"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 local_env_path = os.path.join(BASE_DIR, ".env")
