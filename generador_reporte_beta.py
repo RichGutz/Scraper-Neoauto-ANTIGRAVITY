@@ -115,7 +115,7 @@ def process_data(df_raw: pd.DataFrame) -> pd.DataFrame:
     df = df_raw.copy()
     desconocido_str = "Desconocido"
     df['Make'] = df['Make'].fillna(desconocido_str).astype(str).str.strip().str.lower().map(TARGET_MAKE_MAPPING).fillna(df['Make'].str.lower()).str.title()
-    df['Model'] = df['Model'].fillna(desconocido_str).astype(str).str.strip()
+    df['Model'] = df['Model'].fillna(desconocido_str).astype(str).str.strip().str.title()
     df['Model_Base'] = df.apply(lambda row: get_model_base(row['Model'], row['Make']), axis=1)
     df['slug'] = (df['Make'] + ' ' + df['Model_Base']).str.lower().str.replace(r'[^a-z0-9\s-]', '', regex=True).str.replace(r'\s+', '-', regex=True)
     df_filtered = df[df['Make'].str.lower().isin(STANDARDIZED_TARGET_MAKES)].copy()

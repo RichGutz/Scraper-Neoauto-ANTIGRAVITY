@@ -200,7 +200,7 @@ def calculate_model_metrics(df_historic: pd.DataFrame) -> dict:
     # Process data similar to main.py
     df = df_historic.copy()
     df['Make'] = df['Make'].fillna("Desconocido").astype(str).str.strip().str.upper()
-    df['Model'] = df['Model'].fillna("Desconocido").astype(str).str.strip()
+    df['Model'] = df['Model'].fillna("Desconocido").astype(str).str.strip().str.title()
     df['Model_Base'] = df.apply(lambda row: get_model_base(row['Model'], row['Make']), axis=1)
     
     # Clean numeric columns
