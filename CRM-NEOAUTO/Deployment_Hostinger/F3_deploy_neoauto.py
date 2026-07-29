@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 VPS_HOST = "91.108.125.253"
 VPS_PORT = 22
 VPS_USER = "root"
-VPS_PASS = "doHtFib1poV+f0F7"
+VPS_PASS = "Thiagutz061121@"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 local_env_path = os.path.join(BASE_DIR, ".env")
@@ -60,7 +60,32 @@ def deploy():
         ssh_run(client, f"echo '{service_cfg}' > /etc/systemd/system/{SERVICE}.service && systemctl daemon-reload && systemctl enable {SERVICE} && systemctl restart {SERVICE}", "5. Service")
         
         # 6. Nginx
-        nginx_cfg = f"server {{ listen 80; server_name {SUBDOMAIN}; location / {{ proxy_pass http://127.0.0.1:{APP_PORT}; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection \"upgrade\"; proxy_set_header Host $host; }} }}"
+        nginx_cfg = f"""server {{
+    listen 80;
+    server_name {SUBDOMAIN};
+
+    # Servir reportes estáticos del semanal
+    location /reportes/ {{
+        alias {APP_DIR}/reportes/;
+        autoindex on;
+    }}
+
+    # Redirecciones convenientes al index semanal
+    location = /reportes {{
+        return 301 https://$host/reportes/outputs/index.semanal.html;
+    }}
+    location = /reportes/ {{
+        return 301 https://$host/reportes/outputs/index.semanal.html;
+    }}
+
+    location / {{
+        proxy_pass http://127.0.0.1:{APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }}
+}}"""
         ssh_run(client, f"echo '{nginx_cfg}' > /etc/nginx/sites-available/{SERVICE} && ln -sf /etc/nginx/sites-available/{SERVICE} /etc/nginx/sites-enabled/{SERVICE} && nginx -t && systemctl reload nginx", "6. Nginx")
         
         # 7. SSL
