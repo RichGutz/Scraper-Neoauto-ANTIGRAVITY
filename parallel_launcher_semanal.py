@@ -7,7 +7,7 @@ from threading import Thread
 # Configuration for Weekly Scraper
 sys.stdout.reconfigure(encoding='utf-8')
 SCRIPT_TO_RUN = "extractores/4.DIARIO.SEMANAL.SCRAPER.NEOAUTO.SUPABASE.PARA.CRON.BETA.py"
-NUM_INSTANCES = 7  # 7 workers in parallel
+NUM_INSTANCES = 6  # 6 workers in parallel
 
 def stream_output(process, prefix):
     """Reads output from a subprocess and prints it to stdout with a prefix."""

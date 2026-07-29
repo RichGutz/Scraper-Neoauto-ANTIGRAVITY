@@ -61,9 +61,8 @@ fi
 
 # --- Ejecución del scraper ---
 echo ""
-echo "--> Ejecutando 1 instancia de SCRAPER.NEOAUTO..."
-SCRIPT_TO_RUN="extractores/4.DIARIO.SEMANAL.extractor_individual_v4.py"
-$PYTHON_EXEC "$SCRIPT_TO_RUN"
+echo "--> Ejecutando instancias paralelas del SCRAPER SEMANAL..."
+$PYTHON_EXEC -u "parallel_launcher_semanal.py"
 echo "--> Finalizada la instancia del scraper."
 # --- Fin de la ejecución ---
 
