@@ -256,7 +256,7 @@ def main_app():
     # === MENU PRINCIPAL DE SECCIONES ===
     seccion = st.radio(
         "Seccion",
-        options=["CRM", "Investigación"],
+        options=["CRM", "Investigación", "Reportes"],
         horizontal=True,
         label_visibility="collapsed"
     )
@@ -465,6 +465,22 @@ def main_app():
                                 )
                             else:
                                 st.warning("No se encontraron datos para esta combinación.")
+        st.stop()
+
+    # === SECCIÓN REPORTES SEMANALES ===
+    if seccion == "Reportes":
+        st.subheader("📊 Reportes Semanales de Vehículos")
+        st.markdown("""
+        Accede al panel interactivo de reportes históricos recopilados semanalmente. 
+        Aquí puedes consultar el análisis de mercado de marcas, modelos y la evolución de precios.
+        """)
+        
+        st.link_button(
+            "🌐 Abrir Panel de Reportes Semanales", 
+            "https://crm-neoauto.geeksoft.tech/reportes/outputs/index.semanal.html", 
+            type="primary", 
+            use_container_width=True
+        )
         st.stop()
 
     # === SECCIÓN CRM ===
