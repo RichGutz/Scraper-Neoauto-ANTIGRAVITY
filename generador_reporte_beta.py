@@ -110,11 +110,51 @@ def get_model_base(model_name: str, make_name: str) -> str:
                 return rule['model_base_target']
     return model_name
 
-def process_data(df_raw: pd.DataFrame) -> pd.DataFrame:
+def build_canonical_model_mapping(df: pd.DataFrame) -> dict:
+    """
+    Builds a mapping from (Make, OriginalModel) -> CanonicalModel.
+    CanonicalModel is the most frequent model name among those sharing the same simplified key
+    (lowercase, alphanumeric-only) within the same Make.
+    """
+    mapping = {}
+    if df is None or df.empty:
+        return mapping
+        
+    temp_df = df[['Make', 'Model']].copy()
+    temp_df['Make_clean'] = temp_df['Make'].fillna("Desconocido").astype(str).str.strip().str.title()
+    temp_df['Model_clean'] = temp_df['Model'].fillna("Desconocido").astype(str).str.strip()
+    
+    # Key removes spaces, hyphens, and any non-alphanumeric chars
+    temp_df['Key'] = temp_df['Model_clean'].str.lower().str.replace(r'[^a-z0-9]', '', regex=True)
+    
+    # Calculate frequencies
+    counts = temp_df.groupby(['Make_clean', 'Key', 'Model_clean']).size().reset_index(name='count')
+    
+    # Find the most frequent name for each (Make, Key) group
+    idx_max = counts.groupby(['Make_clean', 'Key'])['count'].idxmax()
+    canonical_models = counts.loc[idx_max]
+    
+    for _, row in canonical_models.iterrows():
+        make = row['Make_clean']
+        key = row['Key']
+        canonical_name = row['Model_clean']
+        
+        # Get all variants mapping to this key
+        original_models = counts[(counts['Make_clean'] == make) & (counts['Key'] == key)]['Model_clean'].tolist()
+        for orig in original_models:
+            mapping[(make.lower(), orig.lower())] = canonical_name
+            
+    return mapping
+
+def process_data(df_raw: pd.DataFrame, canonical_mapping: dict = None) -> pd.DataFrame:
     logger.info(f"Procesando {len(df_raw)} filas.")
     df = df_raw.copy()
     desconocido_str = "Desconocido"
     df['Make'] = df['Make'].fillna(desconocido_str).astype(str).str.strip().str.lower().map(TARGET_MAKE_MAPPING).fillna(df['Make'].str.lower()).str.title()
+    
+    if canonical_mapping:
+        df['Model'] = df.apply(lambda row: canonical_mapping.get((str(row['Make']).lower().strip(), str(row['Model']).lower().strip()), row['Model']), axis=1)
+        
     df['Model'] = df['Model'].fillna(desconocido_str).astype(str).str.strip().str.title()
     df['Model_Base'] = df.apply(lambda row: get_model_base(row['Model'], row['Make']), axis=1)
     df['slug'] = (df['Make'] + ' ' + df['Model_Base']).str.lower().str.replace(r'[^a-z0-9\s-]', '', regex=True).str.replace(r'\s+', '-', regex=True)
@@ -275,9 +315,13 @@ def generate_combined_report():
         logger.critical("No se descargaron datos de leads de 'autos_detalles_diarios'. Abortando.")
         return
 
+    # Build canonical model mapping to group X-Trail/X Trail (etc) together
+    df_combined = pd.concat([df_raw_historic[['Make', 'Model']], df_raw_leads[['Make', 'Model']]], ignore_index=True)
+    canonical_mapping = build_canonical_model_mapping(df_combined)
+
     # 2. Procesar datos
-    df_processed_historic = process_data(df_raw_historic)
-    df_processed_leads = process_data(df_raw_leads)
+    df_processed_historic = process_data(df_raw_historic, canonical_mapping)
+    df_processed_leads = process_data(df_raw_leads, canonical_mapping)
 
     if df_processed_leads.empty:
         logger.critical("No quedaron datos de leads después del procesamiento. Abortando.")

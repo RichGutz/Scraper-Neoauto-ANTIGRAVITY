@@ -176,6 +176,42 @@ def fetch_historical_data(supabase: Client) -> pd.DataFrame:
     print(f"[OK] Historical data loaded: {len(all_data)} records")
     return pd.DataFrame(all_data) if all_data else pd.DataFrame()
 
+def build_canonical_model_mapping(df: pd.DataFrame) -> dict:
+    """
+    Builds a mapping from (Make, OriginalModel) -> CanonicalModel.
+    CanonicalModel is the most frequent model name among those sharing the same simplified key
+    (lowercase, alphanumeric-only) within the same Make.
+    """
+    mapping = {}
+    if df is None or df.empty:
+        return mapping
+        
+    temp_df = df[['Make', 'Model']].copy()
+    temp_df['Make_clean'] = temp_df['Make'].fillna("Desconocido").astype(str).str.strip().str.title()
+    temp_df['Model_clean'] = temp_df['Model'].fillna("Desconocido").astype(str).str.strip()
+    
+    # Key removes spaces, hyphens, and any non-alphanumeric chars
+    temp_df['Key'] = temp_df['Model_clean'].str.lower().str.replace(r'[^a-z0-9]', '', regex=True)
+    
+    # Calculate frequencies
+    counts = temp_df.groupby(['Make_clean', 'Key', 'Model_clean']).size().reset_index(name='count')
+    
+    # Find the most frequent name for each (Make, Key) group
+    idx_max = counts.groupby(['Make_clean', 'Key'])['count'].idxmax()
+    canonical_models = counts.loc[idx_max]
+    
+    for _, row in canonical_models.iterrows():
+        make = row['Make_clean']
+        key = row['Key']
+        canonical_name = row['Model_clean']
+        
+        # Get all variants mapping to this key
+        original_models = counts[(counts['Make_clean'] == make) & (counts['Key'] == key)]['Model_clean'].tolist()
+        for orig in original_models:
+            mapping[(make.lower(), orig.lower())] = canonical_name
+            
+    return mapping
+
 def calculate_model_metrics(df_historic: pd.DataFrame) -> dict:
     """
     Calculate market metrics per model:
@@ -1240,6 +1276,15 @@ async def main():
     print("LOADING HISTORICAL DATA FOR STATISTICAL ANALYSIS")
     print("="*60)
     df_historic = fetch_historical_data(supabase)
+    
+    # Normalize model variants (X-Trail/X Trail, etc)
+    df_filtered = df_filtered.copy()
+    df_combined = pd.concat([df_filtered[['Make', 'Model']], df_historic[['Make', 'Model']]], ignore_index=True)
+    canonical_mapping = build_canonical_model_mapping(df_combined)
+    
+    df_filtered['Model'] = df_filtered.apply(lambda row: canonical_mapping.get((str(row['Make']).lower().strip(), str(row['Model']).lower().strip()), row['Model']), axis=1)
+    df_historic['Model'] = df_historic.apply(lambda row: canonical_mapping.get((str(row['Make']).lower().strip(), str(row['Model']).lower().strip()), row['Model']), axis=1)
+    
     model_metrics = calculate_model_metrics(df_historic)
     print("="*60 + "\n")
 
