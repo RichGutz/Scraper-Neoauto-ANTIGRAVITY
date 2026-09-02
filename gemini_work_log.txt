@@ -8,3 +8,17 @@
 - Configurada llave SSH id_thinkpad_antigravity y autostart en ThinkPad (~/.config/autostart/x11vnc.desktop).
 - Actualizada guia_conexion_remota_thinkpad.md y generado PDF guia_conexion_remota_thinkpad.pdf.
 - Corregido solapamiento de tabs en frontend_app.py agregando st.stop() al finalizar la sección de Investigación.
+
+[2026-08-26 18:35] Corrección de Gráficos Estadísticos (Plotly) en Reporte de Autos:
+- Resguardado estado anterior en rama y tag 'PRE.CORRECCION.BUG.INFORME'.
+- Corregido bug de capitalización en generate_autos_report.py forzando Title Case a df_filtered['Model'] y df_historic['Model'] después de aplicar canonical_mapping.
+- Verificada con éxito la visualización y cruce de datos históricos en simulación local.
+
+[2026-09-02 17:45] Corrección Completa de Reporte Diario y Creación de Netdata Kiosk:
+- Corregida desduplicación por URL en Autos.Richard.Gutierrez/generate_autos_report.py (eliminados 131 avisos duplicados).
+- Solucionado error de curvas invisibles en Plotly (conversión .tolist() para evitar serialización bdata Base64 y una sola inclusión de Plotly JS en <head>).
+- Ejecutado bucle de auditoría de calidad (QC Audit Loop) con 100% de éxito en desduplicación, renderizado de curvas y PDF.
+- Creados TAGs 'TAG.20260902', 'FIX.INFORME.DIARIO.20260902' y rama 'release/20260902'.
+- Creada e integrada app Kiosk HTML (/home/richgutz/netdata_kiosk.html) para rotación de monitoreo Netdata Cloud en Brave Browser.
+
+
