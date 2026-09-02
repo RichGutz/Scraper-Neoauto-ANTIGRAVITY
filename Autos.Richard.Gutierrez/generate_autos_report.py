@@ -371,6 +371,13 @@ def filter_data(df, filters):
         print("Applying HARDCODED filter: Only ÚNICO DUEÑO vehicles...")
         df = df[df['unico_dueno'].astype(str).str.lower() == 'true']
         print(f"  After único dueño filter: {len(df)} records")
+
+    # 5. DEDUPLICATION FILTER: Ensure 1 unique vehicle per URL
+    if 'URL' in df.columns:
+        initial_dup_count = len(df)
+        df['URL_clean'] = df['URL'].astype(str).str.strip().str.lower()
+        df = df.drop_duplicates(subset=['URL_clean'], keep='first').drop(columns=['URL_clean'])
+        print(f"  After URL deduplication filter: {initial_dup_count} -> {len(df)} records")
     
     print(f"Filtered down to {len(df)} records.")
     return df
@@ -627,17 +634,18 @@ def generate_model_chart(model_base: str, yearly_stats: pd.DataFrame, current_ca
                 if k_val >= 1:
                     x_smooth = np.linspace(x_years.min(), x_years.max(), 100)
                     spl_median = make_interp_spline(x_years, y_median, k=k_val)
+                    y_smooth = np.maximum(0, spl_median(x_smooth))
                     fig.add_trace(go.Scatter(
-                        x=x_smooth, 
-                        y=spl_median(x_smooth), 
+                        x=x_smooth.tolist(), 
+                        y=y_smooth.tolist(), 
                         mode='lines', 
                         name='Mediana Histórica',
                         line=dict(dash='dash', color='#3498db', width=2)
                     ))
-            except:
+            except Exception as e:
                 fig.add_trace(go.Scatter(
-                    x=x_years, 
-                    y=y_median, 
+                    x=x_years.tolist(), 
+                    y=y_median.tolist(), 
                     mode='lines+markers', 
                     name='Mediana Histórica',
                     marker=dict(size=4, color='#3498db')
@@ -650,17 +658,18 @@ def generate_model_chart(model_base: str, yearly_stats: pd.DataFrame, current_ca
                 if k_val >= 1:
                     x_smooth = np.linspace(x_years.min(), x_years.max(), 100)
                     spl_mean = make_interp_spline(x_years, y_mean, k=k_val)
+                    y_smooth_mean = np.maximum(0, spl_mean(x_smooth))
                     fig.add_trace(go.Scatter(
-                        x=x_smooth, 
-                        y=spl_mean(x_smooth), 
+                        x=x_smooth.tolist(), 
+                        y=y_smooth_mean.tolist(), 
                         mode='lines', 
                         name='Promedio Histórico',
                         line=dict(dash='dot', color='#95a5a6', width=2)
                     ))
-            except:
+            except Exception as e:
                 fig.add_trace(go.Scatter(
-                    x=x_years, 
-                    y=y_mean, 
+                    x=x_years.tolist(), 
+                    y=y_mean.tolist(), 
                     mode='lines+markers', 
                     name='Promedio Histórico',
                     marker=dict(size=4, color='#95a5a6')
@@ -690,7 +699,7 @@ def generate_model_chart(model_base: str, yearly_stats: pd.DataFrame, current_ca
     
     # Return as HTML div (no full HTML, just the div)
     # Use car_id to make div_id unique for each vehicle
-    return fig.to_html(full_html=False, include_plotlyjs='cdn', div_id=f'chart-{model_base.replace(" ", "-")}-{car_id}')
+    return fig.to_html(full_html=False, include_plotlyjs=False, div_id=f'chart-{model_base.replace(" ", "-")}-{car_id}')
 
 def generate_html(df, results_map, filters, model_metrics):
     print("Generating HTML report with dynamic cover page...")
@@ -725,6 +734,7 @@ def generate_html(df, results_map, filters, model_metrics):
     <head>
         <meta charset="UTF-8">
         <title>Reporte de Autos - Factsheets</title>
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
             
@@ -1284,6 +1294,10 @@ async def main():
     
     df_filtered['Model'] = df_filtered.apply(lambda row: canonical_mapping.get((str(row['Make']).lower().strip(), str(row['Model']).lower().strip()), row['Model']), axis=1)
     df_historic['Model'] = df_historic.apply(lambda row: canonical_mapping.get((str(row['Make']).lower().strip(), str(row['Model']).lower().strip()), row['Model']), axis=1)
+    
+    # Normalizar a Title Case para coincidir con la capitalización esperada por las métricas y reglas
+    df_filtered['Model'] = df_filtered['Model'].fillna("Desconocido").astype(str).str.strip().str.title()
+    df_historic['Model'] = df_historic['Model'].fillna("Desconocido").astype(str).str.strip().str.title()
     
     model_metrics = calculate_model_metrics(df_historic)
     print("="*60 + "\n")
