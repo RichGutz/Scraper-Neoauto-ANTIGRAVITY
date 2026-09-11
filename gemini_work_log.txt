@@ -21,4 +21,8 @@
 - Creados TAGs 'TAG.20260902', 'FIX.INFORME.DIARIO.20260902' y rama 'release/20260902'.
 - Creada e integrada app Kiosk HTML (/home/richgutz/netdata_kiosk.html) para rotación de monitoreo Netdata Cloud en Brave Browser.
 
-
+[2026-09-11 15:45] Nota #120 - Ajustes Autostart Brave Kiosk & Netdata en ThinkPad:
+- Agregado flag --password-store=basic en ~/.local/bin/brave_kiosk.sh para suprimir la solicitud de contraseña del depósito de claves al abrir.
+- Cambiado --kiosk por --start-maximized para permitir botones estándar de minimizar y cerrar ventana.
+- Añadido sleep 4 previo a la apertura de Brave Browser para asegurar la inicialización de Netdata.
+- Incorporado aseguramiento del arranque automático del servicio Netdata mediante 'sudo systemctl enable --now netdata'.
