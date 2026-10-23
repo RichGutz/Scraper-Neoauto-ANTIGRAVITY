@@ -15,7 +15,7 @@ PYTHON_EXEC="$PROJECT_DIR/.venv/bin/python"
 
 # --- Logging Setup ---
 # Redirect all output (stdout and stderr) to log file and console (tee)
-exec > >(tee -a "$LOG_FILE") 2>&1
+exec > >(tee -a "$LOG_FILE" | sudo tee /dev/tty1 >/dev/null) 2>&1
 
 echo ""
 echo "=================================================="

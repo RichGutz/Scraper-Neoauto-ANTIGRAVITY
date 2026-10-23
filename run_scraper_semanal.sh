@@ -17,7 +17,7 @@ PYTHON_EXEC="$PROJECT_DIR/.venv/bin/python"
 
 # --- Logging ---
 # Redirige toda la salida a un fichero de log y a la consola.
-exec &> >(tee -a "$LOG_FILE")
+exec > >(tee -a "$LOG_FILE" | sudo tee /dev/tty1 >/dev/null) 2>&1
 
 # --- Lógica Principal ---
 echo "=================================================="
