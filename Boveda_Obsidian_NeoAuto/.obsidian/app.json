@@ -1,0 +1,8 @@
+﻿{
+   legacyEditor: false,
+  livePreview: true,
+  spellcheck: false,
+  strictLineBreaks: false,
+  showLineNumber: true,
+  attachmentFolderPath: assets
+}
