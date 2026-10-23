@@ -115,3 +115,10 @@ Ubicado en `/usr/local/bin/smart_conditional_shutdown.sh`, se invoca automática
 - **Integridad Git:** Código compilado con `py_compile` (0 errores) y publicado en GitHub (commits `87e0b44` y `c1560ac`).
 
 El sistema queda 100% blindado, desatendido y protegido contra desgaste de hardware.
+
+## 9. Actualización Gmail OAuth 2.0 (23-Oct-2026 15:40 PM)
+- **Estado**: 100% OPERATIVO.
+- **Remitente Autenticado**: deals.kc.2025@gmail.com.
+- **Credenciales**: Proyecto Google Cloud 'neoautogmailsender' (499463343361-nlbg62bevc9mr227sm586bs5qtg750k8.apps.googleusercontent.com).
+- **Prueba en Vivo**: Email enviado exitosamente a gutil@gmail.com y nnyred9@gmail.com con PDF adjunto (IDs: 1a16a7eca4d962f1, 1a16a7ed885e07c0).
+- **Ubicación Token**: Z:\Scraper.Neoauto\gmail_sender\token.json y sincronizado en C:\Users\rguti\Scraper.Neoauto\gmail_sender\token.json.
