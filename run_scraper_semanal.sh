@@ -4,7 +4,13 @@
 set -e
 
 # --- Configuración ---
-PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
+if [ -d "/mnt/caddy_storage/Scraper.Neoauto" ]; then
+    PROJECT_DIR="/mnt/caddy_storage/Scraper.Neoauto"
+elif [ -d "/home/richgutz/Scraper-Neoauto-ANTIGRAVITY" ]; then
+    PROJECT_DIR="/home/richgutz/Scraper-Neoauto-ANTIGRAVITY"
+else
+    PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 LOG_FILE="$PROJECT_DIR/scraper_sequence_semanal.log"
 # Asegúrate de que la ruta a tu entorno virtual (venv) es correcta.
 PYTHON_EXEC="$PROJECT_DIR/.venv/bin/python"
@@ -99,7 +105,7 @@ date
 echo "=================================================="
 
 echo ""
-echo "--> APAGANDO EL EQUIPO..."
-# sudo /sbin/shutdown -h now (Desactivado para Servidor Headless 24/7)
+echo "--> EVALUANDO APAGADO INTELIGENTE (SMART SHUTDOWN GUARD)..."
+/usr/local/bin/smart_conditional_shutdown.sh
 
 exit 0
