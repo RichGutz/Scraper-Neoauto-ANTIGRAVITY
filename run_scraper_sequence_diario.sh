@@ -86,6 +86,6 @@ echo "PROCESO FINALIZADO."
 
 echo ""
 echo "---> APAGANDO EL EQUIPO..."
-sudo /sbin/shutdown -h now
+# sudo /sbin/shutdown -h now (Desactivado para Servidor Headless 24/7)
 
 exit 0
