@@ -114,3 +114,14 @@ ssh -i C:\Users\rguti\.ssh\id_thinkpad_antigravity richgutz@192.168.0.150 "tail 
 ```bash
 ssh -i C:\Users\rguti\.ssh\id_thinkpad_antigravity richgutz@192.168.0.150 "cd /mnt/caddy_storage/Scraper.Neoauto && .venv/bin/python Autos.Richard.Gutierrez/email_result.py"
 ```
+
+---
+
+## 5. Quality Gates & Lecciones Forenses Críticas (Grado Empresarial)
+
+| Calidad / Gate | Componente Afectado | Causa Raíz Forense (RCA) | Regla de Prevención Inmutable |
+| :--- | :--- | :--- | :--- |
+| **QG-01: Pureza de Scopes OAuth 2.0** | `gmail_sender/gmail_sender.py` | Discordancia entre scopes del consent screen y código (`contacts` no autorizado provocó `RefreshError: invalid_scope`). | `SCOPES` en código debe coincidir 1:1 estrictamente con los autorizados en Google Cloud (`gmail.send` y `gmail.modify`). Cero scopes huérfanos. |
+| **QG-02: Dependencias de Gráficos Headless** | `generate_autos_report.py` | En entornos Linux headless faltaban `python3-tk`, `Pillow`, `plotly` y `scipy` en `.venv`. | Las dependencias gráficas deben instalarse a nivel del sistema y entorno virtual con verificación previa en terminal. |
+| **QG-03: Doble Reposo a 0 RPM** | Caddy SATA (`sdb`) & Bóveda USB (`sdd`) | Desgaste motriz innecesario al girar 24/7 a 5400 RPM. | Spindown automático a 10 min en Caddy (`hdparm -B 127 -S 120`) y corte eléctrico por bus xHCI en USB (`hdd_off`). |
+| **QG-04: Guardián de Inactividad Cruzada** | `smart_conditional_shutdown.sh` & `inactivity_watchdog.ps1` | Apagados ciegos interrumpían al operador si seguía programando tras el fin del scraper o backup. | ThinkPad evalúa ping a `DESKTOP-JPPDHHP.localdomain`; Windows evalúa Win32 `GetLastInputInfo` (5 min de reposo continuo). |
