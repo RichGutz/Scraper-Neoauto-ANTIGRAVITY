@@ -68,8 +68,7 @@ except ImportError:
 # --- CONFIGURACIÓN ---
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.send',
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/contacts'
+    'https://www.googleapis.com/auth/gmail.modify'
 ]
 RECIPIENT_EMAILS_FILE = Path(__file__).parent / 'destinatarios.txt' # Use Path to construct absolute path
 LOG_FILE = Path(__file__).parent / 'envio_reporte.log' # Use Path to construct absolute path
@@ -256,5 +255,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
