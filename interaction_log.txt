@@ -8,3 +8,9 @@
 - Configurada llave SSH id_thinkpad_antigravity y autostart en ThinkPad (~/.config/autostart/x11vnc.desktop).
 - Actualizada guia_conexion_remota_thinkpad.md y generado PDF guia_conexion_remota_thinkpad.pdf.
 - Corregido solapamiento de tabs en frontend_app.py agregando st.stop() al finalizar la sección de Investigación.
+
+[2026-10-23 19:43] FIX FORENSE GMAIL API: Resuelto 'RefreshError: invalid_scope' en gmail_sender.py removiendo scope no autorizado 'contacts'. Correo del reporte reporte_autos_20261023_193639.pdf entregado con exito a rgutil@gmail.com (ID: 1a16b5cd9f992885) y annyred9@gmail.com (ID: 1a16b5ce756df4c1).
+[2026-10-23 20:04] SANEAMIENTO BASE DE DATOS SUPABASE: Normalizado precio de Subaru Forester 2026 (URL: https://neoauto.com/auto/usado/subaru-forester-2026-1889533) en tabla autos_detalles_diarios. Precio erróneo en soles de 111,111.00 dividido entre 3.4 a $32,679.71 USD en IDs 44164 y 44379 para proteger la regresión y mediana estadistica.
+[2026-10-23 20:18] REPLICA RESTIC 3-2-1 ENTERPRISE COMPLETADA AL 100%: Concluida exitosamente la transferencia de 131 GB hacia la Boveda USB externa (/mnt/usb_vault/repos_backup/home_rguti). 5 snapshots historicos de C:\Users\rguti verificados e integros (c753efa3, 7aa861bf, 7f975e36, dee1ec89, 527d220b). Preservados intactos los 158 GB previos (DOMUS, Takout, etc.).
+[2026-10-23 20:18] CORTE ELECTRICO A 0 RPM: Ejecutado sudo /usr/local/bin/hdd_off en ThinkPad. Buffers sincronizados, /mnt/usb_vault desmontado y motor mecanico apagado a 0 RPM por bus xHCI.
+[2026-10-23 20:20] CIERRE DE SESION & GOBERNANZA: Bovedas Obsidian (AI.TOOLS.FOR.GEEKSOFT y Scraper.Neoauto) actualizadas a Grado Empresarial con Quality Gates, RCA y notas #201, #332, #00, #09 y #10. Sincronizadas en GitHub.
